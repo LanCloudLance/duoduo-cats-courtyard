@@ -11,7 +11,7 @@ preset=stage/'export_presets.cfg';s=preset.read_text()
 for variant in ['debug','release']:
  s=re.sub(r'custom_template/'+variant+r'="[^"]*"',f'custom_template/{variant}="{templates}/web_nothreads_{variant}.zip"',s)
 preset.write_text(s)
-out=site/'public/game';out.mkdir(parents=True,exist_ok=True)
+out=site/'dist/game';out.mkdir(parents=True,exist_ok=True)
 subprocess.run([str(engine),'--headless','--path',str(stage),'--editor','--import','--quit'],check=True)
 subprocess.run([str(engine),'--headless','--path',str(stage),'--export-debug' if os.environ.get('WEB_DEBUG') else '--export-release','Web',str(out/'index.html')],check=True)
 wasm=out/'index.wasm';data=wasm.read_bytes();compressed=gzip.compress(data,compresslevel=9,mtime=0)

@@ -20,9 +20,14 @@ var guard_direction := Vector2.RIGHT
 var storybook := false
 var painted: Node2D
 var reaction := 0.0
+var caption_plaque: StyleBoxFlat
+
 
 func _ready() -> void:
     if storybook:
+        caption_plaque = StyleBoxFlat.new()
+        caption_plaque.bg_color = Color(0.09,0.18,0.14,0.87)
+        caption_plaque.set_corner_radius_all(9)
         painted = preload("res://game/combat_sprite.gd").new() if combat_visual else preload("res://game/storybook_sprite.gd").new()
         painted.role = role
         add_child(painted)
@@ -39,6 +44,7 @@ func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) ->
     reaction = maxf(0, reaction - delta * 2.0)
     if painted:
         if combat_visual:
+            painted.pose_delta = delta
             painted.combat_kind = combat_kind
             painted.combat_active = combat_active
             painted.combat_progress = combat_progress
@@ -94,10 +100,7 @@ func _draw() -> void:
         if not caption_override.is_empty(): caption = caption_override
         var height := (-146.0 if role == 0 else -105.0) if storybook else (-99.0 if role == 0 else -77.0)
         if storybook:
-            var plaque := StyleBoxFlat.new()
-            plaque.bg_color = Color(0.09,0.18,0.14,0.87)
-            plaque.set_corner_radius_all(9)
-            draw_style_box(plaque,Rect2(-66,height-19,132,26))
+            draw_style_box(caption_plaque,Rect2(-66,height-19,132,26))
         draw_string(font, Vector2(-65, height), caption, HORIZONTAL_ALIGNMENT_CENTER, 130, 17, Color("fff3d4"))
 
 func _girl(foot: float) -> void:

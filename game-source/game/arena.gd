@@ -76,6 +76,8 @@ func cancel_inputs() -> void:
     battle._cancel_rescue()
     battle.cancel_attacks()
     solo.cancel(battle)
+    for actor_view in actors:
+        if actor_view.painted: actor_view.painted.reset_transition()
 
 func restart() -> void:
     configure_solo(session.single_player)
@@ -161,7 +163,7 @@ func _refresh() -> void:
         enemy_views[i].sync(battle.enemies[i])
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
-    status_label.text = "角色攻击 / M14   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "角色攻击 / M14.1   %d / 3\nEsc / 菜单键暂停" % battle.wave
     if session.keyboard_mode:
         girl_help.text = "WASD 移动 · F 横扫 · Q 闪避\n按住 G 正面举盾 · E 互动 / 救援"
         cat_help.text = ("方向键 · J 短扑快抓 · K 闪避" if battle.current_cat == 1 else "方向键 · J 轻拍 / 蓄力松开重拍")+"\n空格救援 · Tab 切猫 · K 闪避"
@@ -195,7 +197,7 @@ func _solo_hud() -> void:
     var who: String = ["朵朵","团团","圆圆"][actor]
     girl_label.text = "朵朵 · "+("你控制" if solo.human_slot == 0 else "AI")+"  "+_health(0)
     cat_label.text = ("团团" if battle.current_cat == 1 else "圆圆")+" · "+("你控制" if solo.human_slot == 1 else "AI")+"  "+_health(1)
-    status_label.text = "单人战斗 / M14   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "单人战斗 / M14.1   %d / 3\nEsc / 菜单键暂停" % battle.wave
     girl_help.text = "WASD 移动 · F 攻击 · Q 闪避\nE 互动 / 救援 · G 朵朵举盾" if session.keyboard_mode else "左摇杆 · 面键左攻击 / 右闪避\n面键下互动 · 左肩朵朵举盾"
     if actor > 0:
         girl_help.text = ("WASD · F "+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\nE 互动 / 救援 · Q 闪避") if session.keyboard_mode else ("面键左："+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\n左摇杆移动 · 右闪避 · 下互动")

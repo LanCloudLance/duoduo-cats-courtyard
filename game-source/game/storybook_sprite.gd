@@ -5,6 +5,7 @@ const KEY = preload("res://assets/visual-m13/chroma.gdshader")
 var sprite := Sprite2D.new()
 var role := 0
 var last_frame := -1
+var frame_cache: Array[AtlasTexture] = []
 
 func _ready() -> void:
     sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -21,11 +22,14 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     var feet := [454, 807, 1180]
     var anchors := [245, 650, 1040]
     if frame != last_frame:
-        var atlas := AtlasTexture.new()
-        atlas.atlas = SHEET
-        atlas.region = Rect2(frame * 418, tops[role], 418, bottoms[role] - tops[role])
-        atlas.filter_clip = true
-        sprite.texture = atlas
+        if frame_cache.is_empty():
+            for index in range(3):
+                var atlas := AtlasTexture.new()
+                atlas.atlas = SHEET
+                atlas.region = Rect2(index*418,tops[role],418,bottoms[role]-tops[role])
+                atlas.filter_clip = true
+                frame_cache.append(atlas)
+        sprite.texture = frame_cache[frame]
         sprite.centered = false
         sprite.position = Vector2(frame * 418 - anchors[frame], tops[role] - feet[role])
         last_frame = frame

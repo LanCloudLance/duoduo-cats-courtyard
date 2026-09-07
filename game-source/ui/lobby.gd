@@ -442,7 +442,7 @@ func _process(_delta: float) -> void:
             action_text[slot].text = "已收到按钮 %d" % last_buttons[slot]
         slot_badges[slot].text = ("AI" if stage == "combat" else "伴") if session.single_player and slot == 1 else "P%d" % (slot+1)
     if session.single_player:
-        top_status.text = ("单人战斗试玩" if preview_run else "单人完整庭院") + " · M11"
+        top_status.text = ("单人战斗试玩" if preview_run else "单人完整庭院") + " · M13"
         footer_status.text = "单人键盘 · Enter 开始 / 继续" if session.keyboard_mode else "单手柄 · 十字键选菜单 / 下确认 · 菜单键准备 / 继续"
         if not session.focused: footer_status.text = "返回游戏窗口后继续"
         mode_help.text = "WASD 移动 · E 互动 · Tab 换角色；战斗 F 攻击 / Q 闪避，解谜 R 工具 / Q 切回。"

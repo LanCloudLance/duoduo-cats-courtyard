@@ -13,6 +13,15 @@ var combat_kind := ""
 var combat_progress := 0.0
 var combat_direction := Vector2.RIGHT
 var charge_progress := 0.0
+var storybook := false
+var painted: Node2D
+var reaction := 0.0
+
+func _ready() -> void:
+    if storybook:
+        painted = preload("res://game/storybook_sprite.gd").new()
+        painted.role = role
+        add_child(painted)
 
 func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) -> void:
     var distance := position.distance_to(point)
@@ -23,6 +32,9 @@ func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) ->
     position = point
     controlled = selected
     held = staying
+    reaction = maxf(0, reaction - delta * 2.0)
+    if painted:
+        painted.pose(phase,stride,facing,reaction)
     z_index = int(point.y)
     queue_redraw()
 
@@ -36,6 +48,9 @@ func _draw() -> void:
     ellipse(Vector2(0, 5), Vector2(27, 10), Color(0.03, 0.10, 0.07, 0.28))
     if controlled:
         draw_set_transform(Vector2(0, 4), 0, Vector2(1, 0.42))
+        if storybook:
+            draw_circle(Vector2.ZERO,32,Color(accent,0.19))
+            draw_arc(Vector2.ZERO,34,0,TAU,48,Color("345346"),7,true)
         draw_arc(Vector2.ZERO, 33, 0, TAU, 48, accent, 3, true)
         draw_set_transform(Vector2.ZERO)
     if held:
@@ -50,7 +65,9 @@ func _draw() -> void:
         pose_scale = Vector2(1.08,0.88)
         bob += 3
     draw_set_transform(Vector2(0, bob),0,pose_scale)
-    if role == 0:
+    if storybook:
+        pass
+    elif role == 0:
         _girl(foot)
     else:
         _cat(foot)
@@ -60,7 +77,12 @@ func _draw() -> void:
         if role > 0:
             caption = ("P2 " if controlled else "") + caption + (" · 驻守" if held else "")
         if not caption_override.is_empty(): caption = caption_override
-        var height := -99.0 if role == 0 else -77.0
+        var height := (-146.0 if role == 0 else -105.0) if storybook else (-99.0 if role == 0 else -77.0)
+        if storybook:
+            var plaque := StyleBoxFlat.new()
+            plaque.bg_color = Color(0.09,0.18,0.14,0.87)
+            plaque.set_corner_radius_all(9)
+            draw_style_box(plaque,Rect2(-66,height-19,132,26))
         draw_string(font, Vector2(-65, height), caption, HORIZONTAL_ALIGNMENT_CENTER, 130, 17, Color("fff3d4"))
 
 func _girl(foot: float) -> void:

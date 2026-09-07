@@ -1,0 +1,6 @@
+.build/
+node_modules/
+.DS_Store
+*.tar.gz
+game-source/.godot/
+game-source/override.cfg

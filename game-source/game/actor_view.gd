@@ -13,13 +13,17 @@ var combat_kind := ""
 var combat_progress := 0.0
 var combat_direction := Vector2.RIGHT
 var charge_progress := 0.0
+var combat_visual := false
+var combat_active := false
+var guarding := false
+var guard_direction := Vector2.RIGHT
 var storybook := false
 var painted: Node2D
 var reaction := 0.0
 
 func _ready() -> void:
     if storybook:
-        painted = preload("res://game/storybook_sprite.gd").new()
+        painted = preload("res://game/combat_sprite.gd").new() if combat_visual else preload("res://game/storybook_sprite.gd").new()
         painted.role = role
         add_child(painted)
 
@@ -34,6 +38,17 @@ func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) ->
     held = staying
     reaction = maxf(0, reaction - delta * 2.0)
     if painted:
+        if combat_visual:
+            painted.combat_kind = combat_kind
+            painted.combat_active = combat_active
+            painted.combat_progress = combat_progress
+            painted.combat_direction = combat_direction
+            painted.charge_progress = charge_progress
+            painted.guarding = guarding
+            painted.guard_direction = guard_direction
+            var direction: Vector2 = guard_direction if guarding else combat_direction
+            if (combat_active or guarding or combat_kind == "charge") and absf(direction.x) > 0.01:
+                facing = signf(direction.x)
         painted.pose(phase,stride,facing,reaction)
     z_index = int(point.y)
     queue_redraw()

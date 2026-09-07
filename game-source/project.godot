@@ -1,7 +1,7 @@
 config_version=5
 
 [application]
-config/name="朵朵与猫猫 · 庭院视觉样板 M13"
+config/name="朵朵与猫猫 · 庭院与战斗视觉 M14"
 config/use_custom_user_dir=true
 config/custom_user_dir_name="DuoduoCatsCourtyard"
 run/main_scene="res://main.tscn"

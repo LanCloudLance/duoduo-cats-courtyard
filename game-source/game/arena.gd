@@ -20,6 +20,9 @@ var cat_help: Label
 var objective_label: Label
 var hint_label: Label
 var status_label: Label
+var enemy_views: Array[Node2D] = []
+const EnemyView = preload("res://game/enemy_visual.gd")
+const BACKDROP = preload("res://assets/visual-m14/arena-painted.png")
 
 func _init(state) -> void:
     session = state
@@ -31,23 +34,32 @@ func _ready() -> void:
     add_child(camera)
     for i in range(3):
         var actor_view := Actor.new()
+        actor_view.storybook = true
+        actor_view.combat_visual = true
         actor_view.role = i
         actor_view.font = font
         actor_view.position = battle.positions[i]
         add_child(actor_view)
         actors.append(actor_view)
+    for stump in Battle.Space.STUMPS:
+        var prop = EnemyView.prop(3, 82)
+        prop.position = stump
+        prop.z_index = int(stump.y)
+        add_child(prop)
     hud.layer = 11
     add_child(hud)
-    _panel(Rect2(24, 20, 1232, 124))
+    _panel(Rect2(24, 20, 274, 124))
+    _panel(Rect2(306, 20, 427, 124))
+    _panel(Rect2(741, 20, 515, 124))
     title_label = _label("林间空地", Rect2(48, 34, 230, 38), 28)
     status_label = _label("", Rect2(48, 84, 245, 45), 17)
-    girl_label = _label("", Rect2(310, 34, 360, 38), 23, Color("9ddcc9"))
+    girl_label = _label("", Rect2(310, 34, 360, 38), 23, Color("316b60"))
     cat_label = _label("", Rect2(745, 34, 480, 38), 23)
     girl_help = _label("", Rect2(310, 81, 430, 50), 17)
     cat_help = _label("", Rect2(745, 81, 480, 50), 17)
     _panel(Rect2(24, 685, 1232, 91))
     objective_label = _label("", Rect2(48, 697, 1170, 32), 22)
-    hint_label = _label("", Rect2(48, 738, 1170, 27), 17, Color("bbd3bc"))
+    hint_label = _label("", Rect2(48, 738, 1170, 27), 17, Color("566d55"))
     set_active(false)
     _refresh()
 
@@ -124,21 +136,32 @@ func _physics_process(delta: float) -> void:
         actors[i].modulate = Color(0.7, 0.75, 0.7) if selected and battle.hp[slot] <= 0 else Color.WHITE
         if selected and battle.invulnerable[slot] > 0:
             actors[i].modulate.a = 0.45 if fmod(battle.invulnerable[slot], 0.2) < 0.1 else 1.0
+        actors[i].combat_active = selected and battle.attack_flash[slot] > 0
+        actors[i].guarding = i == 0 and battle.guarding and battle.hp[0] > 0
+        actors[i].guard_direction = battle.facing[0]
         actors[i].combat_kind = battle.attacks.kinds[slot] if selected else ""
         var duration := 0.24 if slot == 0 else (0.3 if battle.attacks.kinds[1] == "heavy" else 0.22)
         actors[i].combat_progress = 1.0-battle.attack_flash[slot]/duration if selected and battle.attack_flash[slot] > 0 else 0.0
         actors[i].combat_direction = battle.attack_direction[slot]
         actors[i].charge_progress = battle.attacks.charge_time/0.6 if selected and i == 2 else 0.0
         if not battle.attacks.charging and actors[i].combat_kind == "charge": actors[i].combat_kind = ""
-        actors[i].update_pose(battle.positions[i], selected, false, delta)
+        actors[i].update_pose(battle.positions[i], selected and (not battle.solo_mode or slot == solo.human_slot), false, delta)
     _refresh()
 
 func _refresh() -> void:
     if not is_instance_valid(title_label):
         return
+    while enemy_views.size() > battle.enemies.size():
+        enemy_views.pop_back().queue_free()
+    while enemy_views.size() < battle.enemies.size():
+        var view = EnemyView.new()
+        add_child(view)
+        enemy_views.append(view)
+    for i in range(enemy_views.size()):
+        enemy_views[i].sync(battle.enemies[i])
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
-    status_label.text = "角色攻击 / M11   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "角色攻击 / M14   %d / 3\nEsc / 菜单键暂停" % battle.wave
     if session.keyboard_mode:
         girl_help.text = "WASD 移动 · F 横扫 · Q 闪避\n按住 G 正面举盾 · E 互动 / 救援"
         cat_help.text = ("方向键 · J 短扑快抓 · K 闪避" if battle.current_cat == 1 else "方向键 · J 轻拍 / 蓄力松开重拍")+"\n空格救援 · Tab 切猫 · K 闪避"
@@ -172,7 +195,7 @@ func _solo_hud() -> void:
     var who: String = ["朵朵","团团","圆圆"][actor]
     girl_label.text = "朵朵 · "+("你控制" if solo.human_slot == 0 else "AI")+"  "+_health(0)
     cat_label.text = ("团团" if battle.current_cat == 1 else "圆圆")+" · "+("你控制" if solo.human_slot == 1 else "AI")+"  "+_health(1)
-    status_label.text = "单人战斗 / M11   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "单人战斗 / M14   %d / 3\nEsc / 菜单键暂停" % battle.wave
     girl_help.text = "WASD 移动 · F 攻击 · Q 闪避\nE 互动 / 救援 · G 朵朵举盾" if session.keyboard_mode else "左摇杆 · 面键左攻击 / 右闪避\n面键下互动 · 左肩朵朵举盾"
     if actor > 0:
         girl_help.text = ("WASD · F "+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\nE 互动 / 救援 · Q 闪避") if session.keyboard_mode else ("面键左："+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\n左摇杆移动 · 右闪避 · 下互动")
@@ -199,14 +222,14 @@ func _panel(rect: Rect2) -> void:
     panel.position = rect.position
     panel.size = rect.size
     var style := StyleBoxFlat.new()
-    style.bg_color = Color("17382e")
-    style.border_color = Color("658b70")
+    style.bg_color = Color("f4e9cf")
+    style.border_color = Color("8b9a70")
     style.set_border_width_all(1)
     style.set_corner_radius_all(16)
     panel.add_theme_stylebox_override("panel", style)
     hud.add_child(panel)
 
-func _label(value: String, rect: Rect2, size: int, color := Color("fff0d0")) -> Label:
+func _label(value: String, rect: Rect2, size: int, color := Color("354b3c")) -> Label:
     var label := Label.new()
     label.text = value
     label.position = rect.position
@@ -219,25 +242,10 @@ func _label(value: String, rect: Rect2, size: int, color := Color("fff0d0")) -> 
 
 func _draw() -> void:
     draw_rect(Rect2(-800, -800, 3000, 2500), Color("294d3b"))
-    draw_style_box(_ground(), Battle.FIELD.grow(36))
-    draw_rect(Battle.FIELD, Color("86926c"), false, 2)
-    var rng := RandomNumberGenerator.new()
-    rng.seed = 2918
-    for i in range(95):
-        var p := Vector2(rng.randf_range(110, 1170), rng.randf_range(215, 668))
-        draw_line(p, p + Vector2(3, -5), Color("8b9f72"), 2)
-    for x in range(105, 1200, 105):
-        for y in [184, 665]:
-            draw_circle(Vector2(x, y), 28, Color("3b674a"))
-            draw_circle(Vector2(x - 12, y - 6), 18, Color("487651"))
+    draw_texture_rect(BACKDROP,Rect2(0,0,1280,800),false)
     for stump in Battle.Space.STUMPS:
-        draw_circle(stump+Vector2(3,6),40,Color(0.1,0.16,0.1,0.25))
-        draw_circle(stump,34,Color("72563c"))
-        draw_circle(stump-Vector2(0,7),31,Color("c4a171"))
-        draw_arc(stump-Vector2(0,7),19,0,TAU,28,Color("8e704d"),2,true)
-        draw_arc(stump-Vector2(0,7),10,0,TAU,28,Color("8e704d"),2,true)
         var prompt_rect := Rect2(stump+Vector2(-75,43),Vector2(150,24))
-        if battle.positions.all(func(point): return not prompt_rect.intersects(Rect2(point-Vector2(36,102),Vector2(72,118)))):
+        if battle.positions.all(func(point): return not prompt_rect.intersects(Rect2(point-Vector2(42,146),Vector2(84,164)))):
             _text(stump+Vector2(-75,62),"可引它撞树桩",150,16)
     # Wide lanes remain on both sides of each stump.
     if battle.phase in ["clear", "complete"]:
@@ -255,7 +263,13 @@ func _draw() -> void:
             var reach := 364.0 if enemy.kind == "roller" else 230.0
             var end: Vector2 = enemy.pos + enemy.direction * reach
             var side: Vector2 = enemy.direction.orthogonal() * 39
-            draw_line(enemy.pos, end, Color(0.95, 0.36, 0.24, 0.23), 78)
+            var full: float = (0.9 if enemy.kind == "thorn" else 1.2)+(0.2 if battle.solo_mode else 0.0)
+            var urgency: float = clampf(1.0-enemy.timer/full,0,1)
+            draw_line(enemy.pos, end, Color(0.79, 0.26, 0.14, 0.18+urgency*0.14), 78)
+            draw_line(enemy.pos, end, Color("865337"), 3, true)
+            for step in range(1,4):
+                var mark: Vector2 = enemy.pos+enemy.direction*reach*step/4.0
+                draw_polyline(PackedVector2Array([mark-enemy.direction*9+side*0.24,mark,mark-enemy.direction*9-side*0.24]),Color("ffe2ad"),3,true)
             draw_line(enemy.pos + side, end + side, Color("f7b278"), 2, true)
             draw_line(enemy.pos - side, end - side, Color("f7b278"), 2, true)
             draw_line(end - enemy.direction * 24 + side * 0.4, end, Color("fbd29d"), 4, true)
@@ -268,9 +282,9 @@ func _draw() -> void:
         if battle.attack_flash[slot] > 0:
             var direction: Vector2 = battle.attack_direction[slot]
             if slot == 0:
-                draw_arc(p,103,direction.angle()-PI/3,direction.angle()+PI/3,28,Color(1,0.89,0.63,0.65),5,true)
+                draw_arc(p,103,direction.angle()-PI/3,direction.angle()+PI/3,28,Color(0.52,0.86,0.74,0.85),7,true)
             elif battle.attacks.kinds[1] == "pounce":
-                for side in [-1,1]:
+                for side in [-1,0,1]:
                     var offset: Vector2 = direction.orthogonal()*side*10
                     draw_line(p+direction*24+offset,p+direction*65+offset,Color("ffe2a0"),4,true)
             else:
@@ -282,6 +296,8 @@ func _draw() -> void:
                     for toe in [-1,0,1]:
                         draw_circle(paw+direction*12+direction.orthogonal()*toe*5,3,Color("fff0c4"))
                 if heavy:
+                    var progress: float = 1.0-battle.attack_flash[slot]/0.3
+                    draw_arc(impact,30+progress*24,0,TAU,36,Color(0.91,0.66,0.30,1-progress),4,true)
                     for side in [-1,1]:
                         draw_line(impact+direction.orthogonal()*side*29,impact+direction.orthogonal()*side*42+direction*8,Color("f6d589"),4,true)
         if slot == 1 and battle.attacks.charging:
@@ -307,33 +323,15 @@ func _ground() -> StyleBoxFlat:
 
 func _text(point: Vector2, value: String, width: float, size: int) -> void:
     if font:
-        draw_string(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, Color("fff0d0"))
+        draw_string_outline(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, 4, Color("f4e9cf"))
+        draw_string(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, Color("394b36"))
 
 func _draw_enemy(enemy: Dictionary) -> void:
     var p: Vector2 = enemy.pos
-    var color := Color("78684b") if enemy.kind == "roller" else Color("53574e")
-    if enemy.flash > 0:
-        color = Color("ffdfb2")
-    draw_circle(p + Vector2(3, 5), 27, Color(0.1, 0.15, 0.1, 0.3))
-    if enemy.kind == "thorn":
-        for i in range(8):
-            var direction := Vector2.from_angle(i * TAU / 8)
-            draw_colored_polygon(PackedVector2Array([p + direction * 37, p + direction.rotated(-0.4) * 20, p + direction.rotated(0.4) * 20]), Color("9a9273"))
-    draw_circle(p + Vector2(0, -10), 26, color)
-    if enemy.kind == "roller":
-        draw_arc(p + Vector2(0, -10), 20, -0.8, PI, 20, Color("bc9d6b"), 5, true)
-        draw_line(p + Vector2(-18, -25), p + Vector2(18, 7), Color("bc9d6b"), 4, true)
-    draw_circle(p + Vector2(-8, -14), 4, Color("f2d798"))
-    draw_circle(p + Vector2(8, -14), 4, Color("f2d798"))
-    if enemy.kind == "armored":
+    if enemy.kind == "armored" and enemy.mode == "exposed":
         var angle: float = enemy.direction.angle()
-        draw_arc(p,30,angle-1.4,angle+1.4,32,Color("c59b68") if enemy.bounce <= 0 else Color("fff2bf"),13,true)
-        var knot: Vector2 = p-enemy.direction*29
-        draw_circle(knot,12,Color("f1d190") if enemy.mode == "exposed" else Color("78664b"))
-        draw_line(knot-Vector2(7,7),knot+Vector2(7,7),Color("5a573b"),3,true)
-        draw_line(knot-Vector2(-7,7),knot+Vector2(-7,7),Color("5a573b"),3,true)
-        if enemy.mode == "exposed":
-            draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("d7f5a9"),5,true)
+        draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("527b47"),9,true)
+        draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("d7f5a9"),4,true)
     var label := "硬壳荆棘团" if enemy.kind == "armored" else ("荆棘团" if enemy.kind == "thorn" else "枝球")
     if enemy.mode == "windup":
         label += " · 蓄力！"
@@ -350,5 +348,5 @@ func _draw_enemy(enemy: Dictionary) -> void:
             label_point = candidate
             break
     _text(label_point, label, 230, 17)
-    draw_rect(Rect2(p + Vector2(-25, -49), Vector2(50, 5)), Color("424e3e"))
-    draw_rect(Rect2(p + Vector2(-25, -49), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))
+    draw_rect(Rect2(p + Vector2(-25, -87), Vector2(50, 5)), Color("424e3e"))
+    draw_rect(Rect2(p + Vector2(-25, -87), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))

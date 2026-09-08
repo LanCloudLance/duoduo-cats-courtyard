@@ -18,6 +18,9 @@ var combat_active := false
 var guarding := false
 var guard_direction := Vector2.RIGHT
 var storybook := false
+var social_visual := false
+var social_kind := ""
+var presentation_clock := 0.0
 var painted: Node2D
 var reaction := 0.0
 var caption_plaque: StyleBoxFlat
@@ -28,7 +31,7 @@ func _ready() -> void:
         caption_plaque = StyleBoxFlat.new()
         caption_plaque.bg_color = Color(0.09,0.18,0.14,0.87)
         caption_plaque.set_corner_radius_all(9)
-        painted = preload("res://game/combat_sprite.gd").new() if combat_visual else preload("res://game/storybook_sprite.gd").new()
+        painted = preload("res://game/combat_sprite.gd").new() if combat_visual else preload("res://game/social_sprite.gd").new() if social_visual else preload("res://game/storybook_sprite.gd").new()
         painted.role = role
         add_child(painted)
 
@@ -43,6 +46,9 @@ func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) ->
     held = staying
     reaction = maxf(0, reaction - delta * 2.0)
     if painted:
+        if social_visual:
+            painted.social_kind = social_kind
+            painted.presentation_clock = presentation_clock
         if combat_visual:
             painted.pose_delta = delta
             painted.combat_kind = combat_kind

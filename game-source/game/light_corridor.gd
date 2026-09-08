@@ -12,6 +12,12 @@ var font: Font
 var camera := Camera2D.new()
 var hud := CanvasLayer.new()
 var actors: Array[Node2D] = []
+const Prop = preload("res://game/storybook_prop.gd")
+var path_views: Array[Node2D] = []
+var mirror_views: Array[Node2D] = []
+var lock_views: Array[Node2D] = []
+var open_lock_views: Array[Node2D] = []
+var presentation_clock := 0.0
 var girl_label: Label
 var cat_label: Label
 var status_label: Label
@@ -30,22 +36,24 @@ func _ready() -> void:
         var actor_view := Actor.new()
         actor_view.role = i
         actor_view.font = font
-        actor_view.scale = Vector2(0.82,0.82)
+        actor_view.storybook = true
+        actor_view.social_visual = true
         actor_view.position = puzzle.positions[i]
         add_child(actor_view)
         actors.append(actor_view)
+    _build_art()
     hud.layer = 12
     add_child(hud)
     _panel(Rect2(24, 20, 1232, 124))
     _label("你照着我", Rect2(48, 34, 250, 38), 28)
     status_label = _label("", Rect2(48, 80, 250, 50), 16)
-    girl_label = _label("P1 朵朵 · 照路 / 过桥", Rect2(330, 34, 420, 38), 22, Color("9cdcca"))
+    girl_label = _label("P1 朵朵 · 照路 / 过桥", Rect2(330, 34, 420, 38), 22, Color("346857"))
     cat_label = _label("", Rect2(754, 34, 470, 38), 22)
     p1_help = _label("", Rect2(330, 81, 405, 50), 17)
     p2_help = _label("", Rect2(754, 81, 470, 50), 17)
     _panel(Rect2(24, 685, 1232, 91))
     objective_label = _label("", Rect2(48, 697, 1170, 32), 21)
-    hint_label = _label("", Rect2(48, 738, 1170, 27), 16, Color("bdd6c7"))
+    hint_label = _label("", Rect2(48, 738, 1170, 27), 16, Color("647253"))
     set_active(false)
     _refresh()
 func set_active(value: bool) -> void:
@@ -86,6 +94,7 @@ func handle_action(slot: int, button: int) -> void:
 func _physics_process(delta: float) -> void:
     if not active or not session.running():
         return
+    presentation_clock += maxf(0,delta)
     if session.single_player:
         puzzle.step(delta, selection.movement(session.movement(0),0), selection.movement(session.movement(0),1), true)
     else:
@@ -101,13 +110,17 @@ func _physics_process(delta: float) -> void:
         var selected: bool = i == selection.actor if session.single_player else i == 0 or i == puzzle.current_cat
         actors[i].caption_override = ["朵朵","团团","圆圆"][i]+(" · 你控制" if selected else "") if session.single_player else ""
         actors[i].caption_visible = selected or actors[i].caption_visible
+        actors[i].social_kind = "operate" if puzzle.is_operator(i) else "lamp" if i == 2 and puzzle.lit else ""
+        actors[i].presentation_clock = presentation_clock
+        if puzzle.is_operator(i): actors[i].facing = 1
         actors[i].update_pose(puzzle.positions[i], selected, i == 2 and puzzle.lit, delta)
+    _update_art()
     _refresh()
 func _refresh() -> void:
     if not is_instance_valid(cat_label):
         return
     cat_label.text = "P2 " + ("团团 · 爪钩" if puzzle.current_cat == 1 else "圆圆 · 定光扣")
-    status_label.text = "双人灯廊 / M11 · %s\nEsc / 菜单键暂停" % ({"cat":"① 探路","girl":"② 接应","route":"③ 选路"}[puzzle.phase])
+    status_label.text = "双猫灯廊 / M15 · %s\nEsc / 菜单键暂停" % ({"cat":"① 探路","girl":"② 接应","route":"③ 选路"}[puzzle.phase])
     if session.keyboard_mode:
         p1_help.text = "WASD 移动光斑 · E 离开操作台" if puzzle.operator_slot == 0 else "WASD 走路 · E 操台 / 固桥 / 集合"
         p2_help.text = "方向键移动光斑 · R 离台" if puzzle.operator_slot == 1 else "方向键走路 · R 工具 · Tab 切猫"
@@ -135,13 +148,13 @@ func _panel(rect: Rect2) -> void:
     panel.position = rect.position
     panel.size = rect.size
     var style := StyleBoxFlat.new()
-    style.bg_color = Color("163930")
-    style.border_color = Color("608775")
+    style.bg_color = Color(0.98,0.94,0.80,0.98)
+    style.border_color = Color("bca876")
     style.set_border_width_all(1)
     style.set_corner_radius_all(16)
     panel.add_theme_stylebox_override("panel", style)
     hud.add_child(panel)
-func _label(value: String, rect: Rect2, size: int, color := Color("fff0d0")) -> Label:
+func _label(value: String, rect: Rect2, size: int, color := Color("3c4938")) -> Label:
     var label := Label.new()
     label.text = value
     label.position = rect.position
@@ -155,30 +168,11 @@ func _text(point: Vector2, value: String, width: float, size := 17, color := Col
     if font:
         draw_string(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, color)
 func _draw() -> void:
-    draw_rect(Rect2(-800,-800,3000,2500),Color("172f31"))
-    draw_rect(Map.FIELD.grow(18),Color("314d50"))
-    draw_rect(Map.FIELD,Color("233f50"))
-    for x in range(295,1060,42):
-        for y in range(270,640,46):
-            draw_line(Vector2(x,y),Vector2(x+16,y-3),Color("355463"),2,true)
-    for land in [Map.NEAR,Map.MID,Map.FAR]:
-        draw_rect(land.grow(4),Color("849775"))
-        draw_rect(land,Color("607c62"))
     _text(Vector2(85,218),"近岸 · 出发",190,21)
     _text(Vector2(580,218),"中岛 · 交换职责",180,21)
     _text(Vector2(1055,218),"远岸 · 团聚",150,21)
-    if not puzzle.front_fixed:
-        _path(Map.CAT_PATH, "cat", Color("8dd7cf"))
-        if puzzle.phase != "cat": _path(Map.GIRL_PATH,"girl",Color("dbc294"))
-    else: _bridge(270,590)
-    if not puzzle.permanent:
-        _path(Map.SAFE_PATH,"safe",Color("8dd7cf"))
-        _path(Map.FAST_PATH,"fast",Color("f0c480"))
-    else: _bridge(750,1070)
-    for island in [Map.ISLAND_ONE,Map.ISLAND_SAFE]:
-        draw_rect(island.grow(4),Color("b4b79c"))
-        draw_rect(island,Color("789077"))
-        draw_arc(island.get_center(),15,0,TAU,24,Color("e5ecd2"),2,true)
+    if puzzle.front_fixed: _bridge(265,595)
+    if puzzle.permanent: _bridge(745,1075)
     _text(Vector2(364,313),"安全点",90,15)
     _text(Vector2(866,275),"安全岛",90,15)
     if not puzzle.permanent:
@@ -190,8 +184,8 @@ func _draw() -> void:
         draw_line(source,desk,Color(0.6,0.91,0.85,0.35),3,true)
         if puzzle._source_ready() and not puzzle.permanent:
             draw_line(desk,puzzle.beam,Color(0.8,0.96,0.8,0.18),6,true)
-            draw_circle(puzzle.beam,Light.BEAM_RADIUS,Color(0.9,1,0.78,0.1))
-            draw_arc(puzzle.beam,Light.SUPPORT_RADIUS,0,TAU,60,Color("f6efad"),2,true)
+            draw_circle(puzzle.beam,Light.BEAM_RADIUS,Color(0.9,1,0.78,0.07))
+            draw_arc(puzzle.beam,Light.SUPPORT_RADIUS,0,TAU,60,Color("fff0ac"),2,true)
             draw_line(puzzle.beam-Vector2(7,0),puzzle.beam+Vector2(7,0),Color("fff5c7"),2)
             draw_line(puzzle.beam-Vector2(0,7),puzzle.beam+Vector2(0,7),Color("fff5c7"),2)
             _text(puzzle.beam+Vector2(-40,83),("团团光斑" if puzzle.phase == "girl" else "朵朵光斑") if session.single_player else "P%d 光斑" % (2 if puzzle.phase == "girl" else 1),80,14)
@@ -214,33 +208,69 @@ func _draw() -> void:
         if puzzle.slipping[i] > 0:
             draw_arc(puzzle.positions[i],29,0,TAU,32,Color("ffcb82"),4,true)
             _text(puzzle.positions[i]+Vector2(-80,-100),"抓稳了！把光照回来",160,16,Color("ffe3aa"))
-func _path(points: Array, kind: String, color: Color) -> void:
-    var chosen: bool = (puzzle.phase == kind) or (puzzle.phase == "route" and puzzle.route == kind)
-    draw_polyline(PackedVector2Array(points),Color(color,0.25),2,true)
-    for point in Map.samples(points):
-        if Map.bank(point) >= 0: continue
-        var bright: bool = chosen and puzzle._source_ready() and point.distance_to(puzzle.beam) <= Light.SUPPORT_RADIUS
-        draw_circle(point,13 if kind in ["girl","safe"] else 10,Color("dcf1bf") if bright else Color("48616a"))
-        draw_arc(point,13 if kind in ["girl","safe"] else 10,0,TAU,16,color if chosen else Color(color,0.35),1.4,true)
 func _bridge(start: float, end: float) -> void:
-    draw_rect(Rect2(start,441,end-start,78),Color("45483c"))
-    for x in range(int(start),int(end),21): draw_rect(Rect2(x,447,18,66),Color("bea271"))
-    for y in [444,516]: draw_line(Vector2(start,y),Vector2(end,y),Color("e5c68e"),4,true)
+    # Exactly the permanent support rectangle from Light.is_safe.
+    draw_rect(Rect2(start,446,end-start,68),Color("746746"))
+    for x in range(int(start),int(end),22):
+        var w := minf(20,end-x)
+        draw_rect(Rect2(x,448,w,64),Color("c2a76d"))
+        draw_line(Vector2(x+2,456),Vector2(x+w-2,455),Color("e5cb93"),1,true)
+        draw_line(Vector2(x+3,497),Vector2(x+w-2,499),Color("a48a56"),1,true)
+    for y in [447,513]: draw_line(Vector2(start,y),Vector2(end,y),Color("ead39b"),2,true)
 func _lamp(point: Vector2,title: String,available: bool,selected: bool) -> void:
     var color := Color("b1ebdf") if available else Color("839083")
     draw_arc(point,25,0,TAU,32,color,3,true)
-    draw_circle(point,10,color)
     if selected and puzzle.lit: draw_arc(point,31,0,TAU,32,Color("fff0a8"),3,true)
     _text(point+Vector2(-48,44),title,96,14,color)
 func _desk(point: Vector2,title: String,available: bool,selected: bool) -> void:
     var color := Color("e8d7a2") if available else Color("8a9783")
-    draw_rect(Rect2(point-Vector2(22,13),Vector2(44,27)),Color("3a5649"))
-    draw_line(point-Vector2(21,8),point+Vector2(21,8),color,8,true)
     if available: draw_arc(point,30,0,TAU,28,color,2,true)
     _text(point+Vector2(-55,49),"导光中" if selected else title,110,15,color)
 func _lock(point: Vector2,title: String,done: bool,available: bool) -> void:
     var color := Color("c0eab1") if done else (Color("f1cd8b") if available else Color("879581"))
-    draw_arc(point,19,0,TAU,24,color,5,true)
-    draw_line(point-Vector2(12,12),point+Vector2(12,12),color,3,true)
+    if available and not done: draw_arc(point,25,0,TAU,32,color,2,true)
     if not done:
         _text(point+Vector2(-48,38),title,96,14,color)
+
+func _prop(index: int, size: Vector2, point: Vector2, depth: int) -> Sprite2D:
+    var view := Prop.make(index,size)
+    view.position = point
+    view.z_index = depth
+    add_child(view)
+    return view
+func _build_art() -> void:
+    var terrain := preload("res://game/light_terrain.gd").new()
+    terrain.z_index = -2
+    add_child(terrain)
+    var paths := [Map.CAT_PATH,Map.GIRL_PATH,Map.SAFE_PATH,Map.FAST_PATH]
+    for i in range(4):
+        var path_view := preload("res://game/light_path_view.gd").new()
+        path_view.configure(paths[i],[23.0,30.0,28.0,23.0][i],["cat","girl","safe","fast"][i])
+        path_view.z_index = -1
+        add_child(path_view)
+        path_views.append(path_view)
+    for point in [Map.GUIDE_NEAR,Map.RELAY,Map.GUIDE_MID]:
+        _prop(0,Vector2(46,64),point+Vector2(35,-3),int(point.y)-1)
+        var mirror := _prop(1,Vector2(37,37),point+Vector2(35,-49),int(point.y)-1)
+        mirror_views.append(mirror)
+    for point in [Map.LAMP_NEAR,Map.LAMP_SAFE,Map.LAMP_FAST]:
+        _prop(2,Vector2(30,43),point+Vector2(31,8),int(point.y)-1)
+    for point in [Map.FRONT_LOCK,Map.FAR_WINCH,Map.FAR_LOCK]:
+        lock_views.append(_prop(7,Vector2(46,44),point+Vector2(21,-4),int(point.y)-1))
+        open_lock_views.append(_prop(8,Vector2(46,44),point+Vector2(21,-4),int(point.y)-1))
+    for point in [Vector2(103,300),Vector2(1175,300)]:
+        _prop(5,Vector2(35,83),point,int(point.y)-1)
+    _update_art()
+func _update_art() -> void:
+    for path_view in path_views: path_view.update_state(puzzle)
+    var desks := [Map.GUIDE_NEAR,Map.RELAY,Map.GUIDE_MID]
+    var phase_index: int = {"cat":0,"girl":1,"route":2}[puzzle.phase]
+    for i in range(mirror_views.size()):
+        var mirror: Node2D = mirror_views[i]
+        var angle: float = (puzzle.beam-desks[i]).angle()
+        mirror.rotation = sin(angle)*0.22
+        mirror.modulate = Color.WHITE if i == phase_index else Color("89988a")
+    var done := [puzzle.front_fixed,puzzle.permanent,puzzle.latched]
+    for i in range(lock_views.size()):
+        lock_views[i].visible = not done[i]
+        open_lock_views[i].visible = done[i]

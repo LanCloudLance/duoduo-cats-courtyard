@@ -407,9 +407,9 @@ func _draw_enemy(enemy: Dictionary) -> void:
         var candidate: Vector2 = p+offset
         var rect := Rect2(candidate-Vector2(0,18),Vector2(230,22))
         if candidate.x < 100 or candidate.x+230 > 1180 or candidate.y < 230 or candidate.y > 625: continue
-        if battle.positions.all(func(point): return not rect.intersects(Rect2(point-Vector2(36,102),Vector2(72,118)))):
+        if battle.positions.all(func(point): return not rect.intersects(Rect2(point-Vector2(68,169),Vector2(136,184)))):
             label_point = candidate
             break
     _text(label_point, label, 230, 17)
-    draw_rect(Rect2(p + Vector2(-25, -87), Vector2(50, 5)), Color("424e3e"))
-    draw_rect(Rect2(p + Vector2(-25, -87), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))
+    draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50, 5)), Color("424e3e"))
+    draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))

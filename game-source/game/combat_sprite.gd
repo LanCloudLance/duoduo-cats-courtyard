@@ -90,7 +90,7 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     var direction := Vector2(0.35,-0.94).normalized()
     if combat_active and combat_kind == "sword":
         hand = Vector2(37,-49)
-        direction = Vector2(combat_direction.x*face,combat_direction.y).rotated(lerpf(-PI/3,PI/3,combat_progress))
+        direction = Vector2(combat_direction.x*face,combat_direction.y).rotated(lerpf(-PI/3,PI/3,clampf(combat_progress*2.3,0,1)))
     var shield := Vector2(-22,-45)
     if guarding: shield = Vector2(0,-49)+Vector2(guard_direction.x*face,guard_direction.y)*31
     smooth_hand = smooth_hand.lerp(hand,blend)

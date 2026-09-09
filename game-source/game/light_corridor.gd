@@ -120,7 +120,7 @@ func _refresh() -> void:
     if not is_instance_valid(cat_label):
         return
     cat_label.text = "P2 " + ("团团 · 爪钩" if puzzle.current_cat == 1 else "圆圆 · 定光扣")
-    status_label.text = "双猫灯廊 / M15 · %s\nEsc / 菜单键暂停" % ({"cat":"① 探路","girl":"② 接应","route":"③ 选路"}[puzzle.phase])
+    status_label.text = "双猫灯廊 · %s\nEsc / 菜单键暂停" % ({"cat":"① 探路","girl":"② 接应","route":"③ 选路"}[puzzle.phase])
     if session.keyboard_mode:
         p1_help.text = "WASD 移动光斑 · E 离开操作台" if puzzle.operator_slot == 0 else "WASD 走路 · E 操台 / 固桥 / 集合"
         p2_help.text = "方向键移动光斑 · R 离台" if puzzle.operator_slot == 1 else "方向键走路 · R 工具 · Tab 切猫"

@@ -12,6 +12,9 @@ func advance(b, seconds: float, p1 := Vector2.ZERO, p2 := Vector2.ZERO) -> void:
 func fixture():
     var b = B.new()
     b._start_wave(2)
+    b.enemies.resize(1)
+    b.enemies[0].hp = 3
+    b.enemies[0].max_hp = 3
     b.positions[0] = Vector2(400,440)
     b.positions[1] = Vector2(950,610)
     b.enemies[0].pos = Vector2(580,440)
@@ -21,13 +24,14 @@ func fixture():
     return b
 func _initialize() -> void:
     var b = fixture()
-    check(b.enemies.size() == 1 and b.enemies[0].kind == "armored","second round teaches one armored opponent")
+    check(b.enemies.size() == 1 and b.enemies[0].kind == "armored","isolated armor fixture retains armor geometry")
     if failed:
         finish()
         return
     var enemy = b.enemies[0]
     b.positions[0] = Vector2(510,440)
     b.attack(0)
+    advance(b,0.08)
     check(enemy.hp == 3,"armor blocks front attacks")
     b.positions[1] = Vector2(650,440)
     b.attack(1)
@@ -51,11 +55,13 @@ func _initialize() -> void:
     b.positions[0] = enemy.pos+Vector2(65,0)
     b.facing[0] = Vector2.LEFT
     b.attack(0)
+    advance(b,0.08)
     check(enemy.hp == 1,"girl can also damage exposed rear knot")
     b.attack_cooldown[0] = 0
     b.positions[0] = enemy.pos-Vector2(65,0)
     b.facing[0] = Vector2.RIGHT
     b.attack(0)
+    advance(b,0.08)
     check(enemy.hp == 1,"exposure does not remove front armor")
     var angle: Vector2 = enemy.direction
     advance(b,0.1,Vector2.DOWN)
@@ -134,7 +140,7 @@ func _initialize() -> void:
     check(enemy.direction == angle,"switching cats does not retarget locked telegraph")
     b = B.new()
     b._start_wave(1)
-    b.enemies[0].hp = 0
+    for e in b.enemies: e.hp = 0
     b.hp[1] = 0
     advance(b,4)
     b.interact(0)
@@ -143,9 +149,9 @@ func _initialize() -> void:
     b.interact(0)
     advance(b,1.3)
     b.interact(0)
-    check(b.wave == 1,"one confirmation cannot start next round")
+    check(b.wave == 2,"rescue releases automatic next wave")
     b.interact(1)
-    check(b.wave == 2 and b.enemies[0].kind == "armored","both ready after rescue starts tutorial round")
+    check(b.wave == 2 and b.enemies[0].kind == "armored","rescue allows mixed round")
     b.hp[0] = 0
     b.hp[1] = 0
     advance(b,2.1)

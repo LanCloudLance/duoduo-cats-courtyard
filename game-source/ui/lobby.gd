@@ -409,7 +409,7 @@ func _process(_delta: float) -> void:
     if rest_area.active != (playing and stage == "rest"):
         rest_area.set_active(playing and stage == "rest")
     get_node("ReplayCourtyard").text = "重走庭院" if stage == "rest" else ("重玩庭院" if stage == "bridge" else "重玩本关")
-    top_status.text = "键盘试玩  ·  M15" if session.keyboard_mode else "检测到 %d 只手柄  ·  M15" % Input.get_connected_joypads().size()
+    top_status.text = "键盘试玩" if session.keyboard_mode else "检测到 %d 只手柄" % Input.get_connected_joypads().size()
     footer_status.text = "双人输入已启用 · 试试两边的摇杆与按钮" if session.running() else session.pause_reason
     mode_help.text = "WASD / E：朵朵  ·  方向键 / 空格：猫咪  ·  Enter 继续" if session.keyboard_mode else "十字键选菜单，面键下选择；菜单键加入 / 准备。无手柄可按 Enter。"
     if not playing and not session.keyboard_mode and session.devices == [-1, -1]:
@@ -442,7 +442,7 @@ func _process(_delta: float) -> void:
             action_text[slot].text = "已收到按钮 %d" % last_buttons[slot]
         slot_badges[slot].text = ("AI" if stage == "combat" else "伴") if session.single_player and slot == 1 else "P%d" % (slot+1)
     if session.single_player:
-        top_status.text = ("单人战斗试玩" if preview_run else "单人完整庭院") + " · M15"
+        top_status.text = ("单人战斗试玩" if preview_run else "单人完整庭院") + ""
         footer_status.text = "单人键盘 · Enter 开始 / 继续" if session.keyboard_mode else "单手柄 · 十字键选菜单 / 下确认 · 菜单键准备 / 继续"
         if not session.focused: footer_status.text = "返回游戏窗口后继续"
         mode_help.text = "WASD 移动 · E 互动 · Tab 换角色；战斗 F 攻击 / Q 闪避，解谜 R 工具 / Q 切回。"

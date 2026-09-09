@@ -6,6 +6,7 @@ var pause_reason: String = "等待两位加入"
 var focused: bool = true
 var keyboard_mode: bool = false
 var single_player := false
+var stick_deadzone := 0.2
 var axes: Array[Vector2] = [Vector2.ZERO, Vector2.ZERO]
 
 func slot_of(device: int) -> int:
@@ -73,9 +74,10 @@ func movement(slot: int) -> Vector2:
         return Vector2.ZERO
     var value := axes[slot]
     var strength := minf(value.length(), 1.0)
-    if strength <= 0.2:
+    var deadzone := clampf(stick_deadzone,0.05,0.4)
+    if strength <= deadzone:
         return Vector2.ZERO
-    return value.normalized() * ((strength - 0.2) / 0.8)
+    return value.normalized() * ((strength - deadzone) / (1.0-deadzone))
 
 func release_slot(slot: int) -> void:
     if slot >= 0 and slot <= 1:

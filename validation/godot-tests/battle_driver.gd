@@ -4,6 +4,7 @@ var host
 var b
 var shield_openings := 0
 var stump_openings := 0
+var collision_openings := 0
 var tracked: Array = []
 func _init(owner, battle) -> void:
     host = owner
@@ -22,6 +23,7 @@ func observe() -> void:
             tracked.append(enemy)
             if enemy.opening == "shield": shield_openings += 1
             if enemy.opening == "stump": stump_openings += 1
+            if enemy.opening == "collision": collision_openings += 1
 func step_slot(slot: int) -> void:
     observe()
     if b.hp[slot] <= 0:
@@ -78,6 +80,15 @@ func step_slot(slot: int) -> void:
         movement = toward(point,target.pos)
     # Avoid another charging lane; shield may handle a frontal threat.
     for threat in b.enemies:
+        if threat.mode in ["cast","burst","slam_windup","slam","melee_windup","melee"] and b.Encounter.danger(threat,point,24):
+            var origin: Vector2 = threat.get("aim",threat.pos) if threat.mode in ["cast","burst"] else threat.pos
+            movement = origin.direction_to(point)
+            if movement.length() < 0.1: movement = Vector2.UP
+            if not b.Space.valid(point+movement*100,b.Space.ACTOR_RADIUS): movement = -movement
+            drive(slot,movement)
+            if slot == 0: shield(false)
+            if threat.timer < 0.3: tap(KEY_Q if slot == 0 else KEY_K)
+            return
         if threat.mode not in ["windup","rush"]: continue
         var end: Vector2 = threat.pos+threat.direction*(364 if threat.kind == "roller" else 230)
         var closest := Geometry2D.get_closest_point_to_segment(point,threat.pos,end)

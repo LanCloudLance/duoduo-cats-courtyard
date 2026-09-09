@@ -1,5 +1,6 @@
 extends RefCounted
 # Simulation owns two player health pools. The inactive cat is a visual follower.
+const Encounter = preload("res://game/battle_encounter.gd")
 const Attacks = preload("res://game/battle_attacks.gd")
 var attacks = Attacks.new()
 const Space = preload("res://game/battle_space.gd")
@@ -19,6 +20,14 @@ var dodge_cooldown: Array[float] = [0.0, 0.0]
 var dodge_direction: Array[Vector2] = [Vector2.RIGHT, Vector2.RIGHT]
 var invulnerable: Array[float] = [0.0, 0.0]
 var guarding := false
+var guard_age := 0.0
+var fx: Array[Dictionary] = []
+var feedback_id := 0
+var last_feedback := ""
+var assist_cooldown := 0.0
+var assist_role := 1
+var assist_time := 0.0
+var assist_point := Vector2.ZERO
 var enemies: Array[Dictionary] = []
 var wave := 0
 var phase := "briefing"
@@ -29,6 +38,12 @@ var retries := 0
 var rescuer := -1
 var rescue_progress := 0.0
 var message := "先练 F 横扫、J 猫咪攻击、Tab 切猫；两位按互动键再开战。"
+
+func feedback(kind: String, point: Vector2, slot: int) -> void:
+    feedback_id += 1
+    last_feedback = kind
+    fx.append({"kind":kind,"pos":point,"slot":slot,"life":0.26})
+    if fx.size() > 24: fx.pop_front()
 
 func actor(slot: int) -> int:
     return 0 if slot == 0 else current_cat
@@ -82,6 +97,19 @@ func interact(slot: int) -> void:
 func switch_cat() -> void:
     if hp[1] <= 0 or phase == "complete":
         return
+    # An earned departure assist cannot be farmed by switching repeatedly.
+    if phase == "combat" and assist_cooldown <= 0:
+        for enemy in enemies:
+            if enemy.hp > 0 and enemy.get("mark_time",0.0) > 0 and not enemy.get("assist_used",false) and positions[current_cat].distance_to(enemy.pos) < 130 and Space.clear_line(positions[current_cat],enemy.pos,0):
+                enemy.assist_used = true
+                enemy.hp = maxf(0,enemy.hp-1)
+                enemy.flash = 0.15
+                assist_cooldown = 3.0
+                assist_role = current_cat
+                assist_time = 0.22
+                assist_point = enemy.pos
+                feedback("assist",enemy.pos,1)
+                break
     attacks.cancel(self,1)
     current_cat = 3 - current_cat
     confirmed[1] = false
@@ -105,18 +133,19 @@ func dodge(slot: int, direction: Vector2) -> void:
         _cancel_rescue()
     attacks.cancel(self,slot)
     dodge_direction[slot] = direction.normalized() if direction.length() > 0.1 else facing[slot]
-    dodge_time[slot] = 0.25
-    dodge_cooldown[slot] = 0.95
+    dodge_time[slot] = 0.22
+    dodge_cooldown[slot] = 0.72
     if slot == 0:
         guarding = false
 
-func hurt(slot: int, source: Vector2) -> bool:
+func hurt(slot: int, source: Vector2, blockable := true) -> bool:
     if hp[slot] <= 0 or invulnerable[slot] > 0 or dodge_time[slot] > 0 or phase != "combat":
         return false
-    if slot == 0 and guarding and facing[0].dot(positions[0].direction_to(source)) >= 0.25:
+    if blockable and slot == 0 and guarding and facing[0].dot(positions[0].direction_to(source)) >= 0.25:
         message = "挡住了！朵朵正面举盾，猫咪可以绕到侧面抓击。"
         return false
     attacks.cancel(self,slot)
+    feedback("hurt",positions[actor(slot)],slot)
     hp[slot] -= 1
     invulnerable[slot] = 1.2
     if rescuer == slot:
@@ -138,14 +167,13 @@ func _start_wave(number: int) -> void:
     confirmed[0] = false
     confirmed[1] = false
     enemies.clear()
-    _spawn("thorn" if number == 1 else "armored", Vector2(900, 420))
-    if number == 3:
-        _spawn("roller", Vector2(1010, 570))
-    message = ["看预警，侧闪后进攻。", "硬壳来了：盾挡或引它撞树桩，伙伴绕后拆结点。", "先打谁由你们决定：一位牵制，另一位寻找破绽。"][number-1]
+    Encounter.start(self,number)
+    message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会锁定脚下：先打断后排，或分工拆掉硬壳。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
 
 func _spawn(kind: String, point: Vector2) -> void:
-    enemies.append({"kind": kind, "pos": point, "hp": 4 if kind == "roller" else 3,
-        "max_hp": 4 if kind == "roller" else 3, "mode": "approach", "timer": 0.8,
+    var health: float = {"sprout":4.0,"weaver":6.0,"elder":22.0,"roller":5.0,"armored":5.0}.get(kind,5.0)
+    enemies.append({"kind": kind, "pos": point, "hp": health,
+        "max_hp": health, "mode": "approach", "timer": 0.8,
         "direction": Vector2.LEFT, "hit": {}, "flash": 0.0, "bounce": 0.0, "target": 0, "opening": ""})
 
 func _retry_wave() -> void:
@@ -174,13 +202,20 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
         if retry_time >= 2.0:
             _retry_wave()
         return
-    var pouncing: bool = attacks.step(self,dt)
-    var inputs := [p1.limit_length(), p2.limit_length()]
+    guard_age = guard_age+dt if guarding else 0.0
+    assist_cooldown = maxf(0,assist_cooldown-dt)
+    assist_time = maxf(0,assist_time-dt)
+    for effect in fx: effect.life -= dt
+    fx = fx.filter(func(effect): return effect.life > 0)
     for slot in range(2):
         attack_cooldown[slot] = maxf(0, attack_cooldown[slot] - dt)
         attack_flash[slot] = maxf(0, attack_flash[slot] - dt)
         dodge_cooldown[slot] = maxf(0, dodge_cooldown[slot] - dt)
         invulnerable[slot] = maxf(0, invulnerable[slot] - dt)
+    if guarding: attacks.cancel(self,0)
+    var pouncing: bool = attacks.step(self,dt)
+    var inputs := [p1.limit_length(), p2.limit_length()]
+    for slot in range(2):
         if hp[slot] <= 0 or phase == "complete":
             continue
         var velocity: Vector2 = inputs[slot] * (90.0 if slot == 0 and guarding else 215.0)
@@ -211,6 +246,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if phase == "intermission":
         intermission -= dt
         intermission = maxf(0,intermission)
+        if intermission <= 0 and hp[0] > 0 and hp[1] > 0: _start_wave(wave+1)
     elif phase == "combat":
         for enemy in enemies:
             if enemy.hp > 0:
@@ -218,18 +254,26 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
         enemies = enemies.filter(func(e): return e.hp > 0)
         if enemies.is_empty() and (hp[0] > 0 or hp[1] > 0):
             phase = "intermission" if wave < 3 else "clear"
-            intermission = 3.0
+            intermission = 1.25
             confirmed = [false,false]
-            message = "这一段安全了，扶起伙伴；整理好后两位确认继续。" if wave < 3 else "空地安全了！扶起伙伴，再到右边营火集合。"
+            message = "喘口气，下一段马上开始；伙伴坐下时先扶起来。" if wave < 3 else "空地安全了！扶起伙伴，再到右边营火集合。"
 
 func _busy(except_enemy: Dictionary) -> bool:
+    var count := 0
     for other in enemies:
-        if not is_same(other,except_enemy) and other.hp > 0 and (other.mode in ["windup","rush"] or (solo_mode and other.mode == "exposed")): return true
-    return false
+        if is_same(other,except_enemy) or other.hp <= 0: continue
+        if solo_mode and other.mode == "exposed": return true
+        if other.mode in ["windup","rush","cast","burst","slam_windup","slam","melee_windup","melee"]:
+            count += 1
+            # Never stack melee and a major attack on the same player.
+            if other.target == except_enemy.target: return true
+    return count >= (1 if solo_mode else 2)
 func _expose(enemy: Dictionary, cause: String) -> void:
-    enemy.mode = "exposed" if enemy.kind == "armored" else "rest"
+    enemy.mode = "exposed" if enemy.kind in ["armored","elder"] else "rest"
     enemy.timer = (2.4 if cause == "shield" else 2.0) if enemy.kind == "armored" else 1.25
     if solo_mode and enemy.kind == "armored": enemy.timer += 0.8
+    if enemy.kind == "elder": enemy.timer = 2.0 if cause == "stump" or guard_age <= 0.18 else 1.15
+    if cause == "shield": feedback("parry" if guard_age <= 0.18 else "guard",enemy.pos,0)
     enemy.opening = cause
     enemy.heavy_extended = false
     if hp[0] > 0 and hp[1] > 0:
@@ -250,8 +294,24 @@ func _rush(enemy: Dictionary, dt: float) -> void:
         var shield: bool = slot == 0 and guarding and dodge_time[0] <= 0 and facing[0].dot(-enemy.direction) >= 0.25 and facing[0].dot(positions[0].direction_to(before)) >= 0.25
         var t := Space.contact(before,end,positions[actor(slot)],64.0 if shield else 44.0)
         if t != INF: hits.append({"t":t,"kind":"shield" if shield else "body","slot":slot})
+    for other in enemies:
+        if is_same(other,enemy) or other.hp <= 0 or other.kind == "armored": continue
+        var t := Space.contact(before,end,other.pos,Space.ENEMY_RADIUS*2)
+        if t != INF: hits.append({"t":t,"kind":"enemy","slot":-1,"enemy":other})
     hits.sort_custom(func(a,b): return a.t < b.t)
     for hit in hits:
+        if hit.kind == "enemy":
+            var other: Dictionary = hit.enemy
+            other.hp = maxf(0,other.hp-1)
+            other.flash = 0.13
+            if other.mode != "rush":
+                other.mode = "rest"
+                other.timer = 0.7
+            enemy.pos = before.lerp(end,maxf(0,hit.t-0.001))
+            _expose(enemy,"collision")
+            feedback("interrupt",other.pos,-1)
+            message = "撞到一起了！后排被打断，趁现在追击。"
+            return
         if hit.kind == "stump" or hit.kind == "shield":
             enemy.pos = before.lerp(end,maxf(0,hit.t-0.001))
             if hit.slot >= 0: enemy.hit[hit.slot] = true
@@ -268,6 +328,7 @@ func _enemy_step(enemy: Dictionary, dt: float) -> void:
     enemy.bounce = maxf(0,enemy.bounce-dt)
     if enemy.get("control_time",0.0) > 0: return
     enemy.timer -= dt
+    if Encounter.step(self,enemy,dt): return
     if enemy.mode == "approach":
         var target: int = enemy.target if hp[enemy.target] > 0 else 1-enemy.target
         if hp[1-target] > 0 and positions[actor(1-target)].distance_to(enemy.pos)+0.1 < positions[actor(target)].distance_to(enemy.pos): target = 1-target

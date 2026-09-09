@@ -19,7 +19,7 @@ func _initialize() -> void:
     b.interact(0)
     check(b.enemies.is_empty(), "both players must confirm combat start")
     b.interact(1)
-    check(b.wave == 1 and b.enemies.size() == 1, "first wave starts after both confirmations")
+    check(b.wave == 1 and b.enemies.size() == 3, "first wave starts after both confirmations")
     var snapshot: Array = b.positions.duplicate()
     var timer: float = b.enemies[0].timer
     b.step(0.1, Vector2.RIGHT, Vector2.LEFT, false)
@@ -27,9 +27,11 @@ func _initialize() -> void:
     b.positions[0] = Vector2(700, 440)
     b.enemies[0].pos = Vector2(780, 440)
     b.attack(0)
-    check(b.enemies[0].hp == 2, "wood sword damages nearby enemy")
+    advance(b,0.08)
+    check(b.enemies[0].hp == 4, "wood sword damages nearby enemy")
     b.attack(0)
-    check(b.enemies[0].hp == 2, "attack cannot bypass cooldown by button spam")
+    advance(b,0.08)
+    check(b.enemies[0].hp == 4, "attack cannot bypass cooldown by button spam")
     b.positions[0] = Vector2(300, 450)
     b.facing[0] = Vector2.RIGHT
     b.guarding = true
@@ -64,22 +66,21 @@ func _initialize() -> void:
     check(b.hp[1] == 1 and is_equal_approx(b.invulnerable[1], 0.7) and is_equal_approx(b.attack_cooldown[1], 0.3), "switch preserves cat health and recovery timers")
     b = Battle.new()
     start(b)
-    b.enemies[0].hp = 0
+    for enemy in b.enemies: enemy.hp = 0
     advance(b, 0.1)
     check(b.phase == "intermission", "cleared first wave offers breathing room")
     advance(b, 3.2)
-    check(b.wave == 1 and b.enemies.is_empty(), "intermission does not auto-start before both ready")
+    check(b.wave == 2 and b.enemies.size() == 3, "intermission automatically starts next wave without repeated confirmation")
     start(b)
-    check(b.wave == 2 and b.enemies.size() == 1, "second wave teaches one armored enemy")
+    check(b.wave == 2 and b.enemies.size() == 3, "second wave combines armor, caster and melee")
     b.hp[0] = 0
     b.hp[1] = 0
     advance(b, 2.2)
-    check(b.wave == 2 and b.hp == [3, 3] and b.enemies.size() == 1, "team wipe retries current wave without replaying previous wave")
-    b.enemies[0].hp = 0
+    check(b.wave == 2 and b.hp == [3, 3] and b.enemies.size() == 3, "team wipe retries current wave without replaying previous wave")
+    for enemy in b.enemies: enemy.hp = 0
     advance(b,3.2)
     start(b)
-    b.enemies[0].hp = 0
-    b.enemies[1].hp = 0
+    for enemy in b.enemies: enemy.hp = 0
     advance(b, 0.1)
     check(b.phase == "clear", "all waves unlock camp exit")
     b.positions[0] = Battle.EXIT
@@ -95,6 +96,7 @@ func _initialize() -> void:
     check(b.phase == "complete", "both players at camp complete combat stage")
     b = Battle.new()
     start(b)
+    b.enemies.resize(1)
     b.positions[0] = Vector2(600, 440)
     b.positions[1] = Vector2(200, 600)
     b.enemies[0].pos = Vector2(820, 440)
@@ -108,6 +110,7 @@ func _initialize() -> void:
     check(b.hp[0] == 3, "moving out of warning lane avoids charge")
     b = Battle.new()
     start(b)
+    b.enemies.resize(1)
     b.positions[0] = Vector2(600, 440)
     b.positions[1] = Vector2(200, 620)
     b.enemies[0].pos = Vector2(780, 440)
@@ -116,6 +119,7 @@ func _initialize() -> void:
     check(b.hp[0] == 2, "standing in telegraphed lane takes exactly one hit per charge")
     b = Battle.new()
     start(b)
+    b.enemies.resize(1)
     b.positions[0] = Vector2(600, 440)
     b.positions[1] = Vector2(200, 620)
     b.enemies[0].pos = Vector2(780, 440)
@@ -133,13 +137,17 @@ func _initialize() -> void:
     b.hp[0] = 0
     b.attack_cooldown[0] = 0
     b.attack(0)
+    advance(b,0.08)
     check(b.attack_cooldown[0] == 0, "downed player cannot attack")
     b = Battle.new()
     b._start_wave(3)
     b.positions[0] = Vector2(820, 570)
     b.positions[1] = Vector2(200, 620)
-    b.enemies[0].hp = 0
-    b.enemies[1].timer = 0
+    var rolling: Dictionary = b.enemies[2]
+    b.enemies.clear()
+    b.enemies.append(rolling)
+    b.enemies[0].pos = Vector2(1010,570)
+    b.enemies[0].timer = 0
     advance(b, 0.9)
     check(b.enemies[0].kind == "roller" and b.enemies[0].mode == "windup" and b.hp[0] == 3, "rolling enemy has longer safe telegraph")
     advance(b, 1.0)

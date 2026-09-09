@@ -11,6 +11,7 @@ func run() -> void:
     await frames(2)
     b = lobby.arena.battle
     b._start_wave(2)
+    b.enemies.resize(1)
     var e = b.enemies[0]
     e.pos = Vector2(720,320)
     e.timer = 0.0
@@ -37,16 +38,17 @@ func run() -> void:
         await frames(1)
     check(e.hp == 0,"girl defeats stump-exposed knot through normal attack events")
     await frames(4)
-    check(b.phase == "intermission" and b.wave == 2,"clearing lesson does not silently start mixed round")
+    check(b.phase == "intermission" and b.wave == 2,"clearing isolated armor offers brief recovery")
     for i in range(240):
-        if b.intermission <= 0: break
+        if b.wave == 3: break
         await frames(1)
     tap_key(KEY_E)
-    check(b.wave == 2,"girl alone cannot start mixed round")
+    check(b.wave == 3,"next wave starts automatically after recovery")
     tap_key(KEY_SPACE)
-    check(b.wave == 3,"two fresh confirmations start mixed round")
+    check(b.wave == 3,"extra interaction does not skip the new wave")
     # Actual shield contact followed by event-driven pause and resume.
     b._start_wave(2)
+    b.enemies.resize(1)
     e = b.enemies[0]
     e.pos = Vector2(600,440)
     e.timer = 0.0

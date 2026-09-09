@@ -75,6 +75,7 @@ func run() -> void:
     attack.pressed = false
     Input.parse_input_event(attack)
     Input.flush_buffered_events()
+    await frames(9)
     check(target.hp == 8,"single pad release damages target with white heavy")
     lobby._connection_changed(9,false)
     await frames(2)

@@ -28,7 +28,7 @@ func sync(enemy: Dictionary) -> void:
     if kind != enemy.kind:
         kind = enemy.kind
         if body: body.queue_free()
-        body = prop(0 if kind == "thorn" else 1 if kind == "armored" else 2,94)
+        body = prop(0 if kind in ["thorn","sprout"] else 1 if kind in ["armored","elder"] else 2,132 if kind == "elder" else 65 if kind == "sprout" else 80 if kind == "weaver" else 94)
         add_child(body)
         if bud: bud.queue_free()
         bud = prop(4,37)
@@ -37,10 +37,13 @@ func sync(enemy: Dictionary) -> void:
     position = enemy.pos
     z_index = int(position.y)
     body.flip_h = enemy.direction.x < 0
-    body.modulate = Color(1.45,1.35,1.10) if enemy.flash > 0 else Color.WHITE
-    body.position.y = -sin(clampf(enemy.timer,0,1)*PI)*3 if enemy.mode == "windup" else 0.0
-    bud.visible = kind == "armored" and enemy.mode == "exposed"
-    bud.position = -enemy.direction*29
+    body.modulate = Color(1.45,1.35,1.10) if enemy.flash > 0 else (Color("dcc6f7") if kind == "weaver" else Color("bce7a5") if kind == "sprout" else Color.WHITE)
+    # A 40 ms contact pose only holds this enemy artwork, never the simulation.
+    if enemy.flash <= 0.09:
+        body.position.y = -sin(clampf(enemy.timer,0,1)*PI)*5 if enemy.mode in ["windup","cast","melee_windup","slam_windup"] else 0.0
+    body.rotation = -0.06*signf(enemy.direction.x) if enemy.flash > 0.09 else 0.0
+    bud.visible = (kind in ["armored","elder"] and enemy.mode == "exposed") or kind == "weaver"
+    bud.position = Vector2(0,-65) if kind == "weaver" else -enemy.direction*29
     queue_redraw()
 
 func _draw() -> void:
@@ -48,6 +51,12 @@ func _draw() -> void:
     draw_set_transform(Vector2(0,4),0,Vector2(1,0.4))
     draw_circle(Vector2.ZERO,32,Color(0.13,0.20,0.10,0.23))
     draw_set_transform(Vector2.ZERO)
+    if kind == "elder":
+        draw_line(Vector2(12,-80),Vector2(25,-100),Color("765332"),5,true)
+        draw_circle(Vector2(25,-86),11,Color("ffe59b"))
+        draw_arc(Vector2(25,-86),15,0,TAU,24,Color(1,0.83,0.42,0.4),4,true)
+    if state.get("mark_time",0.0) > 0:
+        draw_arc(Vector2(0,-37),46,0,TAU,32,Color("a4e8ea"),2,true)
     if kind == "armored":
         var angle: float = state.direction.angle()
         draw_arc(Vector2.ZERO,32,angle-1.4,angle+1.4,28,Color("84613d"),9,true)

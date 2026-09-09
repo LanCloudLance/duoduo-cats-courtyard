@@ -26,18 +26,22 @@ func run() -> void:
     check(b.guarding, "holding G raises shield")
     key_event(KEY_G, false)
     check(not b.guarding, "releasing G lowers shield")
+    for enemy in b.enemies:
+        enemy.mode = "rest"
+        enemy.timer = 100.0
     b.enemies[0].mode = "rest"
     b.enemies[0].timer = 100.0
     b.positions[0] = b.enemies[0].pos + Vector2(-70, 0)
     tap_key(KEY_F)
-    check(b.enemies[0].hp == 2, "F attacks through production keyboard router")
+    await frames(2)
+    check(b.enemies[0].hp == 4, "F attacks through production keyboard router")
     b.positions[b.current_cat] = b.enemies[0].pos + Vector2(0, 70)
     key_event(KEY_UP,true)
     await frames(1)
     key_event(KEY_UP,false)
     tap_key(KEY_J)
     await frames(2)
-    check(b.enemies[0].hp == 1, "J independently scratches as P2")
+    check(b.enemies[0].hp == 3, "J independently scratches as P2")
     tap_key(KEY_Q)
     tap_key(KEY_K)
     check(b.dodge_time[0] > 0 and b.dodge_time[1] > 0, "both keyboard dodge bindings work")
@@ -76,16 +80,23 @@ func run() -> void:
             key_event(face_key,true)
             await frames(1)
             key_event(face_key,false)
-            for hit in range(int(enemy.hp)):
+            for hit in range(80):
+                if enemy.hp <= 0: break
+                for frozen in opponents:
+                    frozen.mode = "exposed" if frozen.kind == "armored" else "rest"
+                    frozen.timer = 100.0
+                b.positions[0] = enemy.pos + Vector2(70 if enemy.kind == "armored" else -70,0)
                 await frames(9)
                 tap_key(KEY_F)
-                await frames(1)
+                await frames(3)
         if wave_number < 3:
-            await frames(49)
-            check(b.wave == wave_number and b.phase == "intermission", "cleared round waits for both players")
+            for wait_frame in range(80):
+                if b.wave == wave_number+1: break
+                await frames(1)
+            check(b.wave == wave_number+1 and b.phase == "combat", "cleared round automatically begins the next encounter")
             tap_key(KEY_E)
             tap_key(KEY_SPACE)
-            check(b.wave == wave_number+1, "both confirmations start next round")
+            check(b.wave == wave_number+1, "extra confirmations cannot skip a combat wave")
     await frames(2)
     check(b.phase == "clear", "attacks can defeat all three rounds and unlock camp")
     b.positions[0] = b.EXIT + Vector2(-35, 0)

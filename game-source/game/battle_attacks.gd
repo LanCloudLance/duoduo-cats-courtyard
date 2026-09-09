@@ -1,47 +1,80 @@
 extends RefCounted
-# Attack lifecycle and hit resolution; no ownership reference back to Battle.
 const Space = preload("res://game/battle_space.gd")
-const CHARGE_SECONDS := 0.6
+const CHARGE_SECONDS := 0.55
+const BUFFER_SECONDS := 0.12
 var charging := false
 var charge_time := 0.0
 var pounce_left := 0.0
 var pounce_hit := false
 var kinds: Array[String] = ["sword", "pounce"]
+var durations: Array[float] = [0.30,0.28]
+var pending: Array[float] = [-1.0,-1.0]
+var buffered: Array[float] = [0.0,0.0]
+var buffered_release := false
+var combo := 0
+var combo_window := 0.0
+var current_combo := 0
 
 func available(b, slot: int) -> bool:
     return slot >= 0 and slot <= 1 and b.hp[slot] > 0 and b.attack_cooldown[slot] <= 0 and b.dodge_time[slot] <= 0 and b.phase != "complete" and not (slot == 0 and b.guarding)
 
+func aim(b, slot: int) -> Vector2:
+    var direction: Vector2 = b.facing[slot]
+    var nearest := INF
+    for enemy in b.enemies:
+        if enemy.hp <= 0: continue
+        var offset: Vector2 = enemy.pos-b.positions[b.actor(slot)]
+        if offset.length() < nearest and offset.length() < 155 and offset.length() > 0.1 and b.facing[slot].dot(offset.normalized()) >= cos(deg_to_rad(14)) and Space.clear_line(b.positions[b.actor(slot)],enemy.pos,0):
+            direction = offset.normalized()
+            nearest = offset.length()
+    return direction
+
 func press(b, slot: int) -> void:
-    if not available(b,slot) or (slot == 1 and charging): return
+    if slot < 0 or slot > 1 or b.hp[slot] <= 0 or b.phase == "complete": return
+    if not available(b,slot):
+        if not (slot == 0 and b.guarding) and maxf(b.attack_cooldown[slot],b.dodge_time[slot]) <= BUFFER_SECONDS:
+            buffered[slot] = BUFFER_SECONDS
+        return
+    if slot == 1 and charging: return
+    buffered[slot] = 0
     if b.rescuer == slot: b._cancel_rescue()
-    b.attack_direction[slot] = b.facing[slot]
+    b.attack_direction[slot] = aim(b,slot)
     if slot == 0:
+        current_combo = combo if combo_window > 0 else 0
+        combo = (current_combo+1)%3
+        combo_window = 0.85
         kinds[0] = "sword"
-        b.attack_cooldown[0] = 0.5
-        b.attack_flash[0] = 0.24
-        strike(b,0,110,PI/3,1,false,false)
+        _begin(b,0,0.38 if current_combo == 2 else 0.30,0.11 if current_combo == 2 else 0.065)
     elif b.current_cat == 1:
         kinds[1] = "pounce"
-        b.attack_cooldown[1] = 0.35
-        b.attack_flash[1] = 0.22
-        pounce_left = 45
+        pounce_left = 72
         pounce_hit = false
+        _begin(b,1,0.28,-1)
     else:
         charging = true
         charge_time = 0
         kinds[1] = "charge"
 
+func _begin(b, slot: int, duration: float, impact: float) -> void:
+    durations[slot] = duration
+    b.attack_cooldown[slot] = duration
+    b.attack_flash[slot] = duration
+    pending[slot] = impact
+    if b.has_method("feedback"): b.feedback("swing",b.positions[b.actor(slot)],slot)
+
 func release(b, slot: int) -> void:
-    if slot != 1 or not charging: return
+    if slot != 1: return
+    if buffered[1] > 0 and not charging:
+        buffered_release = true
+        return
+    if not charging: return
     var heavy := charge_time >= CHARGE_SECONDS-0.00001
     charging = false
     charge_time = 0
     if b.current_cat != 2 or not available(b,1): return
-    b.attack_direction[1] = b.facing[1]
+    b.attack_direction[1] = aim(b,1)
     kinds[1] = "heavy" if heavy else "slap"
-    b.attack_cooldown[1] = 0.9 if heavy else 0.7
-    b.attack_flash[1] = 0.3 if heavy else 0.22
-    strike(b,1,80,PI/4,2 if heavy else 1,false,heavy)
+    _begin(b,1,0.50 if heavy else 0.28,0.105 if heavy else 0.05)
 
 func cancel(b, slot := -1) -> void:
     if slot != 0:
@@ -49,19 +82,43 @@ func cancel(b, slot := -1) -> void:
         charge_time = 0
         pounce_left = 0
         pounce_hit = false
+        buffered_release = false
     for index in range(2):
-        if slot == -1 or slot == index: b.attack_flash[index] = 0
+        if slot == -1 or slot == index:
+            b.attack_flash[index] = 0
+            pending[index] = -1
+            buffered[index] = 0
 
 func step(b, dt: float) -> bool:
+    combo_window = maxf(0,combo_window-dt)
     for enemy in b.enemies:
         enemy.control_immune = maxf(0,enemy.get("control_immune",0.0)-dt)
         enemy.control_time = maxf(0,enemy.get("control_time",0.0)-dt)
+        enemy.mark_time = maxf(0,enemy.get("mark_time",0.0)-dt)
+    for slot in range(2):
+        if pending[slot] >= 0:
+            pending[slot] -= dt
+            if pending[slot] <= 0:
+                pending[slot] = -1
+                if slot == 0: strike(b,0,112,PI/3,2 if current_combo == 2 else 1,false,current_combo == 2)
+                else: strike(b,1,105 if kinds[1] == "heavy" else 82,PI/2 if kinds[1] == "heavy" else PI/3,2 if kinds[1] == "heavy" else 1,false,kinds[1] == "heavy")
+        if buffered[slot] > 0:
+            if available(b,slot):
+                var quick_release := slot == 1 and buffered_release
+                buffered_release = false if slot == 1 else buffered_release
+                press(b,slot)
+                if quick_release: release(b,slot)
+            else:
+                buffered[slot] = maxf(0,buffered[slot]-dt)
+                if slot == 1 and buffered[slot] <= 0: buffered_release = false
     if charging:
+        var before := charge_time
         charge_time = minf(CHARGE_SECONDS,charge_time+dt)
+        if before < CHARGE_SECONDS and charge_time >= CHARGE_SECONDS: b.feedback("ready",b.positions[2],1)
     var was_pouncing := pounce_left > 0
     if was_pouncing:
         var origin: Vector2 = b.positions[1]
-        var amount := minf(pounce_left,375*dt)
+        var amount := minf(pounce_left,520*dt)
         var end: Vector2 = Space.move(origin,b.attack_direction[1]*amount,Space.ACTOR_RADIUS)
         var contact := 1.0
         for enemy in b.enemies:
@@ -71,8 +128,7 @@ func step(b, dt: float) -> bool:
         b.positions[1] = origin.lerp(end,contact)
         pounce_left = maxf(0,pounce_left-amount)
         if contact < 1 or origin.distance_to(end) < amount*0.5: pounce_left = 0
-        if not pounce_hit:
-            pounce_hit = strike(b,1,65,PI/6,1,true,false)
+        if not pounce_hit: pounce_hit = strike(b,1,67,PI/5,1,true,false)
     return was_pouncing
 
 func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: bool, heavy: bool) -> bool:
@@ -82,27 +138,48 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
     for enemy in b.enemies:
         if enemy.hp <= 0: continue
         var offset: Vector2 = enemy.pos-origin
-        if offset.length() <= reach and (offset.length() < 0.01 or direction.dot(offset.normalized()) >= cos(half_angle)) and Space.clear_line(origin,enemy.pos,0):
-            targets.append(enemy)
+        if offset.length() <= reach and (offset.length() < 0.01 or direction.dot(offset.normalized()) >= cos(half_angle)) and Space.clear_line(origin,enemy.pos,0): targets.append(enemy)
     targets.sort_custom(func(a,c): return origin.distance_squared_to(a.pos) < origin.distance_squared_to(c.pos))
     for enemy in targets:
-        if enemy.kind == "armored" and (enemy.mode != "exposed" or enemy.direction.dot(enemy.pos.direction_to(origin)) > -0.258819):
+        var blocked: bool = enemy.kind == "armored" and (enemy.mode != "exposed" or enemy.direction.dot(enemy.pos.direction_to(origin)) > -0.258819)
+        if blocked:
             enemy.bounce = 0.2
-            if b.hp[0] > 0 and b.hp[1] > 0:
-                b.message = "树皮挡住了！用盾或树桩让它撞停，再打背后展开的结点。"
+            b.feedback("blocked",enemy.pos,slot)
+            if b.hp[0] > 0 and b.hp[1] > 0: b.message = "树皮挡住了！盾挡或引它撞树桩，再绕到背后。"
         else:
-            enemy.hp = maxi(0,enemy.hp-damage)
-            enemy.flash = 0.16
+            var amount := float(damage)
+            if enemy.kind == "elder":
+                if enemy.mode == "exposed": amount *= 1.5
+                elif enemy.direction.dot(enemy.pos.direction_to(origin)) > 0.2: amount *= 0.4
+            enemy.hp = maxf(0,enemy.hp-amount)
+            enemy.flash = 0.13
+            b.feedback("heavy" if heavy else "hit",enemy.pos,slot)
+            if slot == 1 and b.current_cat == 1:
+                enemy.mark_time = 1.8
+                enemy.assist_used = false
+                if enemy.mode in ["cast","melee_windup"] and enemy.get("control_immune",0.0) <= 0:
+                    enemy.mode = "rest"
+                    enemy.timer = 0.7
+                    enemy.control_immune = 2.2
+                    b.feedback("interrupt",enemy.pos,slot)
+                    b.message = "团团打断了！换圆圆，接重拍或继续追击。"
             if heavy and enemy.hp > 0:
                 if enemy.kind == "armored":
                     if not enemy.get("heavy_extended",false):
                         enemy.timer += 0.5
                         enemy.heavy_extended = true
-                elif enemy.mode != "rush" and enemy.get("control_immune",0.0) <= 0:
-                    enemy.pos = Space.move(enemy.pos,direction*35,Space.ENEMY_RADIUS)
+                elif enemy.mode != "rush" and (enemy.get("control_immune",0.0) <= 0 or enemy.get("mark_time",0.0) > 0):
+                    var combo_hit: bool = enemy.get("mark_time",0.0) > 0
+                    enemy.pos = Space.move(enemy.pos,direction*(54 if combo_hit else 32),Space.ENEMY_RADIUS)
                     enemy.mode = "rest"
                     enemy.timer = 0.0
-                    enemy.control_time = 0.4
-                    enemy.control_immune = 2.5
+                    enemy.control_time = 0.8 if combo_hit else 0.28
+                    enemy.control_immune = 2.2
+                    if combo_hit:
+                        enemy.mark_time = 0
+                        b.feedback("combo",enemy.pos,slot)
+                        b.message = "接住机会！圆圆把它掀翻了。"
+            elif enemy.kind in ["sprout","weaver"] and enemy.mode not in ["rush","cast","melee_windup"]:
+                enemy.pos = Space.move(enemy.pos,direction*12,Space.ENEMY_RADIUS)
         if single: break
     return not targets.is_empty()

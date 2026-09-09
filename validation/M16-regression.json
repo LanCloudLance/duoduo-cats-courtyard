@@ -1,0 +1,173 @@
+{
+  "suites": 33,
+  "checks": 638,
+  "failed_suites": 0,
+  "results": [
+    {
+      "suite": "armor_scene_test",
+      "checks": 9,
+      "passed": true
+    },
+    {
+      "suite": "armor_test",
+      "checks": 26,
+      "passed": true
+    },
+    {
+      "suite": "attack_identity_test",
+      "checks": 34,
+      "passed": true
+    },
+    {
+      "suite": "attack_input_test",
+      "checks": 12,
+      "passed": true
+    },
+    {
+      "suite": "battle_playthrough_test",
+      "checks": 3,
+      "passed": true
+    },
+    {
+      "suite": "battle_scene_test",
+      "checks": 26,
+      "passed": true
+    },
+    {
+      "suite": "battle_state_test",
+      "checks": 32,
+      "passed": true
+    },
+    {
+      "suite": "bridge_party_test",
+      "checks": 10,
+      "passed": true
+    },
+    {
+      "suite": "bridge_scene_test",
+      "checks": 24,
+      "passed": true
+    },
+    {
+      "suite": "bridge_state_test",
+      "checks": 27,
+      "passed": true
+    },
+    {
+      "suite": "checkpoint_test",
+      "checks": 10,
+      "passed": true
+    },
+    {
+      "suite": "companion_test",
+      "checks": 17,
+      "passed": true
+    },
+    {
+      "suite": "courtyard_test",
+      "checks": 15,
+      "passed": true
+    },
+    {
+      "suite": "event_router_test",
+      "checks": 10,
+      "passed": true
+    },
+    {
+      "suite": "full_journey_test",
+      "checks": 40,
+      "passed": true
+    },
+    {
+      "suite": "journey_modes_test",
+      "checks": 19,
+      "passed": true
+    },
+    {
+      "suite": "keyboard_scene_test",
+      "checks": 18,
+      "passed": true
+    },
+    {
+      "suite": "keyboard_test",
+      "checks": 13,
+      "passed": true
+    },
+    {
+      "suite": "light_scene_test",
+      "checks": 25,
+      "passed": true
+    },
+    {
+      "suite": "light_state_test",
+      "checks": 29,
+      "passed": true
+    },
+    {
+      "suite": "lobby_test",
+      "checks": 9,
+      "passed": true
+    },
+    {
+      "suite": "m15_presentation_test",
+      "checks": 8,
+      "passed": true
+    },
+    {
+      "suite": "m16_combat_test",
+      "checks": 25,
+      "passed": true
+    },
+    {
+      "suite": "party_state_test",
+      "checks": 22,
+      "passed": true
+    },
+    {
+      "suite": "rest_scene_test",
+      "checks": 27,
+      "passed": true
+    },
+    {
+      "suite": "rest_state_test",
+      "checks": 16,
+      "passed": true
+    },
+    {
+      "suite": "save_upgrade_test",
+      "checks": 4,
+      "passed": true
+    },
+    {
+      "suite": "session_state_test",
+      "checks": 37,
+      "passed": true
+    },
+    {
+      "suite": "solo_input_test",
+      "checks": 18,
+      "passed": true
+    },
+    {
+      "suite": "solo_journey_test",
+      "checks": 39,
+      "passed": true
+    },
+    {
+      "suite": "solo_playthrough_test",
+      "checks": 8,
+      "passed": true
+    },
+    {
+      "suite": "solo_puzzle_test",
+      "checks": 10,
+      "passed": true
+    },
+    {
+      "suite": "solo_rules_test",
+      "checks": 16,
+      "passed": true
+    }
+  ],
+  "method": "Full regression plus targeted reruns for changed fixture expectations; latest logs per suite."
+}

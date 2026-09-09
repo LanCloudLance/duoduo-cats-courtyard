@@ -54,6 +54,15 @@ func step(b, slot: int, human: int, dt: float, engaged: bool) -> Vector2:
     var partner: Vector2 = b.positions[b.actor(human)]
     if b.phase == "combat":
         for threat in b.enemies:
+            if threat.mode in ["cast","burst","slam_windup","slam","melee_windup","melee"] and b.Encounter.danger(threat,point,20):
+                var source: Vector2 = threat.get("aim",threat.pos) if threat.mode in ["cast","burst"] else threat.pos
+                movement = source.direction_to(point)
+                if movement.length() < 0.1: movement = Vector2.UP
+                if not Space.valid(point+movement*95,Space.ACTOR_RADIUS): movement = -movement
+                if threat.timer < 0.38: b.dodge(slot,movement)
+                if b.rescuer == slot: b._cancel_rescue()
+                status = "躲开地面预警"
+                return movement
             if threat.hp <= 0 or threat.mode not in ["windup","rush"]: continue
             var end: Vector2 = threat.pos+threat.direction*(364 if threat.kind == "roller" else 230)
             var closest := Geometry2D.get_closest_point_to_segment(point,threat.pos,end)
@@ -124,7 +133,7 @@ func step(b, slot: int, human: int, dt: float, engaged: bool) -> Vector2:
     elif b.attack_cooldown[slot] <= 0 and b.dodge_time[slot] <= 0 and attack_wait <= 0:
         if slot == 1 and b.current_cat == 2:
             if b.attacks.charging:
-                if b.attacks.charge_time >= 0.599:
+                if b.attacks.charge_time >= b.attacks.CHARGE_SECONDS-0.00001:
                     b.release_attack(1)
                     attack_wait = 0.4
                     status = "双爪重拍"

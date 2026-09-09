@@ -8,6 +8,8 @@ const Actor = preload("res://game/actor_view.gd")
 var battle = Battle.new()
 var session
 var active := false
+var audio := preload("res://game/garden_audio.gd").new()
+var heard_feedback := 0
 var font: Font
 var camera := Camera2D.new()
 var hud := CanvasLayer.new()
@@ -29,6 +31,7 @@ func _init(state) -> void:
 
 func _ready() -> void:
     font = get_parent().theme.default_font
+    add_child(audio)
     camera.enabled = false
     camera.position = Vector2(640, 400)
     add_child(camera)
@@ -60,6 +63,23 @@ func _ready() -> void:
     _panel(Rect2(24, 685, 1232, 91))
     objective_label = _label("", Rect2(48, 697, 1170, 32), 22)
     hint_label = _label("", Rect2(48, 738, 1170, 27), 17, Color("566d55"))
+    var sound := Button.new()
+    sound.text = "音效 开"
+    sound.position = Vector2(1110,646)
+    sound.add_theme_font_override("font",font)
+    sound.pressed.connect(func():
+        audio.muted = not audio.muted
+        audio.silence()
+        sound.text = "音效 关" if audio.muted else "音效 开")
+    hud.add_child(sound)
+    var deadzone := Button.new()
+    deadzone.text = "摇杆死区 20%"
+    deadzone.position = Vector2(934,646)
+    deadzone.add_theme_font_override("font",font)
+    deadzone.pressed.connect(func():
+        session.stick_deadzone = 0.28 if session.stick_deadzone < 0.25 and session.stick_deadzone > 0.15 else 0.12 if session.stick_deadzone >= 0.25 else 0.20
+        deadzone.text = "摇杆死区 %d%%" % roundi(session.stick_deadzone*100))
+    hud.add_child(deadzone)
     set_active(false)
     _refresh()
 
@@ -72,6 +92,7 @@ func set_active(value: bool) -> void:
         cancel_inputs()
 
 func cancel_inputs() -> void:
+    audio.silence()
     battle.guarding = false
     battle._cancel_rescue()
     battle.cancel_attacks()
@@ -84,6 +105,7 @@ func restart() -> void:
 
 func configure_solo(value: bool) -> void:
     allow_next_level = not value
+    heard_feedback = 0
     battle = Battle.new()
     battle.solo_mode = value
     solo = Solo.new()
@@ -93,6 +115,10 @@ func configure_solo(value: bool) -> void:
 func handle_action(slot: int, button: int) -> void:
     if not session.running():
         return
+    var controlled: int = solo.human_slot if battle.solo_mode else slot
+    var movement: Vector2 = session.movement(0 if battle.solo_mode else slot)
+    if movement.length() > 0.1 and battle.dodge_time[controlled] <= 0:
+        battle.facing[controlled] = movement.normalized()
     if battle.solo_mode:
         if slot == 0 and button == JOY_BUTTON_A and battle.phase == "complete" and allow_next_level:
             next_level_requested.emit()
@@ -127,6 +153,12 @@ func _physics_process(delta: float) -> void:
         return
     if battle.solo_mode: solo.step(battle,delta,session.movement(0))
     else: battle.step(delta, session.movement(0), session.movement(1), true)
+    if battle.feedback_id != heard_feedback:
+        heard_feedback = battle.feedback_id
+        var cue: String = battle.last_feedback
+        if cue in ["hit","heavy","hurt"]: audio.play(0)
+        elif cue in ["parry","combo","assist","interrupt"]: audio.play(1)
+        elif cue == "ready": audio.play(3)
     for i in range(3):
         var slot := 0 if i == 0 else 1
         var selected: bool = i == 0 or i == battle.current_cat
@@ -142,11 +174,16 @@ func _physics_process(delta: float) -> void:
         actors[i].guarding = i == 0 and battle.guarding and battle.hp[0] > 0
         actors[i].guard_direction = battle.facing[0]
         actors[i].combat_kind = battle.attacks.kinds[slot] if selected else ""
-        var duration := 0.24 if slot == 0 else (0.3 if battle.attacks.kinds[1] == "heavy" else 0.22)
+        var duration: float = battle.attacks.durations[slot]
         actors[i].combat_progress = 1.0-battle.attack_flash[slot]/duration if selected and battle.attack_flash[slot] > 0 else 0.0
         actors[i].combat_direction = battle.attack_direction[slot]
-        actors[i].charge_progress = battle.attacks.charge_time/0.6 if selected and i == 2 else 0.0
+        actors[i].charge_progress = battle.attacks.charge_time/battle.attacks.CHARGE_SECONDS if selected and i == 2 else 0.0
         if not battle.attacks.charging and actors[i].combat_kind == "charge": actors[i].combat_kind = ""
+        if not selected and i == battle.assist_role and battle.assist_time > 0:
+            actors[i].combat_active = true
+            actors[i].combat_kind = "pounce" if i == 1 else "slap"
+            actors[i].combat_progress = 1-battle.assist_time/0.22
+            actors[i].combat_direction = battle.positions[i].direction_to(battle.assist_point)
         actors[i].update_pose(battle.positions[i], selected and (not battle.solo_mode or slot == solo.human_slot), false, delta)
     _refresh()
 
@@ -163,9 +200,9 @@ func _refresh() -> void:
         enemy_views[i].sync(battle.enemies[i])
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
-    status_label.text = "角色攻击 / M14.1   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "协作战斗   %d / 3\nEsc / 菜单键暂停" % battle.wave
     if session.keyboard_mode:
-        girl_help.text = "WASD 移动 · F 横扫 · Q 闪避\n按住 G 正面举盾 · E 互动 / 救援"
+        girl_help.text = "WASD 移动 · F 连击 · Q 闪避\n按住 G 正面举盾 · E 互动 / 救援"
         cat_help.text = ("方向键 · J 短扑快抓 · K 闪避" if battle.current_cat == 1 else "方向键 · J 轻拍 / 蓄力松开重拍")+"\n空格救援 · Tab 切猫 · K 闪避"
     else:
         girl_help.text = "左摇杆移动 · 面键左攻击 / 右闪避\n按住左肩举盾 · 面键下互动 / 救援"
@@ -173,8 +210,8 @@ func _refresh() -> void:
     var interaction := "朵朵 E / 猫咪空格" if session.keyboard_mode else "双方的面键下方"
     match battle.phase:
         "briefing": objective_label.text = "准备好再出发：%s确认   %s / %s" % [interaction, "朵朵已准备" if battle.confirmed[0] else "朵朵待准备", "猫咪已准备" if battle.confirmed[1] else "猫咪待准备"]
-        "combat": objective_label.text = "看预警，向侧面闪避；敌人停下时靠近攻击。" if battle.wave == 1 else "盾挡或引它撞树桩 → 结点展开 → 伙伴绕后进攻。"
-        "intermission": objective_label.text = ("这一段安全了 · 整理 %d 秒" % ceili(battle.intermission)) if battle.intermission > 0 else ("下一段：%s确认  %s / %s" % [interaction,"朵朵 ✓" if battle.confirmed[0] else "朵朵待准备","猫咪 ✓" if battle.confirmed[1] else "猫咪待准备"])
+        "combat": objective_label.text = ["移动连击清小怪，侧闪冲锋；别被逼到树桩旁。","后排藤蔓会锁定脚下：打断它，或分头处理硬壳。","取回树怪的灯芯：挡冲锋、绕侧输出，红圈亮起就拉开。"][battle.wave-1]
+        "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
         "clear": objective_label.text = "到右边营火集合，%s确认休息。" % interaction
         "complete": objective_label.text = "林间空地完成 ✓ 再按互动键，前往双猫灯廊。"
     if battle.hp[0] == 0 and battle.hp[1] == 0:
@@ -185,7 +222,7 @@ func _refresh() -> void:
         objective_label.text = "正在扶起伙伴  %d%%  · 不要移动，被击中会中断" % int(battle.rescue_progress / Battle.RESCUE_SECONDS * 100)
     hint_label.text = battle.message.replace("互动键", "E / 空格" if session.keyboard_mode else "面键下方")
     if battle.attacks.charging and battle.hp[0] > 0 and battle.hp[1] > 0:
-        hint_label.text = "圆圆蓄满了 · 松开攻击键重拍；闪避可以取消。" if battle.attacks.charge_time >= 0.599 else "圆圆正在准备重拍 · 可以慢慢移动调整方向，松开攻击键出手。"
+        hint_label.text = "圆圆蓄满了 · 松开攻击键重拍；闪避可以取消。" if battle.attacks.charge_time >= battle.attacks.CHARGE_SECONDS-0.00001 else "圆圆正在准备重拍 · 可以慢慢移动调整方向，松开攻击键出手。"
     if battle.solo_mode: _solo_hud()
     queue_redraw()
 
@@ -197,7 +234,7 @@ func _solo_hud() -> void:
     var who: String = ["朵朵","团团","圆圆"][actor]
     girl_label.text = "朵朵 · "+("你控制" if solo.human_slot == 0 else "AI")+"  "+_health(0)
     cat_label.text = ("团团" if battle.current_cat == 1 else "圆圆")+" · "+("你控制" if solo.human_slot == 1 else "AI")+"  "+_health(1)
-    status_label.text = "单人战斗 / M14.1   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "单人协作   %d / 3\nEsc / 菜单键暂停" % battle.wave
     girl_help.text = "WASD 移动 · F 攻击 · Q 闪避\nE 互动 / 救援 · G 朵朵举盾" if session.keyboard_mode else "左摇杆 · 面键左攻击 / 右闪避\n面键下互动 · 左肩朵朵举盾"
     if actor > 0:
         girl_help.text = ("WASD · F "+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\nE 互动 / 救援 · Q 闪避") if session.keyboard_mode else ("面键左："+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\n左摇杆移动 · 右闪避 · 下互动")
@@ -205,7 +242,7 @@ func _solo_hud() -> void:
     var key := "E" if session.keyboard_mode else "面键下"
     match battle.phase:
         "briefing": objective_label.text = "先试试三位动作 · 按 %s 开始，AI 伙伴会协助战斗。" % key
-        "intermission": objective_label.text = "整理 %d 秒" % ceili(battle.intermission) if battle.intermission > 0 else "准备好了按 %s，开始下一轮。" % key
+        "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
         "clear": objective_label.text = "带伙伴到右边营火，按 %s 完成本次单人战斗。" % key
         "complete": objective_label.text = ("林间空地完成 ✓ 再按 %s，前往双猫灯廊。" % key) if allow_next_level else "单人战斗试玩完成 ✓ Esc / 菜单键可以重玩或选择其他关卡。"
     if battle.hp[solo.human_slot] <= 0 and battle.hp[1-solo.human_slot] > 0:
@@ -276,12 +313,35 @@ func _draw() -> void:
             draw_line(enemy.pos - side, end - side, Color("f7b278"), 2, true)
             draw_line(end - enemy.direction * 24 + side * 0.4, end, Color("fbd29d"), 4, true)
             draw_line(end - enemy.direction * 24 - side * 0.4, end, Color("fbd29d"), 4, true)
+        if enemy.mode in ["cast","burst","slam_windup","slam"]:
+            var center: Vector2 = enemy.get("aim",enemy.pos) if enemy.mode in ["cast","burst"] else enemy.pos
+            var radius := 58.0 if enemy.mode in ["cast","burst"] else 112.0
+            var warning: bool = enemy.mode in ["cast","slam_windup"]
+            draw_circle(center,radius,Color(0.75,0.2,0.27,0.16 if warning else 0.5))
+            draw_arc(center,radius,0,TAU,48,Color("f9b19b"),3,true)
+            draw_arc(center,radius-6,-PI/2,-PI/2+TAU*clampf(1-enemy.timer,0.02,1),48,Color("fff0ca"),4,true)
+            draw_line(center-Vector2(8,0),center+Vector2(8,0),Color("ffd2bd"),2,true)
+            draw_line(center-Vector2(0,8),center+Vector2(0,8),Color("ffd2bd"),2,true)
+        elif enemy.mode in ["melee_windup","melee"]:
+            var angle: float = enemy.direction.angle()
+            draw_arc(enemy.pos,82,angle-1.3,angle+1.3,24,Color("efb072"),5,true)
         _draw_enemy(enemy)
+    for effect in battle.fx:
+        if effect.kind in ["swing","ready","danger"]: continue
+        var progress: float = 1-effect.life/0.26
+        var color := Color("9bf3d7") if effect.kind in ["parry","combo","assist","interrupt"] else Color("fff0bc")
+        color.a = 1-progress
+        var center: Vector2 = effect.pos+Vector2(0,-30)
+        for ray in range(6):
+            var axis := Vector2.from_angle(ray*TAU/6)
+            draw_line(center+axis*(10+progress*12),center+axis*(25+progress*28),color,4,true)
+        if effect.kind in ["parry","combo","assist","interrupt"]:
+            _text(center+Vector2(-70,-45-progress*18),{"parry":"完美挡招","combo":"接力掀翻","assist":"接棒追击","interrupt":"打断成功"}[effect.kind],140,18)
     for slot in range(2):
         var p: Vector2 = battle.positions[battle.actor(slot)]
         if battle.dodge_time[slot] > 0:
             draw_line(p - battle.dodge_direction[slot] * 80, p, Color("b4e5d4"), 6, true)
-        if battle.attack_flash[slot] > 0:
+        if battle.attack_flash[slot] > 0 and battle.attacks.pending[slot] < 0:
             var direction: Vector2 = battle.attack_direction[slot]
             if slot == 0:
                 draw_arc(p,103,direction.angle()-PI/3,direction.angle()+PI/3,28,Color(0.52,0.86,0.74,0.85),7,true)
@@ -298,12 +358,12 @@ func _draw() -> void:
                     for toe in [-1,0,1]:
                         draw_circle(paw+direction*12+direction.orthogonal()*toe*5,3,Color("fff0c4"))
                 if heavy:
-                    var progress: float = 1.0-battle.attack_flash[slot]/0.3
+                    var progress: float = 1.0-battle.attack_flash[slot]/battle.attacks.durations[slot]
                     draw_arc(impact,30+progress*24,0,TAU,36,Color(0.91,0.66,0.30,1-progress),4,true)
                     for side in [-1,1]:
                         draw_line(impact+direction.orthogonal()*side*29,impact+direction.orthogonal()*side*42+direction*8,Color("f6d589"),4,true)
         if slot == 1 and battle.attacks.charging:
-            var ratio: float = battle.attacks.charge_time/0.6
+            var ratio: float = battle.attacks.charge_time/battle.attacks.CHARGE_SECONDS
             draw_arc(p,40,-PI/2,-PI/2+TAU*maxf(0.01,ratio),40,Color("fff0b6"),5,true)
         if slot == 0 and battle.guarding:
             var angle: float = battle.facing[0].angle()
@@ -334,18 +394,19 @@ func _draw_enemy(enemy: Dictionary) -> void:
         var angle: float = enemy.direction.angle()
         draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("527b47"),9,true)
         draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("d7f5a9"),4,true)
-    var label := "硬壳荆棘团" if enemy.kind == "armored" else ("荆棘团" if enemy.kind == "thorn" else "枝球")
-    if enemy.mode == "windup":
+    var label: String = {"armored":"硬壳荆棘团","thorn":"荆棘团","roller":"枝球","sprout":"嫩芽怪","weaver":"织藤花","elder":"灯芯树怪"}.get(enemy.kind,"树怪")
+    if enemy.mode in ["windup","cast","slam_windup","melee_windup"]:
         label += " · 蓄力！"
     elif enemy.mode == "rest":
         label += " · 休息"
     elif enemy.mode == "exposed":
-        label = "背后结点展开 · 绕后！"
-    var label_point: Vector2 = p+Vector2(-115,-70)
-    for offset in [Vector2(-115,-70),Vector2(0,-120),Vector2(-115,85)]:
+        label = "露出破绽 · 追击！" if enemy.kind == "elder" else "背后结点展开 · 绕后！"
+    var top := -150.0 if enemy.kind == "elder" else -108.0
+    var label_point: Vector2 = p+Vector2(-115,top)
+    for offset in [Vector2(-115,top),Vector2(0,top),Vector2(-115,75)]:
         var candidate: Vector2 = p+offset
         var rect := Rect2(candidate-Vector2(0,18),Vector2(230,22))
-        if candidate.x < 100 or candidate.x+230 > 1180 or candidate.y < 230 or candidate.y > 650: continue
+        if candidate.x < 100 or candidate.x+230 > 1180 or candidate.y < 230 or candidate.y > 625: continue
         if battle.positions.all(func(point): return not rect.intersects(Rect2(point-Vector2(36,102),Vector2(72,118)))):
             label_point = candidate
             break

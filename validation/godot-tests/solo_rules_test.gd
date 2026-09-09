@@ -37,11 +37,11 @@ func _initialize() -> void:
     b.solo_mode = true
     b.interact(0)
     check(b.wave == 1 and b.phase == "combat","one confirmation starts solo combat")
-    b.enemies[0].hp = 0
+    for enemy in b.enemies: enemy.hp = 0
     for i in range(200): b.step(1.0/60,Vector2.ZERO,Vector2.ZERO,true)
-    check(b.phase == "intermission" and b.wave == 1,"AI cannot automatically confirm next round")
+    check(b.phase == "combat" and b.wave == 2,"solo pacing advances without fake AI confirmations")
     b.interact(1)
-    check(b.wave == 2,"controlling a cat can confirm next round once")
+    check(b.wave == 2,"cat interaction cannot skip active encounter")
     var e: Dictionary = b.enemies[0]
     b._expose(e,"shield")
     check(e.timer > 2.4,"solo widens the same shield opportunity")

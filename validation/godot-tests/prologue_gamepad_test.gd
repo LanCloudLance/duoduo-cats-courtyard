@@ -18,13 +18,15 @@ func run() -> void:
     axes(18,Vector2.RIGHT)
     await frames(10)
     axes(18,Vector2.ZERO)
-    check(s.positions[1].x > origin.x and s.positions[0] == Vector2(360,475),"second stick moves only Tuantuan")
-    s.positions[0] = s.DESK
+    check(s.positions[1].x > origin.x and s.positions[0] == Vector2(380,495),"second stick moves only Tuantuan")
+    s.phase = "jam"
+    s.white_visible = false
+    s.positions[0] = s.DOOR+Vector2(-40,28)
     button(9,JOY_BUTTON_A)
-    check(s.notebook,"first controller interaction reaches notebook")
-    s.positions[1] = s.TOY
+    check(s.brace,"first controller holds door")
+    s.positions[1] = s.rug_position()+Vector2(0,18)
     button(18,JOY_BUTTON_A)
-    check(s.phase == "rest","second controller interaction reaches toy")
+    check(s.rug_grab,"second controller grabs carpet")
     button(9,JOY_BUTTON_START)
     await frames(2)
     check(not lobby.session.running(),"controller menu pauses story")

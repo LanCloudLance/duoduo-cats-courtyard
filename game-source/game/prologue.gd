@@ -1,8 +1,10 @@
 extends Node2D
 const Story = preload("res://game/prologue_state.gd")
 const HomeSprite = preload("res://game/home_sprite.gd")
-const BACKDROP = preload("res://assets/story-prologue/home-room.png")
+const BACKDROP = preload("res://assets/story-prologue/home-room-play.png")
 const OPEN_BACKDROP = preload("res://assets/story-prologue/home-room-open.png")
+const PROPS = preload("res://assets/story-prologue/home-props.png")
+var props: Array[Sprite2D] = []
 var state = Story.new()
 var session
 var active := false
@@ -21,7 +23,7 @@ var audio := preload("res://game/garden_audio.gd").new()
 var heard := -1
 var recorded := false
 var save_status := ""
-var record_prefix := "story-prologue"
+var record_prefix := "story-prologue-v2"
 
 func _init(value) -> void: session = value
 func _ready() -> void:
@@ -36,11 +38,26 @@ func _ready() -> void:
         sprite.position = state.positions[role]
         add_child(sprite)
         sprites.append(sprite)
+    for index in range(4):
+        var prop := Sprite2D.new()
+        var atlas := AtlasTexture.new()
+        atlas.atlas = PROPS
+        # The generated rug extends a few pixels below the half-height seam.
+        atlas.region = Rect2((index%2)*627,0 if index < 2 else 650,627,645 if index < 2 else 604)
+        atlas.filter_clip = true
+        prop.texture = atlas
+        var mat := ShaderMaterial.new()
+        mat.shader = preload("res://assets/visual-m13/chroma.gdshader")
+        prop.material = mat
+        prop.scale = Vector2(0.235,0.235) if index < 2 else Vector2(0.12,0.12)
+        prop.z_index = 1
+        add_child(prop)
+        props.append(prop)
     hud.layer = 14
     add_child(hud)
-    _panel(Rect2(24,18,1232,100))
-    _label("序章 · 今天明明准备什么都不干",Rect2(44,28,970,34),25)
-    goal_label = _label("",Rect2(44,69,1160,32),20)
+    _panel(Rect2(24,18,590,83))
+    _label("序章 · 今天明明准备什么都不干",Rect2(44,25,550,32),23)
+    goal_label = _label("",Rect2(44,61,550,27),17)
     _panel(Rect2(24,692,1232,90))
     line_label = _label("",Rect2(44,700,1180,42),18)
     line_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -65,6 +82,9 @@ func reset(single: bool, resume := false) -> void:
             state.phase = "complete"
             state.finished = true
             state.extras = record.get("extras",{})
+            state.door_open = 1
+            state.rug_pull = 115
+            state.white_visible = false
             recorded = true
             save_status = "已恢复序章通关记录"
     if complete_panel: complete_panel.visible = state.finished
@@ -95,6 +115,9 @@ func set_active(value: bool) -> void:
 
 func handle_action(slot: int, button: int) -> void:
     if not session.running(): return
+    if button == JOY_BUTTON_RIGHT_SHOULDER:
+        state.request_hint()
+        return
     if state.single:
         if slot != 0: return
         if button in [JOY_BUTTON_Y,JOY_BUTTON_B]:
@@ -125,15 +148,26 @@ func _physics_process(dt: float) -> void:
         if absf(change.x) > 0.01: faces[role] = signf(change.x)
         walk_phase[role] += change.length()*0.09
         sprites[role].pose(walk_phase[role],1 if change.length() > 0.1 else 0,faces[role],state.affection if role < 2 else 0)
+        var face: float = faces[role]
+        if role < 2 and absf(state.facing[role].x) > 0.1: face = signf(state.facing[role].x)
+        if state.actions[role] == "brace": face = 1
+        if role == 2 and (state.white_wait > 0 or (state.phase == "peek" and state.timer < 1.2)): face = -1
+        sprites[role].show_action(state.actions[role],state.clock,face)
         sprites[role].position = Vector2(state.positions[role].x,state.positions[role].y+sprites[role].position.y)
         sprites[role].z_index = int(state.positions[role].y)
         sprites[role].visible = role < 2 or state.white_visible
-        if role == 0 and state.resting:
-            sprites[role].rotation = 0.12
-            sprites[role].scale.y *= 0.85
+        sprites[role].modulate.a = state.white_alpha if role == 2 else 1.0
+    props[0].position = state.rug_position()+Vector2(sin(state.clock*40)*state.rug_shake*5,-84)
+    props[1].position = props[0].position
+    props[0].visible = state.rug_pull < 105
+    props[1].visible = state.rug_pull >= 105
+    props[2].position = state.ball
+    props[2].rotation = state.ball_spin
+    props[3].position = Story.DOOR+Vector2(37,-73) if state.wedged else state.wedge
+    props[3].z_index = 700 if state.carrier >= 0 else 2
     goal_label.text = state.objective()
-    line_label.text = state.message
-    controls.text = ("WASD 移动 · E 互动 · Tab 换朵朵 / 团团" if state.single else "朵朵 WASD / E · 团团 方向键 / 空格")+" · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换朵朵 / 团团" if state.single else " · 两位分别操作")+" · 菜单键暂停"
+    line_label.text = state.message if state.message_time > 0 or state.finished else ""
+    controls.text = ("WASD 移动 · E 互动 · Tab 换朵朵 / 团团" if state.single else "朵朵 WASD / E · 团团 方向键 / 空格")+" · R 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换朵朵 / 团团" if state.single else " · 两位分别操作")+" · 右肩想一想 · 菜单键暂停"
     complete_panel.visible = state.finished
     if state.finished:
         completed_text.text = "原本准备休息的下午，\n变成了一起出发的下午。\n\n序章完成 ✓\n"+save_status+"\n\n下一关：点亮第一盏灯\n前往森林，寻找圆圆的方向。\n\n下一关正在制作。Esc 返回选关，可重玩序章。"
@@ -165,26 +199,24 @@ func _text(point: Vector2, value: String, width := 160.0) -> void:
     draw_string_outline(font,point,value,HORIZONTAL_ALIGNMENT_CENTER,width,16,5,Color("f9edcf"))
     draw_string(font,point,value,HORIZONTAL_ALIGNMENT_CENTER,width,16,Color("344b3b"))
 func _draw() -> void:
-    var open_door: bool = state.phase in ["strange","noticed","called","crossing","complete"]
-    draw_texture_rect(OPEN_BACKDROP if open_door else BACKDROP,Rect2(0,0,1280,800),false)
-    if open_door:
-        draw_circle(Story.DOOR+Vector2(0,35),40,Color(1,0.84,0.43,0.10+sin(state.clock*3)*0.025))
+    draw_texture_rect(BACKDROP,Rect2(0,0,1280,800),false)
+    # Reveal only the actual doorway, keeping the room and its movable props stable.
+    var opening: float = state.door_open
+    if opening > 0:
+        var dest := Rect2(1104,22,104*opening,204)
+        var ratio := OPEN_BACKDROP.get_size()/Vector2(1280,800)
+        draw_texture_rect_region(OPEN_BACKDROP,dest,Rect2(dest.position*ratio,dest.size*ratio))
     for slot in range(2):
         var p: Vector2 = state.positions[slot]
         var selected: bool = not state.single or state.controlled == slot
-        draw_arc(p,27,0,TAU,32,Color("98d8c6") if selected else Color("e4c892"),3,true)
-        _text(p+Vector2(-80,30),("朵朵" if slot == 0 else "团团")+(" · 你控制" if state.single and selected else ""))
+        if selected:
+            # Small control indicator, never a world-object waypoint.
+            draw_line(p+Vector2(-9,5),p+Vector2(9,5),Color("f8e3b4"),3,true)
         if selected and not state.finished:
-            var hint: String = state.hint(slot)
-            if not hint.begins_with("靠近"):
-                _text(p+Vector2(-135,53),("E " if state.single or slot == 0 else "空格 ") if session.keyboard_mode else "面键下 ",270)
-                _text(p+Vector2(-135,75),hint,270)
-    if state.phase == "chores":
-        if not state.notebook: _marker(Story.DESK,"朵朵 · 本子")
-        if not state.toy: _marker(Story.TOY,"团团 · 玩具")
-    elif state.phase == "rest": _marker(Story.SOFA,"朵朵 · 沙发")
-    elif state.phase in ["strange","called","crossing"]: _marker(Story.DOOR,"小门 · 铃声")
-    elif state.phase == "noticed": _marker(state.positions[0],"团团 · 呼唤朵朵")
-func _marker(point: Vector2, label: String) -> void:
-    draw_arc(point,36,0,TAU,40,Color("ffe49d"),3,true)
-    _text(point+Vector2(-80,-40),label)
+            var item: String = state.target(slot)
+            if not item.is_empty():
+                var key := ("E" if state.single or slot == 0 else "空格") if session.keyboard_mode else "面键下"
+                _text(p+Vector2(-100,29),key+" · "+item,200)
+    if state.affection > 0:
+        var center: Vector2 = state.positions[2] if state.actions[2] == "listen" and state.white_wait > 0 else state.positions[1]
+        _text(center+Vector2(-60,-112-(1-state.affection)*20),"♡",120)

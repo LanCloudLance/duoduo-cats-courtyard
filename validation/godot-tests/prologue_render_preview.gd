@@ -23,10 +23,17 @@ func run() -> void:
     home.set_physics_process(false)
     home._physics_process(0)
     await capture(args[0],"-home")
-    home.state.phase = "strange"
+    home.state.phase = "jam"
     home.state.positions[0] = Vector2(420,415)
     home.state.positions[1] = Vector2(1070,410)
-    home.state.positions[2] = Vector2(1120,320)
+    home.state.white_visible = false
+    home.state.brace = true
+    home.state.actions[0] = "brace"
+    home.state.positions[0] = Vector2(1080,322)
+    home.state.actions[1] = "pull"
+    home.state.positions[1] = Vector2(1120,455)
+    home.state.rug_pull = 65
+    home.state.door_open = 0.4
     home.state.message = "走廊的小门轻轻响了。圆圆抬头看了一会儿，走向铃声。"
     home._physics_process(0)
     await capture(args[0],"-door")

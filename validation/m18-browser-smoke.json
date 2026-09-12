@@ -1,0 +1,15 @@
+{
+  "scope": "Local release in Codex browser at 127.0.0.1:8767",
+  "checks": [
+    "M18 story-solo route loads",
+    "Home actions and movable props render",
+    "No global task circles or mandatory chore objective",
+    "Chinese font renders correctly"
+  ],
+  "final_visual_fix": "Adjusted rug and wedge drawing offsets to physically meet the door bottom; rerendered and rebuilt afterward.",
+  "limitations": [
+    "No physical controller attached",
+    "Web full puzzle playthrough not repeated; both modes exercised through native keyboard input",
+    "Not a user acceptance of puzzle quality"
+  ]
+}

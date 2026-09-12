@@ -475,7 +475,7 @@ func _process(_delta: float) -> void:
     if stage == "prologue":
         top_status.text = "序章 · 家中的下午"
         get_node("ReplayCourtyard").text = "重玩序章"
-        slot_details[0].text = "在朵朵与团团之间切换，一起去接圆圆。" if session.single_player else "收好本子，和团团一起出发。"
+        slot_details[0].text = "在朵朵与团团之间切换，一起去接圆圆。" if session.single_player else "在家里逛逛，留意猫咪和物件的反应。"
         slot_details[1].text = "圆圆本章自由活动，暂不可操作。"
         if session.keyboard_mode:
             devices_text[0].text = "WASD 移动 · E 互动"+(" · Tab 换角色" if session.single_player else "")
@@ -483,7 +483,7 @@ func _process(_delta: float) -> void:
         if session.single_player:
             mode_help.text = "WASD 移动 · E 互动 · Tab 换朵朵 / 团团。" if session.keyboard_mode else "左摇杆移动 · 面键下互动 · 面键上换朵朵 / 团团。"
             ready_text[1].text = "关键互动由你切换角色完成"
-            action_text[1].text = "收拾、休息、发现小门，再一起出发。"
+            action_text[1].text = "摸猫、玩球、观察和尝试。"
 
 
 func start_story(single: bool) -> void:

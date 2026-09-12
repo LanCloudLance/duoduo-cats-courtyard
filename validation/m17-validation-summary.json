@@ -1,0 +1,224 @@
+{
+  "suites": 36,
+  "checks": 719,
+  "failed_suites": 0,
+  "results": [
+    {
+      "suite": "armor_scene_test",
+      "passed": true,
+      "checks": 9,
+      "details": ""
+    },
+    {
+      "suite": "armor_test",
+      "passed": true,
+      "checks": 26,
+      "details": ""
+    },
+    {
+      "suite": "attack_identity_test",
+      "passed": true,
+      "checks": 34,
+      "details": ""
+    },
+    {
+      "suite": "attack_input_test",
+      "passed": true,
+      "checks": 12,
+      "details": ""
+    },
+    {
+      "suite": "battle_playthrough_test",
+      "passed": true,
+      "checks": 3,
+      "details": ""
+    },
+    {
+      "suite": "battle_scene_test",
+      "passed": true,
+      "checks": 26,
+      "details": ""
+    },
+    {
+      "suite": "battle_state_test",
+      "passed": true,
+      "checks": 32,
+      "details": ""
+    },
+    {
+      "suite": "bridge_party_test",
+      "passed": true,
+      "checks": 10,
+      "details": ""
+    },
+    {
+      "suite": "bridge_scene_test",
+      "passed": true,
+      "checks": 24,
+      "details": ""
+    },
+    {
+      "suite": "bridge_state_test",
+      "passed": true,
+      "checks": 27,
+      "details": ""
+    },
+    {
+      "suite": "checkpoint_test",
+      "passed": true,
+      "checks": 10,
+      "details": ""
+    },
+    {
+      "suite": "companion_test",
+      "passed": true,
+      "checks": 17,
+      "details": ""
+    },
+    {
+      "suite": "courtyard_test",
+      "passed": true,
+      "checks": 15,
+      "details": ""
+    },
+    {
+      "suite": "event_router_test",
+      "passed": true,
+      "checks": 10,
+      "details": ""
+    },
+    {
+      "suite": "full_journey_test",
+      "passed": true,
+      "checks": 40,
+      "details": ""
+    },
+    {
+      "suite": "journey_modes_test",
+      "passed": true,
+      "checks": 20,
+      "details": "Updated navigation fixture for two new prologue entries; rerun passed."
+    },
+    {
+      "suite": "keyboard_scene_test",
+      "passed": true,
+      "checks": 18,
+      "details": ""
+    },
+    {
+      "suite": "keyboard_test",
+      "passed": true,
+      "checks": 13,
+      "details": ""
+    },
+    {
+      "suite": "light_scene_test",
+      "passed": true,
+      "checks": 25,
+      "details": ""
+    },
+    {
+      "suite": "light_state_test",
+      "passed": true,
+      "checks": 29,
+      "details": ""
+    },
+    {
+      "suite": "lobby_test",
+      "passed": true,
+      "checks": 9,
+      "details": ""
+    },
+    {
+      "suite": "m15_presentation_test",
+      "passed": true,
+      "checks": 8,
+      "details": ""
+    },
+    {
+      "suite": "m16_combat_test",
+      "passed": true,
+      "checks": 25,
+      "details": ""
+    },
+    {
+      "suite": "party_state_test",
+      "passed": true,
+      "checks": 22,
+      "details": ""
+    },
+    {
+      "suite": "prologue_gamepad_test",
+      "passed": true,
+      "checks": 8,
+      "details": ""
+    },
+    {
+      "suite": "prologue_scene_test",
+      "passed": true,
+      "checks": 51,
+      "details": ""
+    },
+    {
+      "suite": "prologue_state_test",
+      "passed": true,
+      "checks": 21,
+      "details": ""
+    },
+    {
+      "suite": "rest_scene_test",
+      "passed": true,
+      "checks": 27,
+      "details": ""
+    },
+    {
+      "suite": "rest_state_test",
+      "passed": true,
+      "checks": 16,
+      "details": ""
+    },
+    {
+      "suite": "save_upgrade_test",
+      "passed": true,
+      "checks": 4,
+      "details": ""
+    },
+    {
+      "suite": "session_state_test",
+      "passed": true,
+      "checks": 37,
+      "details": ""
+    },
+    {
+      "suite": "solo_input_test",
+      "passed": true,
+      "checks": 18,
+      "details": ""
+    },
+    {
+      "suite": "solo_journey_test",
+      "passed": true,
+      "checks": 39,
+      "details": ""
+    },
+    {
+      "suite": "solo_playthrough_test",
+      "passed": true,
+      "checks": 8,
+      "details": ""
+    },
+    {
+      "suite": "solo_puzzle_test",
+      "passed": true,
+      "checks": 10,
+      "details": ""
+    },
+    {
+      "suite": "solo_rules_test",
+      "passed": true,
+      "checks": 16,
+      "details": ""
+    }
+  ],
+  "note": "Full suite run followed by targeted rerun of menu test after adapting expected navigation to two new story entries. After final chapter-only pause/help text corrections, prologue state/scene/gamepad and journey menu tests were rerun; gameplay test counts unchanged."
+}

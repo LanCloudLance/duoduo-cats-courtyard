@@ -1,0 +1,18 @@
+{
+  "scope": "Local release build in Codex in-app browser, 127.0.0.1:8766",
+  "checks": [
+    "Story Solo and Story Dual buttons present",
+    "Story Solo starts actual home scene",
+    "Chinese HUD and home assets render at 1280x720 browser viewport",
+    "Tab changes visible controlled actor from Duoduo to Tuantuan",
+    "Escape pauses chapter and exposes Replay Prologue button"
+  ],
+  "limitations": [
+    "No physical controller attached",
+    "No live-site gameplay session modified",
+    "New chapter completion persisted and restored in native scene test; not independently retested across browser relaunch"
+  ],
+  "notes": [
+    "A stale generic three-character instruction was found in the pause menu and replaced with chapter-specific controls. Final source rebuilt and chapter/menu tests rerun."
+  ]
+}

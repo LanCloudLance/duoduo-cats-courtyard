@@ -3,6 +3,7 @@ extends Control
 const Session = preload("res://input/session_state.gd")
 const Router = preload("res://input/event_router.gd")
 const Stick = preload("res://ui/stick_indicator.gd")
+const Prologue = preload("res://game/prologue.gd")
 const Courtyard = preload("res://game/courtyard.gd")
 const Arena = preload("res://game/arena.gd")
 const LightCorridor = preload("res://game/light_corridor.gd")
@@ -22,6 +23,7 @@ var sticks: Array[Control] = []
 var top_status: Label
 var footer_status: Label
 var last_buttons: Array[int] = [-1, -1]
+var prologue: Node2D
 var courtyard: Node2D
 var arena: Node2D
 var light_corridor: Node2D
@@ -51,6 +53,9 @@ func _ready() -> void:
     theme_value.default_font_size = 20
     theme = theme_value
     _build()
+    prologue = Prologue.new(session)
+    prologue.name = "Prologue"
+    add_child(prologue)
     courtyard = Courtyard.new(session)
     courtyard.name = "Courtyard"
     add_child(courtyard)
@@ -80,8 +85,10 @@ func _ready() -> void:
         checkpoint.import_legacy(legacy)
     _refresh_checkpoint_button()
     print("CONNECTED GAMEPADS: ", Input.get_connected_joypads())
+    var web_story := ""
     var web_solo := false
     if OS.has_feature("web"):
+        web_story = str(JavaScriptBridge.eval("window.location.search",true))
         web_solo = str(JavaScriptBridge.eval("window.location.search",true)).contains("mode=solo")
         web_pause_callback = JavaScriptBridge.create_callback(func(_args):
             router.clear_keyboard()
@@ -89,7 +96,9 @@ func _ready() -> void:
         )
         JavaScriptBridge.get_interface("window").duoduoPause = web_pause_callback
         print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())
-    if web_solo or "--solo-journey" in OS.get_cmdline_user_args():
+    if web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
+        start_story(web_story.contains("story-solo"))
+    elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
         start_journey(true)
     elif "--solo-combat-preview" in OS.get_cmdline_user_args():
         start_solo_combat()
@@ -171,14 +180,16 @@ func _build() -> void:
     resume_button.name = "ResumeCheckpoint"
     solo_resume_button = _button("继续单人", Rect2(292,181,130,35),func(): resume_journey(true))
     solo_resume_button.name = "ResumeSolo"
-    _panel(Rect2(59, 234, 513, 231), Color.WHITE, Color("eadfc5"), 16)
+    _panel(Rect2(59, 234, 513, 183), Color.WHITE, Color("eadfc5"), 16)
     var team := TextureRect.new()
     team.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     team.texture = TEAM
     team.position = Vector2(65, 240)
-    team.size = Vector2(501, 219)
+    team.size = Vector2(501, 171)
     team.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     add_child(team)
+    _button("序章 · 单人",Rect2(68,430,240,38),func(): start_story(true)).name = "StorySolo"
+    _button("序章 · 双人",Rect2(320,430,240,38),func(): start_story(false)).name = "StoryDual"
     _button("双人战斗",Rect2(68,482,114,38),func(): start_preview("combat")).name = "CombatPreview"
     _button("双猫灯廊",Rect2(194,482,114,38),func(): start_preview("light")).name = "LightPreview"
     _button("林边休息",Rect2(320,482,114,38),func(): start_preview("rest")).name = "RestPreview"
@@ -196,7 +207,10 @@ func _build() -> void:
     mode_help = _label("", Rect2(59, 724, 900, 28), 16, MUTE)
     var replay := _button("重玩庭院", Rect2(979, 692, 141, 46), func():
         router.clear_keyboard()
-        if stage == "rest":
+        if stage == "prologue":
+            prologue.reset(session.single_player,false)
+            session.pause_all("序章已重置 · Enter 或手柄准备后继续")
+        elif stage == "rest":
             restart_journey()
         elif stage == "light":
             light_corridor.restart()
@@ -210,7 +224,7 @@ func _build() -> void:
     )
     replay.name = "ReplayCourtyard"
     _button("返回" if OS.has_feature("web") else "退出", Rect2(1135, 692, 82, 46), exit_game).name = "ExitGame"
-    for id in ["SingleJourney","DualJourney","ResumeSolo","ResumeCheckpoint","SoloCombatPreview","CombatPreview","LightPreview","RestPreview","ReplayCourtyard","KeyboardPlay","GamepadMode","ExitGame"]:
+    for id in ["StorySolo","StoryDual","SingleJourney","DualJourney","ResumeSolo","ResumeCheckpoint","SoloCombatPreview","CombatPreview","LightPreview","RestPreview","ReplayCourtyard","KeyboardPlay","GamepadMode","ExitGame"]:
         menu_controls.append(get_node(id))
 
 func _build_slot(slot: int, y: float, title: String, detail: String, tint: Color) -> void:
@@ -245,7 +259,9 @@ func _input(event: InputEvent) -> void:
 
 func _action(slot: int, button: int) -> void:
     last_buttons[slot] = button
-    if stage == "rest":
+    if stage == "prologue":
+        prologue.handle_action(slot,button)
+    elif stage == "rest":
         rest_area.handle_action(slot, button)
     elif stage == "light":
         light_corridor.handle_action(slot, button)
@@ -383,10 +399,10 @@ func _process(_delta: float) -> void:
         web_probe_clock += _delta
         if web_probe_clock >= 0.1:
             web_probe_clock = 0
-            var current = courtyard.party if stage == "bridge" else (arena.battle if stage == "combat" else (light_corridor.puzzle if stage == "light" else rest_area.state))
+            var current = prologue.state if stage == "prologue" else courtyard.party if stage == "bridge" else (arena.battle if stage == "combat" else (light_corridor.puzzle if stage == "light" else rest_area.state))
             var points: Array = []
             for point in current.positions: points.append([point.x,point.y])
-            var report := {"stage":stage,"running":session.running(),"solo":session.single_player,"positions":points,"cat":current.current_cat,"bridge_locks":courtyard.bridge.unlocked,"bridge_done":courtyard.bridge.finished,"phase":arena.battle.phase,"wave":arena.battle.wave,"hp":arena.battle.hp,"persistent":OS.is_userfs_persistent(),"rested":rest_area.state.rested,"finished":rest_area.state.finished,"can_save":rest_area.can_save,"solo_saved":not solo_checkpoint.read_checkpoint().is_empty(),"dual_saved":not checkpoint.read_checkpoint().is_empty()}
+            var report := {"stage":stage,"running":session.running(),"solo":session.single_player,"positions":points,"cat":1 if stage == "prologue" else current.current_cat,"bridge_locks":courtyard.bridge.unlocked,"bridge_done":courtyard.bridge.finished,"phase":arena.battle.phase,"wave":arena.battle.wave,"hp":arena.battle.hp,"persistent":OS.is_userfs_persistent(),"rested":rest_area.state.rested,"finished":rest_area.state.finished,"can_save":rest_area.can_save,"solo_saved":not solo_checkpoint.read_checkpoint().is_empty(),"dual_saved":not checkpoint.read_checkpoint().is_empty()}
             if stage == "combat":
                 report["human"] = arena.solo.human_slot
                 report["enemies"] = arena.battle.enemies
@@ -398,8 +414,10 @@ func _process(_delta: float) -> void:
             JavaScriptBridge.eval("window.duoduoStatus = " + JSON.stringify(report),true)
     var playing: bool = session.running()
     for child in get_children():
-        if child is CanvasItem and child != courtyard and child != arena and child != light_corridor and child != rest_area:
+        if child is CanvasItem and child != prologue and child != courtyard and child != arena and child != light_corridor and child != rest_area:
             child.visible = not playing
+    if prologue.active != (playing and stage == "prologue"):
+        prologue.set_active(playing and stage == "prologue")
     if courtyard.active != (playing and stage == "bridge"):
         courtyard.set_active(playing and stage == "bridge")
     if arena.active != (playing and stage == "combat"):
@@ -454,6 +472,34 @@ func _process(_delta: float) -> void:
         vector_text[1].text = "机关解谜由玩家亲自完成"
         claim_buttons[1].visible = false
         sticks[1].visible = false
+    if stage == "prologue":
+        top_status.text = "序章 · 家中的下午"
+        get_node("ReplayCourtyard").text = "重玩序章"
+        slot_details[0].text = "在朵朵与团团之间切换，一起去接圆圆。" if session.single_player else "收好本子，和团团一起出发。"
+        slot_details[1].text = "圆圆本章自由活动，暂不可操作。"
+        if session.keyboard_mode:
+            devices_text[0].text = "WASD 移动 · E 互动"+(" · Tab 换角色" if session.single_player else "")
+            if not session.single_player: devices_text[1].text = "方向键移动 · 空格互动"
+        if session.single_player:
+            mode_help.text = "WASD 移动 · E 互动 · Tab 换朵朵 / 团团。" if session.keyboard_mode else "左摇杆移动 · 面键下互动 · 面键上换朵朵 / 团团。"
+            ready_text[1].text = "关键互动由你切换角色完成"
+            action_text[1].text = "收拾、休息、发现小门，再一起出发。"
+
+
+func start_story(single: bool) -> void:
+    if session.running(): return
+    router.clear_keyboard()
+    session.pause_all("序章 · 准备出发")
+    session.single_player = single
+    if single: session.devices[1] = -1
+    preview_run = false
+    prologue.reset(single,true)
+    stage = "prologue"
+    courtyard.set_active(false)
+    arena.set_active(false)
+    light_corridor.set_active(false)
+    rest_area.set_active(false)
+    if session.keyboard_mode or session.devices[0] < 0: router.start_keyboard()
 
 func start_solo_combat() -> void:
     if session.running(): return

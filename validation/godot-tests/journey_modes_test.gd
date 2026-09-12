@@ -12,6 +12,9 @@ func run() -> void:
     lobby.session.set_focus(true)
     # Native event route selects a mode without mouse or keyboard.
     button(9,JOY_BUTTON_DPAD_DOWN)
+    check(lobby.get_viewport().gui_get_focus_owner() == lobby.get_node("StorySolo"),"D-pad starts at new prologue entry")
+    button(9,JOY_BUTTON_DPAD_DOWN)
+    button(9,JOY_BUTTON_DPAD_DOWN)
     check(lobby.get_viewport().gui_get_focus_owner() == lobby.get_node("SingleJourney"),"D-pad highlights single journey")
     button(9,JOY_BUTTON_A)
     check(lobby.session.single_player and not lobby.session.keyboard_mode and not lobby.session.running(),"controller menu selects solo and awaits ready")

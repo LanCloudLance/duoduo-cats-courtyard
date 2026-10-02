@@ -1,0 +1,7 @@
+{"suite": "m24_chapter_state_test", "passed": true, "checks": 25, "details": []}
+{"suite": "journey_modes_test", "passed": true, "checks": 20, "details": []}
+{"suite": "m24_chapter_test", "passed": true, "checks": 17, "details": []}
+{"suite": "prologue_gamepad_test", "passed": true, "checks": 8, "details": []}
+{"suite": "m21_music_scene_test", "passed": true, "checks": 3, "details": []}
+{"suite": "prologue_scene_test", "passed": true, "checks": 43, "details": []}
+{"suite": "m24_playthrough_test", "passed": true, "checks": 60, "details": []}

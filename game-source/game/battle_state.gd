@@ -14,6 +14,9 @@ const RESCUE_SECONDS := 1.2
 var positions: Array[Vector2] = [Vector2(350, 440), Vector2(440, 520), Vector2(350, 570)]
 var current_cat := 1
 var solo_mode := false
+var story_first := false
+var wave_total := 3
+func available_roles() -> Array: return [0,1] if story_first else [0,1,2]
 var hp: Array[int] = [3, 3]
 var facing: Array[Vector2] = [Vector2.RIGHT, Vector2.RIGHT]
 var velocity: Array[Vector2] = [Vector2.ZERO,Vector2.ZERO]
@@ -122,7 +125,7 @@ func interact(slot: int) -> void:
             message = "朵朵：好，正事做完！先和猫猫歇一会儿。"
 
 func switch_cat() -> void:
-    if hp[1] <= 0 or phase == "complete":
+    if story_first or hp[1] <= 0 or phase == "complete":
         return
     # An earned departure assist cannot be farmed by switching repeatedly.
     if phase == "combat" and assist_cooldown <= 0:
@@ -206,7 +209,10 @@ func _start_wave(number: int) -> void:
     enemies.clear()
     fallen.clear()
     garden.setup(self)
-    Encounter.start(self,number)
+    if story_first:
+        _spawn("sprout" if number == 1 else "armored",Vector2(960,400),true)
+        _spawn("thorn" if number == 1 else "weaver",Vector2(1200,680),true)
+    else: Encounter.start(self,number)
     message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会预判去路：看到预警换方向，或打断后排；硬壳要分工拆。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
 
 func _spawn(kind: String, point: Vector2, protect_arrival := false) -> void:
@@ -227,7 +233,7 @@ func _retry_wave() -> void:
     retries += 1
     positions[0] = Vector2(350, 440)
     positions[1] = Vector2(440, 520)
-    positions[2] = Vector2(350, 570)
+    positions[2] = Vector2(-4000,-4000) if story_first else Vector2(350, 570)
     for slot in range(2):
         hp[slot] = 3
         invulnerable[slot] = 2.0
@@ -288,7 +294,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     # The spare cat follows the active cat and is never an enemy target.
     var follower := 3 - current_cat
     var goal := _bounded(positions[current_cat] + Vector2(-65, 55))
-    positions[follower] = Space.move(positions[follower], Space.direction(positions[follower],goal,Space.ACTOR_RADIUS)*minf(260*dt,positions[follower].distance_to(goal)), Space.ACTOR_RADIUS)
+    if not story_first: positions[follower] = Space.move(positions[follower], Space.direction(positions[follower],goal,Space.ACTOR_RADIUS)*minf(260*dt,positions[follower].distance_to(goal)), Space.ACTOR_RADIUS)
     if not plant_noticed:
         for seed in seeds:
             if positions.any(func(p): return p.distance_to(seed.pos) < 145):
@@ -321,10 +327,10 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
                 feedback("defeat",enemy.pos,-1,{"direction":enemy.get("impact_direction",-enemy.direction)})
         enemies = enemies.filter(func(e): return e.hp > 0)
         if enemies.is_empty() and (hp[0] > 0 or hp[1] > 0):
-            phase = "intermission" if wave < 3 else "clear"
+            phase = "intermission" if wave < wave_total else "clear"
             intermission = 1.25
             confirmed = [false,false]
-            message = "喘口气，下一段马上开始；伙伴坐下时先扶起来。" if wave < 3 else "空地安全了！扶起伙伴，再到右边营火集合。"
+            message = "喘口气，下一段马上开始；伙伴坐下时先扶起来。" if wave < wave_total else "空地安全了！扶起伙伴，再到右边营火集合。"
 
 func _busy(except_enemy: Dictionary) -> bool:
     var count := 0

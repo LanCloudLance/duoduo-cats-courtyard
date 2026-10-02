@@ -1,0 +1,16 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+CONNECTED GAMEPADS: []
+ERROR: FAIL: chapter briefing only describes available roles
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/bridge_scene_test.gd:11)
+       [1] run (res://tests/m24_chapter_test.gd:45)
+       [2] frames (res://tests/bridge_scene_test.gd:36)
+ERROR: FAIL: Tuantuan interrupt never requests the absent white cat
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/bridge_scene_test.gd:11)
+       [1] run (res://tests/m24_chapter_test.gd:53)
+       [2] frames (res://tests/bridge_scene_test.gd:36)
+M24_CHAPTER: 17 checks, 2 failed

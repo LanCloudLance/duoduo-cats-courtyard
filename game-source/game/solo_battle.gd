@@ -17,7 +17,7 @@ func switch_role(b) -> void:
     for offset in range(1,4):
         var next := (current+offset)%3
         var slot := 0 if next == 0 else 1
-        if b.hp[slot] <= 0: continue
+        if next not in b.available_roles() or b.hp[slot] <= 0: continue
         cancel(b)
         human_slot = slot
         if next > 0 and b.current_cat != next: b.switch_cat()

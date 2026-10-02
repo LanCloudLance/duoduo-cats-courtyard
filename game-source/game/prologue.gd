@@ -1,4 +1,5 @@
 extends Node2D
+signal next_chapter_requested
 const Story = preload("res://game/prologue_state.gd")
 const HomeSprite = preload("res://game/home_sprite.gd")
 const BACKDROP = preload("res://assets/story-prologue/home-room-play.png")
@@ -128,6 +129,7 @@ func handle_action(slot: int, button: int) -> void:
     if button == JOY_BUTTON_A:
         if state.finished:
             if not recorded: save_record()
+            else: next_chapter_requested.emit()
         else: state.interact(slot)
 
 func _physics_process(dt: float) -> void:
@@ -170,7 +172,7 @@ func _physics_process(dt: float) -> void:
     controls.text = ("WASD 移动 · E 互动 · Tab 换朵朵 / 团团" if state.single else "朵朵 WASD / E · 团团 方向键 / 空格")+" · R 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换朵朵 / 团团" if state.single else " · 两位分别操作")+" · 右肩想一想 · 菜单键暂停"
     complete_panel.visible = state.finished
     if state.finished:
-        completed_text.text = "原本准备休息的下午，\n变成了一起出发的下午。\n\n序章完成 ✓\n"+save_status+"\n\n下一关：点亮第一盏灯\n前往森林，寻找圆圆的方向。\n\n下一关正在制作。Esc 返回选关，可重玩序章。"
+        completed_text.text = "原本准备休息的下午，\n变成了一起出发的下午。\n\n序章完成 ✓\n"+save_status+"\n\n下一关：点亮第一盏灯\n前往森林，寻找圆圆的方向。\n\n按互动键进入第一章。Esc 返回选关，可重玩序章。"
     queue_redraw()
 
 func _panel(rect: Rect2) -> Panel:

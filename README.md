@@ -33,3 +33,5 @@ M21 完成一轮长循环：扩大真实战斗空间，增加有限卷叶与预�
 validation 中的 compose-m21.py 与 m21-regression.py 是原工作区脚本快照，BASE 采用原目录结构；新 checkout 复跑需调整 BASE、Godot/FFmpeg 路径。Godot 测试资源位于 validation/godot-tests，临时复制到 game-source/tests 并完成编辑器导入后，可按 res://tests/<name>.gd 运行；正式Web构建排除tests。原WAV母带留在工作区work/audio/m21，网站只带Ogg循环文件。
 
 M22 根据用户反馈替换风铃机关素材，并按已选木质童话方向重写六段原创合成配乐。图形遮挡自查、构建与验证边界见 [M22-art-music.md](validation/M22-art-music.md)。音乐听感仍需用户试听判断。
+
+M23 重写战斗与强敌配乐，用户后续反馈“好些了”，当前继续采用该方向。M24 接入第一章“点亮第一盏灯”：序章可继续、独立单人/双人入口、两人清理受力枝架、两段战斗、修灯推理、圆圆线索与共同休息。第二章尚未实现，仍为试玩版。最终7套件176项针对性检查通过；完整回归初轮的一个菜单夹具失败已修复定向复测，证据与体验限制见 [M24-first-chapter.md](validation/M24-first-chapter.md)。

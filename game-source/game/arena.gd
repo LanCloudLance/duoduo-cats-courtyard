@@ -191,6 +191,7 @@ func _physics_process(delta: float) -> void:
     for i in range(3):
         var slot := 0 if i == 0 else 1
         var selected: bool = i == 0 or i == battle.current_cat
+        actors[i].visible = i in battle.available_roles()
         actors[i].caption_visible = selected
         actors[i].caption_override = ""
         if battle.solo_mode:
@@ -240,6 +241,7 @@ func _refresh() -> void:
         add_child(view)
         fallen_views.append(view)
     for i in range(fallen_views.size()): fallen_views[i].sync(battle.fallen[i])
+    title_label.text = "林间空地"
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
     status_label.text = "协作  %d / 3  · Esc 暂停" % battle.wave
@@ -275,6 +277,16 @@ func _refresh() -> void:
     if battle.attacks.charging and battle.hp[0] > 0 and battle.hp[1] > 0:
         hint_label.text = "圆圆蓄满了 · 松开攻击键重拍；闪避可以取消。" if battle.attacks.charge_time >= battle.attacks.CHARGE_SECONDS-0.00001 else "圆圆正在准备重拍 · 可以慢慢移动调整方向，松开攻击键出手。"
     if battle.solo_mode: _solo_hud()
+    if battle.story_first:
+        title_label.text = "驿站前 · 荆棘拦路"
+        if not battle.solo_mode:
+            cat_label.text = "P2 团团   "+_health(1)
+            cat_help.text = "方向键移动 · J 扑击 / 打断 · K 闪避\n空格互动 / 救援" if session.keyboard_mode else "左摇杆移动 · 面键左扑击 / 右闪避\n面键下互动 / 救援"
+        else: cat_help.text = "Tab 换朵朵 / 团团" if session.keyboard_mode else "面键上换朵朵 / 团团"
+        status_label.text = ("单人" if battle.solo_mode else "协作")+"  %d / 2  · Esc 暂停"%battle.wave
+        if battle.phase == "combat": objective_label.text = ["打散枝团，让通往驿站的小路露出来。","风里有织藤花 · 留意落点，团团能扑断它。"][battle.wave-1]
+        elif battle.phase == "complete": objective_label.text = "路通了。按互动键，一起去修驿站的灯。"
+        if battle.phase in ["briefing","clear"]: hint_label.text = "圆圆还在山坡方向；朵朵与团团一起前进。"
     queue_redraw()
 
 func _health(slot: int) -> String:
@@ -292,7 +304,7 @@ func _solo_hud() -> void:
     cat_help.text = ("Tab 换角色" if session.keyboard_mode else "面键上换角色")+" · 当前："+who+"\nAI："+solo.companion.status
     var key := "E" if session.keyboard_mode else "面键下"
     match battle.phase:
-        "briefing": objective_label.text = "先试试三位动作 · 按 %s 开始，AI 伙伴会协助战斗。" % key
+        "briefing": objective_label.text = ("试试朵朵与团团的动作 · 按 %s 开始，AI 伙伴会协助战斗。" if battle.story_first else "先试试三位动作 · 按 %s 开始，AI 伙伴会协助战斗。") % key
         "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
         "clear": objective_label.text = "带伙伴到右边营火，按 %s 完成本次单人战斗。" % key
         "complete": objective_label.text = ("林间空地完成 ✓ 再按 %s，前往双猫灯廊。" % key) if allow_next_level else "单人战斗试玩完成 ✓ Esc / 菜单键可以重玩或选择其他关卡。"

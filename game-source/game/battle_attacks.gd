@@ -168,7 +168,7 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
                     enemy.timer = 0.7
                     enemy.control_immune = 2.2
                     b.feedback("interrupt",enemy.pos,slot)
-                    b.message = "团团打断了！换圆圆，接重拍或继续追击。"
+                    b.message = "团团打断了！朵朵接上连击，或团团继续追击。" if b.story_first else "团团打断了！换圆圆，接重拍或继续追击。"
             if heavy and enemy.hp > 0:
                 if enemy.kind == "armored":
                     if not enemy.get("heavy_extended",false):

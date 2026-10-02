@@ -1,4 +1,5 @@
 extends Node2D
+signal next_chapter_requested
 signal battle_requested
 const Story = preload("res://game/chapter_one_state.gd")
 const Actor = preload("res://game/actor_view.gd")
@@ -92,7 +93,9 @@ func handle_action(slot: int, button: int) -> void:
         if button in [JOY_BUTTON_Y,JOY_BUTTON_B]:get_parent().router.clear_keyboard();state.switch_actor();return
         slot = state.controlled
     if button==JOY_BUTTON_A:
-        if state.finished and not recorded:save_record()
+        if state.finished:
+            if not recorded:save_record()
+            else:next_chapter_requested.emit()
         else:state.interact(slot)
 func _physics_process(dt: float) -> void:
     if not active or not session.running():return
@@ -140,7 +143,7 @@ func _refresh(dt: float) -> void:
     flame_view.state = state;flame_view.visible = lamp.visible;flame_view.queue_redraw()
     complete_panel.visible = state.finished
     if state.finished:
-        completed_text.text = "点亮第一盏灯 ✓\n\n驿站重新亮起来了。圆圆留下的白毛和脚印，\n把路指向了山坡上的旧钟楼。\n\n朵朵：五分钟以后，我还是很勇敢。\n\n"+save_status+"\n\n下一章：团团，去那边等我\n运输桥、桥架内外的分工，还有钟楼的低窗。\n\n第二章尚在制作。Esc 可选关、重玩第一章。"
+        completed_text.text = "点亮第一盏灯 ✓\n\n驿站重新亮起来了。圆圆留下的白毛和脚印，\n把路指向了山坡上的旧钟楼。\n\n朵朵：五分钟以后，我还是很勇敢。\n\n"+save_status+"\n\n下一章：团团，去那边等我\n运输桥、桥架内外的分工，还有钟楼的低窗。\n\n按互动键进入第二章。Esc 可选关、重玩第一章。"
     queue_redraw()
 func _panel(rect: Rect2) -> Panel:
     var p := Panel.new();p.position = rect.position;p.size = rect.size

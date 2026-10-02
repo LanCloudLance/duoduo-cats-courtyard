@@ -3,6 +3,7 @@ extends Control
 const Session = preload("res://input/session_state.gd")
 const Router = preload("res://input/event_router.gd")
 const Stick = preload("res://ui/stick_indicator.gd")
+const StoryChapter = preload("res://game/story_chapter_view.gd")
 const ChapterOne = preload("res://game/chapter_one.gd")
 const Prologue = preload("res://game/prologue.gd")
 const Courtyard = preload("res://game/courtyard.gd")
@@ -26,6 +27,8 @@ var sticks: Array[Control] = []
 var top_status: Label
 var footer_status: Label
 var last_buttons: Array[int] = [-1, -1]
+var selected_story_chapter := 2
+var story_chapter: Node2D
 var chapter_one: Node2D
 var prologue: Node2D
 var courtyard: Node2D
@@ -87,10 +90,22 @@ func _ready() -> void:
         music.set_muted(music_setting == 2)
         music_button.text = ["♫ 音乐：轻声","♫ 音乐：标准","♫ 音乐：关闭"][music_setting]
     )
+    story_chapter = StoryChapter.new(session)
+    story_chapter.name = "StoryChapter"
+    add_child(story_chapter)
+    story_chapter.battle_requested.connect(enter_story_combat)
+    story_chapter.next_chapter_requested.connect(func(chapter):
+        session.pause_all("下一章")
+        start_story_chapter(chapter,session.single_player)
+    )
     chapter_one = ChapterOne.new(session)
     chapter_one.name = "ChapterOne"
     add_child(chapter_one)
     chapter_one.battle_requested.connect(enter_chapter_combat)
+    chapter_one.next_chapter_requested.connect(func():
+        session.pause_all("进入第二章")
+        start_story_chapter(2,session.single_player)
+    )
     prologue = Prologue.new(session)
     prologue.name = "Prologue"
     add_child(prologue)
@@ -116,7 +131,13 @@ func _ready() -> void:
     )
     courtyard.next_level_requested.connect(enter_combat)
     arena.next_level_requested.connect(func():
-        if stage == "chapter-combat":
+        if stage == "story-combat":
+            router.clear_keyboard()
+            story_chapter.state.after_battle()
+            stage = "story-chapter"
+            arena.set_active(false)
+            story_chapter.set_active(session.running())
+        elif stage == "chapter-combat":
             router.clear_keyboard()
             chapter_one.finish_battle()
             stage = "chapter-one"
@@ -129,9 +150,13 @@ func _ready() -> void:
     rest_area.checkpoint_requested.connect(_save_checkpoint)
     router.action_pressed.connect(_action)
     router.action_released.connect(func(slot, button):
-        if stage in ["combat","chapter-combat"]: arena.release_action(slot, button)
+        if stage in ["combat","chapter-combat","story-combat"]: arena.release_action(slot, button)
+        elif stage == "story-chapter": story_chapter.release_action(slot,button)
     )
-    router.actions_cancelled.connect(func(): arena.cancel_inputs())
+    router.actions_cancelled.connect(func():
+        arena.cancel_inputs()
+        story_chapter.cancel_inputs()
+    )
     Input.joy_connection_changed.connect(_connection_changed)
     if not OS.has_feature("web") and checkpoint.path == "user://courtyard-safe-v1.json":
         var legacy: Array = []
@@ -151,7 +176,12 @@ func _ready() -> void:
         )
         JavaScriptBridge.get_interface("window").duoduoPause = web_pause_callback
         print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())
-    if web_story.contains("mode=chapter-one") or "--chapter-one" in OS.get_cmdline_user_args():
+    var requested_chapter := 0
+    for c in range(2,6):
+        if web_story.contains("mode=chapter-"+str(c)+"-") or ("--chapter-"+str(c)) in OS.get_cmdline_user_args(): requested_chapter = c
+    if requested_chapter>0:
+        start_story_chapter(requested_chapter,web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
+    elif web_story.contains("mode=chapter-one") or "--chapter-one" in OS.get_cmdline_user_args():
         start_chapter_one(web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
     elif web_story.contains("mode=trial-"):
         start_trial("combat" if web_story.contains("trial-combat") else ("gate" if web_story.contains("trial-gate") else "light"),web_story.contains("-solo"))
@@ -247,9 +277,15 @@ func _build() -> void:
     team.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
     team.texture = TEAM
     team.position = Vector2(65, 240)
-    team.size = Vector2(501, 121)
+    team.size = Vector2(501, 78)
     team.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
     add_child(team)
+    _button("章节：第二章",Rect2(68,326,184,38),func():
+        selected_story_chapter = 2+(selected_story_chapter-1)%4
+        get_node("ChapterSelect").text = "章节："+["第二章","第三章","第四章","第五章"][selected_story_chapter-2]
+    ).name = "ChapterSelect"
+    _button("单人进入",Rect2(266,326,140,38),func():start_story_chapter(selected_story_chapter,true)).name="LaterChapterSolo"
+    _button("双人进入",Rect2(420,326,140,38),func():start_story_chapter(selected_story_chapter,false)).name="LaterChapterDual"
     _button("第一章 · 单人",Rect2(68,376,240,38),func(): start_chapter_one(true)).name = "ChapterOneSolo"
     _button("第一章 · 双人",Rect2(320,376,240,38),func(): start_chapter_one(false)).name = "ChapterOneDual"
     _button("序章 · 单人",Rect2(68,430,240,38),func(): start_story(true)).name = "StorySolo"
@@ -271,7 +307,12 @@ func _build() -> void:
     mode_help = _label("", Rect2(59, 724, 900, 28), 16, MUTE)
     var replay := _button("重玩庭院", Rect2(979, 692, 141, 46), func():
         router.clear_keyboard()
-        if stage in ["chapter-one","chapter-combat"]:
+        if stage in ["story-chapter","story-combat"]:
+            story_chapter.reset(story_chapter.state.chapter,session.single_player,false)
+            arena.cancel_inputs()
+            stage = "story-chapter"
+            session.pause_all("本章已重置 · 准备后继续")
+        elif stage in ["chapter-one","chapter-combat"]:
             chapter_one.reset(session.single_player,false)
             arena.cancel_inputs()
             stage = "chapter-one"
@@ -296,7 +337,7 @@ func _build() -> void:
     )
     replay.name = "ReplayCourtyard"
     _button("返回" if OS.has_feature("web") else "退出", Rect2(1135, 692, 82, 46), exit_game).name = "ExitGame"
-    for id in ["StorySolo","StoryDual","ChapterOneSolo","ChapterOneDual","SingleJourney","DualJourney","ResumeSolo","ResumeCheckpoint","SoloCombatPreview","CombatPreview","LightPreview","RestPreview","ReplayCourtyard","KeyboardPlay","GamepadMode","ExitGame"]:
+    for id in ["StorySolo","StoryDual","ChapterOneSolo","ChapterOneDual","ChapterSelect","LaterChapterSolo","LaterChapterDual","SingleJourney","DualJourney","ResumeSolo","ResumeCheckpoint","SoloCombatPreview","CombatPreview","LightPreview","RestPreview","ReplayCourtyard","KeyboardPlay","GamepadMode","ExitGame"]:
         menu_controls.append(get_node(id))
 
 func _build_slot(slot: int, y: float, title: String, detail: String, tint: Color) -> void:
@@ -331,7 +372,9 @@ func _input(event: InputEvent) -> void:
 
 func _action(slot: int, button: int) -> void:
     last_buttons[slot] = button
-    if stage == "chapter-one":
+    if stage == "story-chapter":
+        story_chapter.handle_action(slot,button)
+    elif stage == "chapter-one":
         chapter_one.handle_action(slot,button)
     elif stage == "prologue":
         prologue.handle_action(slot,button)
@@ -341,12 +384,13 @@ func _action(slot: int, button: int) -> void:
         light_corridor.handle_action(slot, button)
     elif stage == "gate":
         chime_gate.handle_action(slot, button)
-    elif stage in ["combat","chapter-combat"]:
+    elif stage in ["combat","chapter-combat","story-combat"]:
         arena.handle_action(slot, button)
     else:
         courtyard.handle_action(slot, button)
 
 func enter_combat() -> void:
+    arena.story_title="";arena.story_destination=""
     if arena.battle.solo_mode != session.single_player: arena.configure_solo(session.single_player)
     arena.allow_next_level = not preview_run or not session.single_player
     router.clear_keyboard()
@@ -491,7 +535,7 @@ func _process(_delta: float) -> void:
         web_probe_clock += _delta
         if web_probe_clock >= 0.1:
             web_probe_clock = 0
-            var current = chapter_one.state if stage == "chapter-one" else prologue.state if stage == "prologue" else courtyard.party if stage == "bridge" else (arena.battle if stage in ["combat","chapter-combat"] else (light_corridor.puzzle if stage == "light" else (chime_gate.puzzle if stage == "gate" else rest_area.state)))
+            var current = story_chapter.state if stage == "story-chapter" else chapter_one.state if stage == "chapter-one" else prologue.state if stage == "prologue" else courtyard.party if stage == "bridge" else (arena.battle if stage in ["combat","chapter-combat","story-combat"] else (light_corridor.puzzle if stage == "light" else (chime_gate.puzzle if stage == "gate" else rest_area.state)))
             var points: Array = []
             for point in current.positions: points.append([point.x,point.y])
             var report := {"stage":stage,"running":session.running(),"solo":session.single_player,"positions":points,"cat":1 if stage in ["prologue","chapter-one"] else current.current_cat,"bridge_locks":courtyard.bridge.unlocked,"bridge_done":courtyard.bridge.finished,"phase":arena.battle.phase,"wave":arena.battle.wave,"hp":arena.battle.hp,"persistent":OS.is_userfs_persistent(),"rested":rest_area.state.rested,"finished":rest_area.state.finished,"can_save":rest_area.can_save,"solo_saved":not solo_checkpoint.read_checkpoint().is_empty(),"dual_saved":not checkpoint.read_checkpoint().is_empty()}
@@ -513,25 +557,28 @@ func _process(_delta: float) -> void:
     if playing: music_started = true
     if not music_started: music.set_context("home")
     elif playing:
-        if stage == "chapter-one": music.set_context("rest" if chapter_one.state.lit else "puzzle" if chapter_one.state.phase == "station" else "explore")
-        else: music.set_context(music.context_for("combat" if stage == "chapter-combat" else stage,arena.battle.phase,arena.battle.wave))
-    if playing and stage in ["combat","chapter-combat"]:
+        if stage == "story-chapter": music.set_context("home" if story_chapter.state.phase in ["home","complete"] and story_chapter.state.chapter==5 else "rest" if story_chapter.state.finished else "boss" if story_chapter.state.chapter==5 and story_chapter.state.phase in ["shield","lure","unjam","withdraw"] else "puzzle")
+        elif stage == "chapter-one": music.set_context("rest" if chapter_one.state.lit else "puzzle" if chapter_one.state.phase == "station" else "explore")
+        else: music.set_context(music.context_for("combat" if stage in ["chapter-combat","story-combat"] else stage,arena.battle.phase,arena.battle.wave))
+    if playing and stage in ["combat","chapter-combat","story-combat"]:
         if arena.battle.feedback_id < music_feedback_cursor: music_feedback_cursor = 0
         for event in arena.battle.feedback_since(music_feedback_cursor):
             if event.kind in ["hit","heavy","hurt","parry","danger","plant_burst"]: music.duck(0.18)
         music_feedback_cursor = arena.battle.feedback_id
     music.set_paused(not session.focused or (music_started and not playing))
     for child in get_children():
-        if child is CanvasItem and child != chapter_one and child != prologue and child != courtyard and child != arena and child != light_corridor and child != chime_gate and child != rest_area:
+        if child is CanvasItem and child != story_chapter and child != chapter_one and child != prologue and child != courtyard and child != arena and child != light_corridor and child != chime_gate and child != rest_area:
             child.visible = not playing
+    if story_chapter.active != (playing and stage == "story-chapter"):
+        story_chapter.set_active(playing and stage == "story-chapter")
     if chapter_one.active != (playing and stage == "chapter-one"):
         chapter_one.set_active(playing and stage == "chapter-one")
     if prologue.active != (playing and stage == "prologue"):
         prologue.set_active(playing and stage == "prologue")
     if courtyard.active != (playing and stage == "bridge"):
         courtyard.set_active(playing and stage == "bridge")
-    if arena.active != (playing and stage in ["combat","chapter-combat"]):
-        arena.set_active(playing and stage in ["combat","chapter-combat"])
+    if arena.active != (playing and stage in ["combat","chapter-combat","story-combat"]):
+        arena.set_active(playing and stage in ["combat","chapter-combat","story-combat"])
     if light_corridor.active != (playing and stage == "light"):
         light_corridor.set_active(playing and stage == "light")
     if chime_gate.active != (playing and stage == "gate"):
@@ -584,6 +631,11 @@ func _process(_delta: float) -> void:
         vector_text[1].text = "机关解谜由玩家亲自完成"
         claim_buttons[1].visible = false
         sticks[1].visible = false
+    if stage in ["story-chapter","story-combat"]:
+        top_status.text = story_chapter.state.title
+        slot_details[0].text = "已进入主线章节 · 单人手动解谜，战斗由 AI 协助。"
+        slot_details[1].text = "双猫已经入队。" if story_chapter.state.joined else "圆圆尚未入队。"
+        ready_text[1].text = "另一位由 AI 协助战斗" if stage=="story-combat" else "解谜由你手动切角色" if session.single_player else ready_text[1].text
     if stage in ["chapter-one","chapter-combat"]:
         top_status.text = "第一章 · 点亮第一盏灯"
         slot_details[0].text = "朵朵与团团，一起寻找圆圆的去向。"
@@ -738,6 +790,7 @@ func start_chapter_one(single: bool) -> void:
 func enter_chapter_combat() -> void:
     router.clear_keyboard()
     arena.configure_solo(session.single_player)
+    arena.story_title=""
     arena.battle.story_first = true
     arena.battle.wave_total = 2
     arena.battle.current_cat = 1
@@ -749,3 +802,25 @@ func enter_chapter_combat() -> void:
     arena.set_active(session.running())
     arena.actors[2].visible = false
     arena._refresh()
+
+func start_story_chapter(chapter:int,single:bool)->void:
+    if session.running() or chapter<2 or chapter>5:return
+    router.clear_keyboard();session.pause_all("章节 · 准备出发")
+    session.single_player=single
+    if single:session.devices[1]=-1
+    preview_run=false
+    story_chapter.reset(chapter,single,true)
+    stage="story-chapter"
+    for scene in [chapter_one,prologue,courtyard,arena,light_corridor,chime_gate,rest_area]:scene.set_active(false)
+    if session.keyboard_mode or session.devices[0]<0:router.start_keyboard()
+func enter_story_combat()->void:
+    router.clear_keyboard();arena.configure_solo(session.single_player)
+    arena.battle.story_first=not story_chapter.state.joined
+    arena.battle.wave_total=story_chapter.state.battle_waves
+    arena.battle.current_cat=story_chapter.state.current_cat
+    if not story_chapter.state.joined:arena.battle.positions[2]=Vector2(-4000,-4000)
+    arena.story_title=story_chapter.state.title+" · 荆棘阻路"
+    arena.story_destination="小路清开了。按互动键，回到本章继续修复。"
+    arena.battle.message="荆棘围住了维修通路。先看预兆，再用盾挡、扑断和绕后。"
+    arena.allow_next_level=true
+    stage="story-combat";story_chapter.set_active(false);arena.set_active(session.running());arena._refresh()

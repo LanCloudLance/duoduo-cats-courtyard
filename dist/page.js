@@ -8,3 +8,5 @@ document.querySelector('#fullscreen').onclick=async()=>{try{if(!document.fullscr
 window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame.contentWindow)return;if(e.data.type==='duoduo-exit')home();if(e.data.type==='duoduo-error'){home();status.textContent='暂时无法进入游戏，请刷新重试。'+e.data.message;}});
 
 document.querySelectorAll("[data-trial]").forEach(b=>b.onclick=()=>enter("trial-"+b.dataset.trial+"-"+document.querySelector("#trial-mode").value));
+
+document.querySelectorAll("[data-later-mode]").forEach(b=>b.onclick=()=>enter("chapter-"+document.querySelector("#story-chapter").value+"-"+b.dataset.laterMode));

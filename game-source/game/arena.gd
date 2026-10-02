@@ -1,4 +1,6 @@
 extends Node2D
+var story_title := ""
+var story_destination := ""
 signal next_level_requested
 const Solo = preload("res://game/solo_battle.gd")
 var solo = Solo.new()
@@ -126,6 +128,7 @@ func restart() -> void:
     configure_solo(session.single_player)
 
 func configure_solo(value: bool) -> void:
+    story_title="";story_destination=""
     allow_next_level = not value
     heard_feedback = 0
     battle = Battle.new()
@@ -287,6 +290,12 @@ func _refresh() -> void:
         if battle.phase == "combat": objective_label.text = ["打散枝团，让通往驿站的小路露出来。","风里有织藤花 · 留意落点，团团能扑断它。"][battle.wave-1]
         elif battle.phase == "complete": objective_label.text = "路通了。按互动键，一起去修驿站的灯。"
         if battle.phase in ["briefing","clear"]: hint_label.text = "圆圆还在山坡方向；朵朵与团团一起前进。"
+    if not story_title.is_empty():
+        title_label.text=story_title
+        status_label.text=("单人" if battle.solo_mode else "协作")+" %d / %d · Esc 暂停"%[battle.wave,battle.wave_total]
+        if battle.phase=="complete":objective_label.text=story_destination
+        elif battle.phase=="combat":objective_label.text="留意冲锋与落点；团团打断施法，朵朵从破绽侧追击。"
+        if battle.phase in ["briefing","clear"]:hint_label.text="准备好再确认；清路后仍需要伙伴一起到出口。"
     queue_redraw()
 
 func _health(slot: int) -> String:

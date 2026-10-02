@@ -1,0 +1,5 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+AFTER_MOVE beam_held=false light_released=false
+AFTER_TOOL beam_held=false light_released=true message=圆圆主动收回定光扣，跟上伙伴。固定好的桥仍然牢固。
+FOLLOW_FINAL=(1026.971, 337.3358) walkable=true

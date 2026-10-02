@@ -1,0 +1,13 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+CONNECTED GAMEPADS: []
+ERROR: FAIL: recovered route map completes third chapter
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/bridge_scene_test.gd:11)
+       [1] gate (res://tests/m25_keyboard_driver.gd:29)
+       [2] run (res://tests/m25_two_three_playthrough_test.gd:79)
+       [3] touch (res://tests/m25_keyboard_driver.gd:23)
+       [4] frames (res://tests/bridge_scene_test.gd:36)
+M25_NORMAL_INPUT: 56 checks, 1 failed
+MAP_FAILED [(1079.41, 311.7158), (1000.557, 353.0563), (1113.308, 316.7578)] phase=map message=朵朵：从上方出口过来吧，我们三位一起看地图。 release=true

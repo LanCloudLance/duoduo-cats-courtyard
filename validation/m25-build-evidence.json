@@ -1,0 +1,83 @@
+{
+  "source_matches_authoritative": true,
+  "all_assets_below_25MiB": true,
+  "files": [
+    {
+      "path": "team.png",
+      "bytes": 1346860,
+      "sha256": "f87f6bbbfad2e6952ac4d184a2a709774cfa70142fe0d524203a2fb78bf1a3c9"
+    },
+    {
+      "path": "index.html",
+      "bytes": 5390,
+      "sha256": "bdec6e5f6f5325c4487dd2ef5b501e811618e0507f399a39c7d39b24e7e680d2"
+    },
+    {
+      "path": "page.js",
+      "bytes": 1736,
+      "sha256": "bae5bd3e52410b34eae0aaaaf1b7d0293515a092ac73f29a4dd38443f9e29829"
+    },
+    {
+      "path": "page.css",
+      "bytes": 2559,
+      "sha256": "522f547d43150c9dab7201411f8d3d7c49c28eb294fcfbd3d7afc0264bca2b52"
+    },
+    {
+      "path": "OFL.txt",
+      "bytes": 4388,
+      "sha256": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9"
+    },
+    {
+      "path": "game/index.apple-touch-icon.png",
+      "bytes": 11944,
+      "sha256": "01d4f63e525941e06ce74f5187dad030d20a8d52a07ce365ae4e94af97a3b1f5"
+    },
+    {
+      "path": "game/index.icon.png",
+      "bytes": 5700,
+      "sha256": "ad3c35ad0facf487c618204bd98db543034fc95224eadc7f08c7a9ff38d5b3b5"
+    },
+    {
+      "path": "game/index.html",
+      "bytes": 5785,
+      "sha256": "cb5672387ddbe92d3a881031a04565a3774423bb25123f219e8ca03e0d3c8cde"
+    },
+    {
+      "path": "game/index.png",
+      "bytes": 21443,
+      "sha256": "3cb4495c0b98dfbe4b663cbf2b6836473572339beb66d902367893162a70be0e"
+    },
+    {
+      "path": "game/index.audio.worklet.js",
+      "bytes": 7298,
+      "sha256": "5b476a9c9ce642c0ee4256436d1bc31d9c38f868aca0f9a8e2a57c18d2dec2a3"
+    },
+    {
+      "path": "game/engine.bin",
+      "bytes": 10054758,
+      "sha256": "2862a06f11ad1579c4ceb764f724013c1e62f8916d5d8d237fe5ee209c76f56e"
+    },
+    {
+      "path": "game/index.js",
+      "bytes": 279815,
+      "sha256": "33c94cb3175f3333b82e2a3be5e8e86f77986f0aa2042b1631f6367a4e5bb6ba"
+    },
+    {
+      "path": "game/index.audio.position.worklet.js",
+      "bytes": 2973,
+      "sha256": "be33985bc7160d6bf9646f259cd86b259cd67b02ccb297ee5c44f8ac84327bc8"
+    },
+    {
+      "path": "game/web-loader.js",
+      "bytes": 1048,
+      "sha256": "570b8aa88e779a0d4bef385c09811ad71aabfbaa9a274960bce4b33421a5e0c4"
+    },
+    {
+      "path": "game/index.pck",
+      "bytes": 25819380,
+      "sha256": "ac1c658b2337c30c76045de2ecc020780496b76b24c37e4f3a714905b147cfcc"
+    }
+  ],
+  "web_qa": "Native continuous input, browser entries 2 solo/3 dual/5 dual, Tab, help/pause. Browser full story not tested.",
+  "review": "No P1/P2 blockers; separate fixture evidence."
+}

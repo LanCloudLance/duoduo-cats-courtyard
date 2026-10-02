@@ -1,0 +1,109 @@
+[
+  {
+    "name": "home",
+    "seconds": 60.0,
+    "bpm": 96,
+    "meter": 3,
+    "sections": 4,
+    "events": 288,
+    "peak": 0.2641778480036358,
+    "rms": 0.051144598782212246,
+    "loop_edge_delta": 0.003343289744077816,
+    "instruments": [
+      "bass",
+      "block",
+      "drum",
+      "pluck",
+      "wood"
+    ]
+  },
+  {
+    "name": "explore",
+    "seconds": 52.363625,
+    "bpm": 110,
+    "meter": 3,
+    "sections": 4,
+    "events": 384,
+    "peak": 0.3088427659261015,
+    "rms": 0.05896815269265902,
+    "loop_edge_delta": 0.0030270316497613206,
+    "instruments": [
+      "bass",
+      "block",
+      "drum",
+      "pluck",
+      "wood"
+    ]
+  },
+  {
+    "name": "puzzle",
+    "seconds": 68.57140625,
+    "bpm": 84,
+    "meter": 3,
+    "sections": 4,
+    "events": 248,
+    "peak": 0.17429375100137662,
+    "rms": 0.03050752802078217,
+    "loop_edge_delta": 0.0004704407522551149,
+    "instruments": [
+      "bass",
+      "bell",
+      "pluck",
+      "wood"
+    ]
+  },
+  {
+    "name": "battle",
+    "seconds": 66.206875,
+    "bpm": 116,
+    "meter": 4,
+    "sections": 4,
+    "events": 642,
+    "peak": 0.2853179135124965,
+    "rms": 0.05567769025498054,
+    "loop_edge_delta": 0.0017655607189609873,
+    "instruments": [
+      "bass",
+      "block",
+      "brush",
+      "drum",
+      "pluck",
+      "wood"
+    ]
+  },
+  {
+    "name": "boss",
+    "seconds": 60.952375,
+    "bpm": 126,
+    "meter": 4,
+    "sections": 4,
+    "events": 642,
+    "peak": 0.3175424391720057,
+    "rms": 0.05985803754149523,
+    "loop_edge_delta": 0.003997569285751807,
+    "instruments": [
+      "bass",
+      "block",
+      "brush",
+      "drum",
+      "pluck",
+      "wood"
+    ]
+  },
+  {
+    "name": "rest",
+    "seconds": 75.78946875,
+    "bpm": 76,
+    "meter": 3,
+    "sections": 4,
+    "events": 244,
+    "peak": 0.15506673053474046,
+    "rms": 0.02630164881105013,
+    "loop_edge_delta": 0.00023044203370616283,
+    "instruments": [
+      "bass",
+      "pluck",
+      "wood"
+    ]
+  }
+]

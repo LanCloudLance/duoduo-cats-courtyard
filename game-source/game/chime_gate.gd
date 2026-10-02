@@ -4,6 +4,13 @@ const Chime = preload("res://game/chime_state.gd")
 const Selection = preload("res://game/solo_selection.gd")
 const Actor = preload("res://game/actor_view.gd")
 const BACKDROP = preload("res://assets/visual-m14/arena-painted.png")
+const PROPS = preload("res://assets/visual-m22/chime-props.png")
+# Source regions exclude neighboring sprites and preserve the generated alpha.
+const PROP_REGIONS := [Rect2(90,16,280,422),Rect2(497,16,344,422),
+    Rect2(946,16,334,427),Rect2(1388,16,336,427),
+    Rect2(94,452,296,414),Rect2(539,448,278,420),
+    Rect2(925,447,384,421),Rect2(1430,447,238,421)]
+const BELL_CUES := [preload("res://assets/music/chime-0.wav"),preload("res://assets/music/chime-1.wav")]
 var puzzle = Chime.new()
 var selection = Selection.new()
 var session
@@ -21,6 +28,10 @@ var heard_revision := 0
 var clock := 0.0
 var opening := 0.0
 var reveal := 0.0
+var mirror_blends: Array[float] = [1.0,0.0,0.0]
+var bell_glows: Array[float] = [0.0,0.0]
+var bell_last: Array[bool] = [false,false]
+var bell_voices: Array[AudioStreamPlayer] = []
 
 func _init(state) -> void:
     session = state
@@ -31,6 +42,12 @@ func _ready() -> void:
     camera.enabled = false
     add_child(camera)
     add_child(audio)
+    for stream in BELL_CUES:
+        var voice := AudioStreamPlayer.new()
+        voice.stream = stream
+        voice.volume_db = -14
+        add_child(voice)
+        bell_voices.append(voice)
     for i in range(3):
         var actor = Actor.new()
         actor.role = i
@@ -61,7 +78,9 @@ func set_active(value: bool) -> void:
     visible = value
     hud.visible = value
     camera.enabled = value
-    if not value: audio.silence()
+    if not value:
+        audio.silence()
+        for voice in bell_voices: voice.stop()
 
 func restart() -> void:
     var health: Array[int] = puzzle.hp.duplicate()
@@ -72,6 +91,9 @@ func restart() -> void:
     opening = 0
     reveal = 0
     heard_revision = 0
+    mirror_blends = [1.0,0.0,0.0]
+    bell_glows = [0.0,0.0]
+    bell_last = [false,false]
     _refresh()
 
 func handle_action(slot: int, button: int) -> void:
@@ -110,14 +132,21 @@ func _physics_process(dt: float) -> void:
     reveal = move_toward(reveal,1 if puzzle.stage == 2 else 0,dt*1.5)
     puzzle.step(dt,selection.movement(session.movement(0),0) if session.single_player else session.movement(0),selection.movement(session.movement(0),1) if session.single_player else session.movement(1),true)
     if heard_revision != puzzle.revision:
-        audio.play(2 if puzzle.last_event == "bell" else 1)
+        if puzzle.last_event != "bell": audio.play(1)
         heard_revision = puzzle.revision
     for i in range(3):
+        mirror_blends[i] = move_toward(mirror_blends[i],float(puzzle.mirrors[i]),dt*4.5)
+    for i in range(2):
+        bell_glows[i] = move_toward(bell_glows[i],1.0 if puzzle.receivers[i] else 0.0,dt*4)
+        if puzzle.receivers[i] and not bell_last[i] and not audio.muted:
+            bell_voices[i].play()
+        bell_last[i] = puzzle.receivers[i]
+    for i in range(3):
         var selected: bool = i == selection.actor if session.single_player else i == 0 or i == puzzle.current_cat
-        actors[i].caption_visible = selected
+        actors[i].caption_visible = selected and not (i == 2 and puzzle.lens_site >= 0)
         actors[i].caption_override = ["朵朵","团团","圆圆"][i]+(" · 你控制" if selected and session.single_player else "")
         actors[i].presentation_clock = clock
-        actors[i].social_kind = "lamp" if i == 2 and puzzle.lens_site >= 0 else ""
+        actors[i].social_kind = "rest" if i == 2 and puzzle.lens_site >= 0 else ""
         actors[i].update_pose(puzzle.positions[i],selected,i == 2 and puzzle.lens_site >= 0,dt)
     _refresh()
 
@@ -152,67 +181,100 @@ func _label(text: String, rect: Rect2, size: int) -> Label:
     return label
 
 func _text(point: Vector2,text: String,width: float,size: int = 16) -> void:
+    draw_string_outline(font,point,text,HORIZONTAL_ALIGNMENT_CENTER,width,size,3,Color("263d30"))
     draw_string(font,point,text,HORIZONTAL_ALIGNMENT_CENTER,width,size,Color("fff0ce"))
+
+func _prop(index: int, foot: Vector2, size: Vector2, opacity: float = 1.0) -> void:
+    if opacity <= 0: return
+    draw_texture_rect_region(PROPS,Rect2(foot-Vector2(size.x*0.5,size.y),size),PROP_REGIONS[index],Color(1,1,1,opacity))
+
+func _near_operator(point: Vector2, role: int, candidates: Array) -> bool:
+    var controlled: bool = selection.actor == role if session.single_player else role == 0 or puzzle.current_cat == role
+    if not controlled: return false
+    var distance: float = puzzle.positions[role].distance_to(point)
+    if distance >= 78: return false
+    for other in candidates:
+        if puzzle.positions[role].distance_to(other) < distance-0.1: return false
+    return true
+
+func _foot_shadow(point: Vector2, width: float) -> void:
+    draw_set_transform(point,0,Vector2(1,0.25))
+    draw_circle(Vector2.ZERO,width*0.5,Color(0.12,0.19,0.10,0.24))
+    draw_set_transform(Vector2.ZERO)
 
 func _draw() -> void:
     draw_texture_rect(BACKDROP,Rect2(0,0,1280,800),false)
-    draw_rect(Rect2(120,190,860,440),Color(0.23,0.25,0.14,0.35))
-    # All optics sit on a raised rail; the walking space below remains clear.
+    # Props use their real ground anchor; beams pass through glass above it.
     var height := Vector2(0,65)
-    for ray in puzzle.rays:
-        draw_line(ray.from-height,ray.to-height,Color(1,0.86,0.43,0.24),10,true)
-        draw_line(ray.from-height,ray.to-height,Color("ffe7a0"),3,true)
     var blend: float = puzzle.board_blend()
     for i in [0,2]:
-        draw_line(Chime.MIRRORS[i],puzzle.mirror_points()[i],Color("807350"),5,true)
+        var start: Vector2 = Chime.MIRRORS[i]
+        var end: Vector2 = puzzle.mirror_points()[i]
+        if start.distance_to(end) > 1:
+            draw_line(start+Vector2(0,4),end+Vector2(0,4),Color(0.32,0.25,0.13,0.4),7,true)
+            draw_line(start,end,Color(0.66,0.49,0.27,0.75),3,true)
     if puzzle.stage == 2:
-        draw_line(Vector2(180,400)-height,Vector2(180,500)-height,Color("8d815e"),8,true)
-    var source: Vector2 = Chime.SOURCE.lerp(puzzle.source_point(),blend)-height
-    draw_circle(source,18,Color("efd16e"))
-    draw_arc(source,26,0,TAU,32,Color("ffedac"),2,true)
-    if puzzle.stage == 2:
-        draw_line(source+Vector2(-21,0),source+Vector2(-36,12),Color("d7b96f"),5,true)
-        if puzzle.positions[0].distance_to(puzzle.source_point()) < 120:
-            _text(source+Vector2(-65,45),"调灯高低",130,17)
+        draw_line(Vector2(180,400),Vector2(180,500),Color(0.42,0.30,0.15,0.65),6,true)
+    var source: Vector2 = Chime.SOURCE.lerp(puzzle.source_point(),blend)
+    _foot_shadow(source,62)
+    _prop(4,source+Vector2(-12,4),Vector2(85,118))
+    draw_circle(source-height,7,Color(1,0.90,0.56,0.65+sin(clock*2)*0.1))
+    var girl_controls: Array = [puzzle.source_point(),puzzle.mirror_points()[0],puzzle.mirror_points()[2]]
+    if puzzle.stage == 2 and _near_operator(puzzle.source_point(),0,girl_controls):
+        _text(source+Vector2(-65,25),"调灯高低",130,16)
     for i in range(3):
-        var p: Vector2 = Chime.MIRRORS[i].lerp(puzzle.mirror_points()[i],blend)-height
-        draw_line(p+height-Vector2(0,6),p,Color("806b4c"),10,true)
-        draw_circle(p,30,Color("5c796e"))
-        var d := Vector2(20,-20) if int(puzzle.mirrors[i]) == 0 else Vector2(20,20)
-        draw_line(p-d,p+d,Color("ccece1"),9,true)
-        if i == 1:
-            draw_arc(p+Vector2(0,-40),9,0,TAU,20,Color("d7b96f"),3,true)
-        else:
-            draw_line(p+Vector2(30,0),p+Vector2(47,0),Color("d7b96f"),5,true)
-        _text(p+Vector2(-50,46),"扣环" if i == 1 else "手柄",100,16)
+        var foot: Vector2 = Chime.MIRRORS[i].lerp(puzzle.mirror_points()[i],blend)
+        _foot_shadow(foot,69)
+        _prop(2,foot+Vector2(0,4),Vector2(104,133),1-mirror_blends[i])
+        _prop(3,foot+Vector2(0,4),Vector2(104,133),mirror_blends[i])
+        if _near_operator(puzzle.mirror_points()[i],1 if i == 1 else 0,[puzzle.mirror_points()[1]] if i == 1 else girl_controls):
+            _text(foot+Vector2(-67,25),"团团 · 爪钩扣环" if i == 1 else "朵朵 · 转手柄",134,15)
     for i in range(2):
-        var p: Vector2 = Chime.SOCKETS[i].lerp(puzzle.socket_points()[i],blend)-height
-        draw_line(p,p+height-Vector2(0,7),Color("867a55"),7,true)
-        draw_arc(p+height-Vector2(0,8),25,0,TAU,32,Color("b5bf98"),3,true)
-        draw_circle(p,21,Color("9caa88") if puzzle.lens_site != i else Color("ebd778"))
-        draw_polygon(PackedVector2Array([p+Vector2(0,-18),p+Vector2(15,0),p+Vector2(0,18),p+Vector2(-15,0)]),PackedColorArray([Color("ccebd7")]))
-        _text(p+Vector2(-58,39),"水晶底座",116,15)
+        var foot: Vector2 = Chime.SOCKETS[i].lerp(puzzle.socket_points()[i],blend)
+        _foot_shadow(foot,57)
+        _prop(5,foot+Vector2(0,5),Vector2(66,100))
+        if puzzle.lens_site == i:
+            draw_arc(foot-height,22,0,TAU,36,Color(1,0.87,0.42,0.5),2,true)
+            for k in range(3):
+                var sparkle := foot-height+Vector2(sin(clock*2+k*2)*18,-12-k*7+sin(clock*3+k)*4)
+                draw_circle(sparkle,1.7,Color("fff0b6"))
+        if _near_operator(puzzle.socket_points()[i],2,puzzle.socket_points()):
+            _text(foot+Vector2(-66,25),"圆圆 · 稳住水晶",132,15)
     for i in range(2):
-        var p: Vector2 = Chime.BELLS[i].lerp(puzzle.bell_points()[i],blend)-height
-        var swinging := sin(clock*14)*0.15 if puzzle.receivers[i] else 0.0
-        draw_set_transform(p,swinging)
-        draw_line(Vector2(0,-31),Vector2(0,-15),Color("c9bd91"),3,true)
-        draw_polygon(PackedVector2Array([Vector2(-19,14),Vector2(-12,-12),Vector2(12,-12),Vector2(19,14)]),PackedColorArray([Color("f3d47d") if puzzle.receivers[i] else Color("a49d7b")]))
-        draw_circle(Vector2(0,18),4,Color("d7ad58"))
-        if puzzle.stage == 2:
-            var window := Vector2(29,0) if i == 0 else Vector2(0,29)
-            draw_arc(Vector2.ZERO,26,window.angle()+0.6,window.angle()+TAU-0.6,28,Color("747c6a"),5,true)
-            draw_circle(window,8,Color("faedb3"))
-            var toward: Vector2 = -window.normalized()
-            var tip := window+toward*5
-            draw_line(window-toward*18,tip,Color("ffdb70"),3,true)
-            draw_line(tip,tip-toward.rotated(0.65)*9,Color("ffdb70"),3,true)
-            draw_line(tip,tip-toward.rotated(-0.65)*9,Color("ffdb70"),3,true)
-        if puzzle.receivers[i]: draw_arc(Vector2.ZERO,34,0.2,2.8,24,Color("fff0a0"),2,true)
-        if i == 1 and reveal < 1: draw_rect(Rect2(-30,-35,60,70*(1-reveal)),Color("6c836e"))
+        if i == 1 and reveal < 0.03: continue
+        var foot: Vector2 = Chime.BELLS[i].lerp(puzzle.bell_points()[i],blend)
+        var visibility := 1.0 if i == 0 else reveal
+        _foot_shadow(foot,55)
+        # Bell body can swing, while the branch stand stays visually grounded.
+        var sway := sin(clock*10)*bell_glows[i]*0.025
+        draw_set_transform(foot,sway)
+        _prop(0,Vector2(-13,3),Vector2(82,124),visibility*(1-bell_glows[i]))
+        _prop(1,Vector2(-5,3),Vector2(100,124),visibility*bell_glows[i])
         draw_set_transform(Vector2.ZERO)
-    var door := Chime.EXIT-height
-    draw_rect(Rect2(door-Vector2(48,85),Vector2(96,150)),Color("685b44"),false,10)
-    for side in [-1,1]:
-        draw_rect(Rect2(door+Vector2(side*opening*52-44 if side < 0 else side*opening*52, -80),Vector2(44,140)),Color("a29069"))
-    if puzzle.finished: _text(Chime.EXIT+Vector2(-85,44),"门开了",170,20)
+        if puzzle.stage == 2:
+            # A small receiving port with a moving glint, visibly directed
+            # toward its one accepted incoming beam; no floating debug ring.
+            var port := foot-height+(Vector2(27,0) if i == 0 else Vector2(0,27))
+            var toward := Vector2.LEFT if i == 0 else Vector2.UP
+            draw_line(port-toward*7,port+toward*5,Color("76502c"),9,true)
+            draw_line(port-toward*6,port+toward*5,Color("e7ba69"),5,true)
+            var glint := port-toward*(9-fmod(clock*10,12))
+            draw_circle(glint,2.2,Color(1,0.91,0.65,visibility*.8))
+        if puzzle.receivers[i]:
+            var ring_center: Vector2 = foot-height
+            draw_arc(ring_center,38+sin(clock*5)*3,0.15,2.65,28,Color(1,0.91,0.62,0.55),2,true)
+    var door: Vector2 = Chime.EXIT
+    _foot_shadow(door,126)
+    # Hinged leaves narrow while opening; the doorway never slides off its frame.
+    var leaf_width := 49*(1-opening)
+    if leaf_width > 1:
+        _prop(7,door+Vector2(-24-opening*23,-12),Vector2(leaf_width,151))
+        _prop(7,door+Vector2(24+opening*23,-12),Vector2(leaf_width,151))
+    _prop(6,door+Vector2(0,8),Vector2(170,201))
+    # Keep the magical path legible across the illustrated frames. Actors
+    # still draw above the world; the resting white-cat pose clears its prism.
+    for ray in puzzle.rays:
+        draw_line(ray.from-height,ray.to-height,Color(1,0.86,0.43,0.14),12,true)
+        draw_line(ray.from-height,ray.to-height,Color(1,0.89,0.62,0.30),5,true)
+        draw_line(ray.from-height,ray.to-height,Color("ffe7a0"),2,true)
+    if puzzle.finished: _text(door+Vector2(-85,39),"门开了 · 一起走吧",170,17)

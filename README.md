@@ -31,3 +31,5 @@ M20 补充敌人的蓄势／出手／收招动作，灯廊增加 0.35 秒蓄光�
 M21 完成一轮长循环：扩大真实战斗空间，增加有限卷叶与预警地带、路线预判施法，灯廊之后接入共享镜面风铃谜题，加入六段原创场景配乐。独立评审曾否决盲绕无压力的候选，修正后复审通过；网页又发现音乐缓冲与字体问题，发布前已修正。最终55组954项回归、20项图形检查通过。专业评论与小学生模拟评审、闭环问题、名作参考和验证限制见 [M21-review.md](validation/M21-review.md)。本阶段没有真实儿童、Windows实体手柄或主观听感验收；不以程序通关宣称游戏已好玩。
 
 validation 中的 compose-m21.py 与 m21-regression.py 是原工作区脚本快照，BASE 采用原目录结构；新 checkout 复跑需调整 BASE、Godot/FFmpeg 路径。Godot 测试资源位于 validation/godot-tests，临时复制到 game-source/tests 并完成编辑器导入后，可按 res://tests/<name>.gd 运行；正式Web构建排除tests。原WAV母带留在工作区work/audio/m21，网站只带Ogg循环文件。
+
+M22 根据用户反馈替换风铃机关素材，并按已选木质童话方向重写六段原创合成配乐。图形遮挡自查、构建与验证边界见 [M22-art-music.md](validation/M22-art-music.md)。音乐听感仍需用户试听判断。

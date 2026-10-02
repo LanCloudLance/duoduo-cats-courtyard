@@ -1,0 +1,76 @@
+{
+  "milestone": "M22",
+  "baseline": "faea5f49b3c9426aa7d322bf3701a75c055b285c",
+  "user_style": "wooden fairy tale: warm and playful",
+  "rendered_checks": 20,
+  "rendered_failed": 0,
+  "regression": {
+    "suites": 55,
+    "checks": 954,
+    "failed_suites": 0,
+    "coverage_timing": "Full regression completed before final foreground-ray and resting-pose polish; final graphical routed input completed afterwards. Final music 19/19 and chime 8/8 before last purely visual pass."
+  },
+  "asset_alpha": {
+    "mode": "RGBA",
+    "size": [
+      1774,
+      887
+    ],
+    "range": [
+      0,
+      255
+    ]
+  },
+  "audio": "original offline modal synthesis, no external samples, stream playback preserved",
+  "limits": [
+    "No subjective music acceptance",
+    "No physical controller or child playtest",
+    "Browser entry/pause/music controls, not full browser puzzle journey"
+  ],
+  "dist_sha256": {
+    "team.png": "f87f6bbbfad2e6952ac4d184a2a709774cfa70142fe0d524203a2fb78bf1a3c9",
+    "index.html": "80f6b4fea9906e826d009e33ed1ba5f50b470c338897dadddd7759035b61c597",
+    "page.js": "73b87a610f27a621c305c738048a9a52c2b94f5ae75094dc1ad0e2194354d158",
+    "page.css": "4124bc06de64bed62933876dc07e2a135888604ac525fc8915da9904e7369a78",
+    "OFL.txt": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+    "game/index.apple-touch-icon.png": "01d4f63e525941e06ce74f5187dad030d20a8d52a07ce365ae4e94af97a3b1f5",
+    "game/index.icon.png": "ad3c35ad0facf487c618204bd98db543034fc95224eadc7f08c7a9ff38d5b3b5",
+    "game/index.html": "0f3963cb0c7840fab888e11a2d4db3550e2e2b3f214d886d2796c5a7fb1d4a51",
+    "game/index.png": "3cb4495c0b98dfbe4b663cbf2b6836473572339beb66d902367893162a70be0e",
+    "game/index.audio.worklet.js": "5b476a9c9ce642c0ee4256436d1bc31d9c38f868aca0f9a8e2a57c18d2dec2a3",
+    "game/engine.bin": "2862a06f11ad1579c4ceb764f724013c1e62f8916d5d8d237fe5ee209c76f56e",
+    "game/index.js": "33c94cb3175f3333b82e2a3be5e8e86f77986f0aa2042b1631f6367a4e5bb6ba",
+    "game/index.audio.position.worklet.js": "be33985bc7160d6bf9646f259cd86b259cd67b02ccb297ee5c44f8ac84327bc8",
+    "game/web-loader.js": "570b8aa88e779a0d4bef385c09811ad71aabfbaa9a274960bce4b33421a5e0c4",
+    "game/index.pck": "9bdfe8e525ceb8d7be1c439c001b8763c1512c7d652df24267ac6d6b8f8d8bae"
+  },
+  "largest_asset": {
+    "name": "game/index.pck",
+    "bytes": 26083024,
+    "limit": 26214400
+  },
+  "browser": {
+    "surface": "local release in Codex in-app Chromium",
+    "coverage": [
+      "final wind-bell entry",
+      "normal Return start",
+      "normal G hint",
+      "repeated Escape/Return pause and resume",
+      "music standard/off/quiet with visible labels"
+    ],
+    "errors_observed": 0,
+    "warnings_observed": 0,
+    "subjective_listening_verified": false,
+    "full_browser_journey_verified": false
+  },
+  "source_snapshot": {
+    "identical": true,
+    "files": 144,
+    "excludes": [
+      "tests",
+      ".godot",
+      "override.cfg",
+      "historical root markdown documents"
+    ]
+  }
+}

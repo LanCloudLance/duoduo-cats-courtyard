@@ -1,0 +1,68 @@
+[
+  {
+    "name": "home",
+    "seconds": 43.63634375,
+    "bpm": 88,
+    "sections": 4,
+    "events": 210,
+    "peak": 0.29664747764559035,
+    "rms": 0.08471990446537646,
+    "loop_edge_delta": 0.0005349961288089768,
+    "ogg_bytes": 419769
+  },
+  {
+    "name": "explore",
+    "seconds": 36.9230625,
+    "bpm": 104,
+    "sections": 4,
+    "events": 274,
+    "peak": 0.4238683595453481,
+    "rms": 0.0851759792539691,
+    "loop_edge_delta": 0.004126102293411586,
+    "ogg_bytes": 389483
+  },
+  {
+    "name": "puzzle",
+    "seconds": 44.65115625,
+    "bpm": 86,
+    "sections": 4,
+    "events": 206,
+    "peak": 0.2690404432087884,
+    "rms": 0.06072180906180035,
+    "loop_edge_delta": 0.00028523787988302173,
+    "ogg_bytes": 350400
+  },
+  {
+    "name": "battle",
+    "seconds": 32.0,
+    "bpm": 120,
+    "sections": 4,
+    "events": 274,
+    "peak": 0.43862045301782404,
+    "rms": 0.11723751183900323,
+    "loop_edge_delta": 0.0011679931671209308,
+    "ogg_bytes": 344734
+  },
+  {
+    "name": "boss",
+    "seconds": 30.0,
+    "bpm": 128,
+    "sections": 4,
+    "events": 274,
+    "peak": 0.4184547212568204,
+    "rms": 0.10938526244625689,
+    "loop_edge_delta": 0.0019054584978735432,
+    "ogg_bytes": 324126
+  },
+  {
+    "name": "rest",
+    "seconds": 50.5263125,
+    "bpm": 76,
+    "sections": 4,
+    "events": 206,
+    "peak": 0.2623126512068876,
+    "rms": 0.07289957540878628,
+    "loop_edge_delta": 0.00044624344306390206,
+    "ogg_bytes": 481914
+  }
+]

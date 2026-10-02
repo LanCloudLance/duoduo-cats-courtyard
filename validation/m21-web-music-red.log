@@ -1,0 +1,8 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+ERROR: FAIL: long music uses streaming playback rather than duplicated browser samples
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/m21_music_test.gd:8)
+       [1] run (res://tests/m21_music_test.gd:17)
+M21_MUSIC: 19 checks, 1 failed

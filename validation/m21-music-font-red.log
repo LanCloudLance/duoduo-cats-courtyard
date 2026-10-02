@@ -1,0 +1,9 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+CONNECTED GAMEPADS: []
+ERROR: FAIL: music button uses bundled Chinese font without relying on OS fallback
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/m21_music_scene_test.gd:6)
+       [1] run (res://tests/m21_music_scene_test.gd:13)
+M21_MUSIC_SCENE: 3 checks, 1 failed

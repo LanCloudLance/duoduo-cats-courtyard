@@ -1,0 +1,100 @@
+{
+  "milestone": "M21",
+  "source_baseline": "6fd4b0d4f9567cf2d5f0c27a1741e09243b7a4cb",
+  "regression": {
+    "suites": 55,
+    "checks": 954,
+    "failed_suites": 0
+  },
+  "graphical": {
+    "checks": 20,
+    "failed": 0,
+    "method": "normal routed InputEvent keyboard actions, actual GL rendering and screenshots"
+  },
+  "source_snapshot": {
+    "compared_files": 138,
+    "identical": true
+  },
+  "dist_largest": {
+    "name": "index.pck",
+    "bytes": 24587160,
+    "limit_bytes": 26214400
+  },
+  "performance": {
+    "baseline": {
+      "samples": 361.0,
+      "median_ms": 16.659,
+      "p95_ms": 17.278,
+      "p99_ms": 17.775,
+      "max_ms": 17.911
+    },
+    "candidate": {
+      "samples": 361.0,
+      "median_ms": 16.667,
+      "p95_ms": 17.51,
+      "p99_ms": 17.897,
+      "max_ms": 23.279
+    },
+    "method": "Same engine and script, Engine.max_fps=60, VSync disabled, 8s sample/2s warmup; candidate includes new score; no regression processes active. Earlier unpaced samples differ in window scheduling and are not comparable."
+  },
+  "independent_review": {
+    "round_one": "rejected until blind kiting and puzzle coupling fixed",
+    "round_two": "stage approved after empirical re-review",
+    "spawn_samples": 3000,
+    "min_actor_distance": 220.011,
+    "min_enemy_distance": 112.198,
+    "blind_route_first_hits_seconds": [
+      1.67,
+      4.53,
+      3.82
+    ],
+    "caster_reaction_delay_samples_seconds": [
+      0,
+      0.3,
+      0.45
+    ]
+  },
+  "browser": {
+    "surface": "Codex in-app Chromium, localhost release",
+    "coverage": [
+      "wind bell entry",
+      "normal G hint",
+      "normal Tab role swap",
+      "pause and resume",
+      "music mute and quiet",
+      "switch into combat preview",
+      "normal E starts combat"
+    ],
+    "old_candidate_failure": "WebAudio long Sample duplication error; music switched to Stream and unchanged pause calls suppressed",
+    "subjective_audio_verified": false,
+    "full_browser_journey_verified_this_round": false,
+    "new_errors_after_streaming_fix": 0,
+    "pause_resume_cycles": 5,
+    "observed_duration_minutes_at_least": 3,
+    "fresh_session_console_errors": 0,
+    "fresh_session_console_warnings": 0
+  },
+  "limitations": [
+    "No physical Windows controller tested",
+    "No real primary-school playtest",
+    "Musical listening quality not verified",
+    "Performance is local engine process samples, not monitor refresh FPS or input latency"
+  ],
+  "sha256": {
+    "team.png": "f87f6bbbfad2e6952ac4d184a2a709774cfa70142fe0d524203a2fb78bf1a3c9",
+    "index.html": "e32ff74e8845f164b6490c27de459e529ef3a0d9dc8f5ad1c201369b9565eb7e",
+    "page.js": "73b87a610f27a621c305c738048a9a52c2b94f5ae75094dc1ad0e2194354d158",
+    "page.css": "4124bc06de64bed62933876dc07e2a135888604ac525fc8915da9904e7369a78",
+    "OFL.txt": "1c05c68c34f9708415aada51f17e1b0092d2cea709bf4a94cd38114f9e73d7d9",
+    "game/index.apple-touch-icon.png": "01d4f63e525941e06ce74f5187dad030d20a8d52a07ce365ae4e94af97a3b1f5",
+    "game/index.icon.png": "ad3c35ad0facf487c618204bd98db543034fc95224eadc7f08c7a9ff38d5b3b5",
+    "game/index.html": "715f9b907127473d3f0a2d7ef702ceda0796fb0dbb28abd47e0cb455c6d5e2e6",
+    "game/index.png": "3cb4495c0b98dfbe4b663cbf2b6836473572339beb66d902367893162a70be0e",
+    "game/index.audio.worklet.js": "5b476a9c9ce642c0ee4256436d1bc31d9c38f868aca0f9a8e2a57c18d2dec2a3",
+    "game/engine.bin": "2862a06f11ad1579c4ceb764f724013c1e62f8916d5d8d237fe5ee209c76f56e",
+    "game/index.js": "33c94cb3175f3333b82e2a3be5e8e86f77986f0aa2042b1631f6367a4e5bb6ba",
+    "game/index.audio.position.worklet.js": "be33985bc7160d6bf9646f259cd86b259cd67b02ccb297ee5c44f8ac84327bc8",
+    "game/web-loader.js": "570b8aa88e779a0d4bef385c09811ad71aabfbaa9a274960bce4b33421a5e0c4",
+    "game/index.pck": "bde389a0ff74111ad2f876700a487c7cfb44f5a472cd1ae7db999c3a3dce6bfb"
+  }
+}

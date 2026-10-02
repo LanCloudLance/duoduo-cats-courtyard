@@ -53,6 +53,14 @@ func step(b, slot: int, human: int, dt: float, engaged: bool) -> Vector2:
     var point: Vector2 = b.positions[b.actor(slot)]
     var partner: Vector2 = b.positions[b.actor(human)]
     if b.phase == "combat":
+        var thorns: Vector2 = b.garden.danger(b,point,24)
+        if thorns.is_finite():
+            movement = thorns.direction_to(point)
+            if movement.length() < 0.1: movement = Vector2.UP
+            if not Space.valid(point+movement*95,Space.ACTOR_RADIUS): movement = -movement
+            if b.rescuer == slot: b._cancel_rescue()
+            status = "绕开荆棘"
+            return movement
         for threat in b.enemies:
             if threat.mode in ["cast","burst","slam_windup","slam","melee_windup","melee"] and b.Encounter.danger(threat,point,20):
                 var source: Vector2 = threat.get("aim",threat.pos) if threat.mode in ["cast","burst"] else threat.pos

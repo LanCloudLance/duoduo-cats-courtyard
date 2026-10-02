@@ -4,7 +4,11 @@ const Encounter = preload("res://game/battle_encounter.gd")
 const Attacks = preload("res://game/battle_attacks.gd")
 var attacks = Attacks.new()
 const Space = preload("res://game/battle_space.gd")
-const FIELD := Rect2(120, 240, 1040, 410)
+const FIELD := Space.FIELD
+const Garden = preload("res://game/battle_garden.gd")
+var garden = Garden.new()
+var seeds: Array[Dictionary] = []
+var hazards: Array[Dictionary] = []
 const EXIT := Vector2(1050, 570)
 const RESCUE_SECONDS := 1.2
 var positions: Array[Vector2] = [Vector2(350, 440), Vector2(440, 520), Vector2(350, 570)]
@@ -12,6 +16,7 @@ var current_cat := 1
 var solo_mode := false
 var hp: Array[int] = [3, 3]
 var facing: Array[Vector2] = [Vector2.RIGHT, Vector2.RIGHT]
+var velocity: Array[Vector2] = [Vector2.ZERO,Vector2.ZERO]
 var attack_cooldown: Array[float] = [0.0, 0.0]
 var attack_flash: Array[float] = [0.0, 0.0]
 var attack_direction: Array[Vector2] = [Vector2.RIGHT, Vector2.RIGHT]
@@ -43,6 +48,10 @@ var retries := 0
 var rescuer := -1
 var rescue_progress := 0.0
 var message := "先练 F 横扫、J 猫咪攻击、Tab 切猫；两位按互动键再开战。"
+var plant_noticed := false
+
+func _init() -> void:
+    garden.setup(self)
 
 func feedback(kind: String, point: Vector2, slot: int, detail: Dictionary = {}) -> void:
     feedback_id += 1
@@ -196,10 +205,19 @@ func _start_wave(number: int) -> void:
     confirmed[1] = false
     enemies.clear()
     fallen.clear()
+    garden.setup(self)
     Encounter.start(self,number)
-    message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会锁定脚下：先打断后排，或分工拆掉硬壳。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
+    message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会预判去路：看到预警换方向，或打断后排；硬壳要分工拆。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
 
-func _spawn(kind: String, point: Vector2) -> void:
+func _spawn(kind: String, point: Vector2, protect_arrival := false) -> void:
+    if protect_arrival and (positions.any(func(p): return p.distance_to(point) < 220) or enemies.any(func(e): return e.pos.distance_to(point) < 100) or not Space.valid(point,Space.ENEMY_RADIUS)):
+        var candidates: Array[Vector2] = []
+        for x in range(6):
+            for y in range(4):
+                var candidate: Vector2 = FIELD.position+Vector2(90+x*(FIELD.size.x-180)/5,80+y*(FIELD.size.y-160)/3)
+                if Space.valid(candidate,Space.ENEMY_RADIUS) and positions.all(func(p): return p.distance_to(candidate) >= 220) and enemies.all(func(e): return e.pos.distance_to(candidate) > 100): candidates.append(candidate)
+        candidates.sort_custom(func(a,c): return a.distance_squared_to(point) < c.distance_squared_to(point))
+        if not candidates.is_empty(): point = candidates[0]
     var health: float = {"sprout":4.0,"weaver":6.0,"elder":22.0,"roller":5.0,"armored":5.0}.get(kind,5.0)
     enemies.append({"kind": kind, "pos": point, "hp": health,
         "max_hp": health, "mode": "approach", "timer": 0.8,
@@ -254,21 +272,29 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     for slot in range(2):
         if hp[slot] <= 0 or phase == "complete":
             continue
-        var velocity: Vector2 = inputs[slot] * (90.0 if slot == 0 and guarding else 215.0)
-        if slot == 1 and attacks.charging: velocity *= 0.4
-        if slot == 1 and pouncing: velocity = Vector2.ZERO
+        var motion: Vector2 = inputs[slot] * (90.0 if slot == 0 and guarding else 215.0)
+        if slot == 1 and attacks.charging: motion *= 0.4
+        if slot == 1 and pouncing: motion = Vector2.ZERO
         if inputs[slot].length() > 0.1 and not (slot == 1 and pouncing):
             facing[slot] = inputs[slot].normalized()
         if dodge_time[slot] > 0:
-            velocity = dodge_direction[slot] * 550.0
+            motion = dodge_direction[slot] * 550.0
             dodge_time[slot] = maxf(0, dodge_time[slot] - dt)
-        positions[actor(slot)] = Space.move(positions[actor(slot)], velocity*dt, Space.ACTOR_RADIUS)
+        var before: Vector2 = positions[actor(slot)]
+        positions[actor(slot)] = Space.move(before, motion*dt, Space.ACTOR_RADIUS)
+        velocity[slot] = (positions[actor(slot)]-before)/dt
         if phase == "clear" and positions[actor(slot)].distance_to(EXIT) > 95:
             confirmed[slot] = false
     # The spare cat follows the active cat and is never an enemy target.
     var follower := 3 - current_cat
     var goal := _bounded(positions[current_cat] + Vector2(-65, 55))
     positions[follower] = Space.move(positions[follower], Space.direction(positions[follower],goal,Space.ACTOR_RADIUS)*minf(260*dt,positions[follower].distance_to(goal)), Space.ACTOR_RADIUS)
+    if not plant_noticed:
+        for seed in seeds:
+            if positions.any(func(p): return p.distance_to(seed.pos) < 145):
+                plant_noticed = true
+                message = "朵朵：这团卷叶摇摇晃晃的，敲一下会怎样？"
+                break
     if rescuer >= 0:
         if inputs[rescuer].length() > 0.1 or hp[rescuer] <= 0 or positions[actor(rescuer)].distance_to(positions[actor(1 - rescuer)]) > 85:
             _cancel_rescue()
@@ -279,6 +305,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
                 invulnerable[1 - rescuer] = 2.0
                 _cancel_rescue()
                 message = "扶起来了！继续一起走。"
+    if phase != "complete": garden.step(self,dt)
     if phase == "intermission":
         intermission -= dt
         intermission = maxf(0,intermission)

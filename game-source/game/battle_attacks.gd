@@ -139,6 +139,7 @@ func step(b, dt: float) -> bool:
 func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: bool, heavy: bool) -> bool:
     var origin: Vector2 = b.positions[b.actor(slot)]
     var direction: Vector2 = b.attack_direction[slot]
+    var seed_hit: bool = b.garden.strike(b,origin,direction,reach,half_angle,heavy)
     var targets: Array[Dictionary] = []
     for enemy in b.enemies:
         if enemy.hp <= 0: continue
@@ -188,4 +189,4 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
                 enemy.pos = Space.move(enemy.pos,direction*12,Space.ENEMY_RADIUS)
         b.contact(enemy,slot,direction,heavy,blocked)
         if single: break
-    return not targets.is_empty()
+    return not targets.is_empty() or seed_hit

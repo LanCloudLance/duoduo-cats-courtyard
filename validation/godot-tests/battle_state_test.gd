@@ -45,6 +45,8 @@ func _initialize() -> void:
     var before: Vector2 = b.positions[0]
     advance(b, 0.2)
     check(b.positions[0].distance_to(before) > 60, "dodge actually moves the character")
+    # Isolate rescue timing from the newly introduced long-range caster.
+    for enemy in b.enemies: enemy.mode = "rest"; enemy.timer = 99
     b.hp[1] = 0
     var cat: int = b.current_cat
     b.switch_cat()

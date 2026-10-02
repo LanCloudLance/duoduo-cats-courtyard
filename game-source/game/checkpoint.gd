@@ -15,7 +15,11 @@ func _canonical(value: Variant) -> Dictionary:
     if not completed is Dictionary: return {}
     for key in ["bridge", "combat", "light"]:
         if typeof(completed.get(key)) != TYPE_BOOL: return {}
-    return {"version":1,"safe_point":"rest","rested":true,"current_cat":int(value.current_cat),"completed":{"bridge":completed.bridge,"combat":completed.combat,"light":completed.light}}
+    var progress := {"bridge":completed.bridge,"combat":completed.combat,"light":completed.light}
+    if completed.has("gate"):
+        if typeof(completed.gate) != TYPE_BOOL: return {}
+        progress.gate = completed.gate
+    return {"version":1,"safe_point":"rest","rested":true,"current_cat":int(value.current_cat),"completed":progress}
 func read_checkpoint() -> Dictionary:
     last_error = ""
     if not FileAccess.file_exists(path): return {}

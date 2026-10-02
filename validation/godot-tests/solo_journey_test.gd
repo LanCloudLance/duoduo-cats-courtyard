@@ -14,12 +14,14 @@ func selected():
     match lobby.stage:
         "bridge": return lobby.courtyard.selection
         "light": return lobby.light_corridor.selection
+        "gate": return lobby.chime_gate.selection
         "rest": return lobby.rest_area.selection
     return null
 func state():
     match lobby.stage:
         "bridge": return lobby.courtyard.party
         "light": return lobby.light_corridor.puzzle
+        "gate": return lobby.chime_gate.puzzle
         "rest": return lobby.rest_area.state
     return null
 func pick(actor: int) -> void:
@@ -234,6 +236,9 @@ func run() -> void:
     milestone("light complete")
     tap_key(KEY_E)
     await frames(2)
+    if not gate(lobby.stage == "gate","solo light corridor reaches bell gate"): return
+    if not gate(await load("res://tests/chime_driver.gd").solve(self,true),"single input finishes bell gate manually"): return
+    milestone("bell gate complete")
     if not gate(lobby.stage == "rest" and lobby.rest_area.can_save,"full solo reaches save-enabled rest"): return
     var rest = lobby.rest_area.state
     check(rest.full_run() and rest.hp == health,"rest reflects all actual stages")

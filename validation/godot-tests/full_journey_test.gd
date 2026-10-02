@@ -12,6 +12,7 @@ func movement_state():
         "bridge": return lobby.courtyard.party
         "combat": return lobby.arena.battle
         "light": return lobby.light_corridor.puzzle
+        "gate": return lobby.chime_gate.puzzle
         "rest": return lobby.rest_area.state
     return null
 func walk(slot: int, target: Vector2) -> bool:
@@ -112,6 +113,9 @@ func run() -> void:
     milestone("light complete")
     tap_key(KEY_E)
     await frames(2)
+    if not gate(lobby.stage == "gate","completed light corridor reaches bell gate"): return
+    if not gate(await load("res://tests/chime_driver.gd").solve(self,false),"physical bell rules finish continuous dual journey"): return
+    milestone("bell gate complete")
     if not gate(lobby.stage=="rest" and lobby.rest_area.can_save,"normal route reaches save-enabled rest area"): return
     var rest = lobby.rest_area.state
     check(rest.full_run() and rest.hp==health,"rest board and health reflect actual completed journey")

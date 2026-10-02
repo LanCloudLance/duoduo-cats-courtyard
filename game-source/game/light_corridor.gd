@@ -143,7 +143,7 @@ func _refresh() -> void:
     objective_label.text = puzzle.objective()
     hint_label.text = puzzle.message
     if puzzle.finished:
-        hint_label.text = "再按互动键，带猫猫去林边长椅休息。"
+        hint_label.text = "再按互动键，带猫猫去看看灯廊尽头的风铃门。"
     girl_label.text = selection.title() if session.single_player else "P1 朵朵"
     if session.single_player:
         status_label.text = "单人 · Esc / 菜单暂停"

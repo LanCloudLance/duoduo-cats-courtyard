@@ -3,7 +3,7 @@ const STUMPS := [Vector2(560,320),Vector2(760,555)]
 const STUMP_RADIUS := 34.0
 const ACTOR_RADIUS := 18.0
 const ENEMY_RADIUS := 26.0
-const FIELD := Rect2(120,240,1040,410)
+const FIELD := Rect2(-120,170,1520,650)
 # First time of contact on a segment, INF if there is no contact.
 static func contact(from: Vector2, to: Vector2, center: Vector2, radius: float) -> float:
     var offset := from-center

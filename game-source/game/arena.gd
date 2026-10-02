@@ -38,7 +38,8 @@ func _ready() -> void:
     audio.combat = true
     add_child(audio)
     camera.enabled = false
-    camera.position = Vector2(640, 400)
+    camera.position = Vector2(640, 480)
+    camera.zoom = Vector2(0.72,0.72)
     add_child(camera)
     for i in range(3):
         var actor_view := Actor.new()
@@ -56,15 +57,17 @@ func _ready() -> void:
         add_child(prop)
     hud.layer = 11
     add_child(hud)
-    _panel(Rect2(24, 20, 274, 124))
-    _panel(Rect2(306, 20, 427, 124))
-    _panel(Rect2(741, 20, 515, 124))
-    title_label = _label("林间空地", Rect2(48, 34, 230, 38), 28)
-    status_label = _label("", Rect2(48, 84, 245, 45), 17)
-    girl_label = _label("", Rect2(310, 34, 360, 38), 23, Color("316b60"))
-    cat_label = _label("", Rect2(745, 34, 480, 38), 23)
-    girl_help = _label("", Rect2(310, 81, 430, 50), 17)
-    cat_help = _label("", Rect2(745, 81, 480, 50), 17)
+    _panel(Rect2(24, 10, 1232, 46))
+    title_label = _label("林间空地", Rect2(42, 19, 230, 30), 25)
+    status_label = _label("", Rect2(240, 25, 280, 30), 16)
+    girl_label = _label("", Rect2(536, 20, 305, 34), 22, Color("316b60"))
+    cat_label = _label("", Rect2(862, 20, 380, 34), 22)
+    girl_help = _label("", Rect2(42, 85, 500, 50), 17)
+    cat_help = _label("", Rect2(675, 85, 555, 50), 17)
+    for help in [girl_help,cat_help]:
+        help.add_theme_color_override("font_color",Color("fff6da"))
+        help.add_theme_color_override("font_outline_color",Color("27392b"))
+        help.add_theme_constant_override("outline_size",5)
     _panel(Rect2(24, 685, 1232, 91))
     objective_label = _label("", Rect2(48, 697, 1170, 32), 22)
     hint_label = _label("", Rect2(48, 738, 1170, 27), 17, Color("566d55"))
@@ -239,7 +242,16 @@ func _refresh() -> void:
     for i in range(fallen_views.size()): fallen_views[i].sync(battle.fallen[i])
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
-    status_label.text = "协作战斗   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "协作  %d / 3  · Esc 暂停" % battle.wave
+    for help in [girl_help,cat_help]:
+        help.visible = battle.phase == "briefing"
+        if help.visible:
+            for actor in actors:
+                var anchor: Vector2 = actor.get_global_transform_with_canvas().origin
+                var body := Rect2(anchor-Vector2(72,174)*camera.zoom,Vector2(144,186)*camera.zoom)
+                if body.intersects(help.get_global_rect()): help.visible = false
+    girl_label.tooltip_text = girl_help.text
+    cat_label.tooltip_text = cat_help.text
     if session.keyboard_mode:
         girl_help.text = "WASD 移动 · F 连击 · Q 闪避\n按住 G 正面举盾 · E 互动 / 救援"
         cat_help.text = ("方向键 · J 短扑快抓 · K 闪避" if battle.current_cat == 1 else "方向键 · J 轻拍 / 蓄力松开重拍")+"\n空格救援 · Tab 切猫 · K 闪避"
@@ -249,7 +261,7 @@ func _refresh() -> void:
     var interaction := "朵朵 E / 猫咪空格" if session.keyboard_mode else "双方的面键下方"
     match battle.phase:
         "briefing": objective_label.text = "准备好再出发：%s确认   %s / %s" % [interaction, "朵朵已准备" if battle.confirmed[0] else "朵朵待准备", "猫咪已准备" if battle.confirmed[1] else "猫咪待准备"]
-        "combat": objective_label.text = ["移动连击清小怪，侧闪冲锋；别被逼到树桩旁。","后排藤蔓会锁定脚下：打断它，或分头处理硬壳。","取回树怪的灯芯：挡冲锋、绕侧输出，红圈亮起就拉开。"][battle.wave-1]
+        "combat": objective_label.text = ["旋叶空地 · 它们盯上了猫咪的灯芯。","荆棘围猎 · 两边都有动静。","灯芯守卫 · 找机会取回灯芯。"][battle.wave-1]
         "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
         "clear": objective_label.text = "到右边营火集合，%s确认休息。" % interaction
         "complete": objective_label.text = "林间空地完成 ✓ 再按互动键，前往双猫灯廊。"
@@ -273,7 +285,7 @@ func _solo_hud() -> void:
     var who: String = ["朵朵","团团","圆圆"][actor]
     girl_label.text = "朵朵 · "+("你控制" if solo.human_slot == 0 else "AI")+"  "+_health(0)
     cat_label.text = ("团团" if battle.current_cat == 1 else "圆圆")+" · "+("你控制" if solo.human_slot == 1 else "AI")+"  "+_health(1)
-    status_label.text = "单人协作   %d / 3\nEsc / 菜单键暂停" % battle.wave
+    status_label.text = "单人  %d / 3  · Esc 暂停" % battle.wave
     girl_help.text = "WASD 移动 · F 攻击 · Q 闪避\nE 互动 / 救援 · G 朵朵举盾" if session.keyboard_mode else "左摇杆 · 面键左攻击 / 右闪避\n面键下互动 · 左肩朵朵举盾"
     if actor > 0:
         girl_help.text = ("WASD · F "+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\nE 互动 / 救援 · Q 闪避") if session.keyboard_mode else ("面键左："+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\n左摇杆移动 · 右闪避 · 下互动")
@@ -320,11 +332,35 @@ func _label(value: String, rect: Rect2, size: int, color := Color("354b3c")) -> 
 
 func _draw() -> void:
     draw_rect(Rect2(-800, -800, 3000, 2500), Color("294d3b"))
-    draw_texture_rect(BACKDROP,Rect2(0,0,1280,800),false)
-    for stump in Battle.Space.STUMPS:
-        var prompt_rect := Rect2(stump+Vector2(-75,43),Vector2(150,24))
-        if battle.positions.all(func(point): return not prompt_rect.intersects(Rect2(point-Vector2(42,146),Vector2(84,164)))):
-            _text(stump+Vector2(-75,62),"可引它撞树桩",150,16)
+    draw_texture_rect(BACKDROP,Rect2(-220,40,1720,940),false)
+    draw_rect(Battle.FIELD.grow(20),Color(0.15,0.26,0.14,0.28),false,25)
+    draw_rect(Battle.FIELD,Color(0.83,0.85,0.61,0.45),false,3)
+    for hazard in battle.hazards:
+        var warning: bool = hazard.age < 0.65
+        draw_circle(hazard.pos,hazard.radius,Color(0.58,0.14,0.24,0.15 if warning else 0.40))
+        draw_arc(hazard.pos,hazard.radius,0,TAU,40,Color("ffc294") if warning else Color("80415b"),3,true)
+        for i in range(7):
+            var p: Vector2 = hazard.pos+Vector2.from_angle(i*TAU/7)*44
+            draw_polyline(PackedVector2Array([p+Vector2(-9,8),p+Vector2(0,-14),p+Vector2(9,8)]),Color("ebbc81") if warning else Color("603c51"),3,true)
+    for seed in battle.seeds:
+        if seed.mode == "spent": continue
+        var p: Vector2 = seed.pos
+        draw_set_transform(p,seed.age*8 if seed.mode == "rolling" else sin(shake_clock*3+p.x)*0.06)
+        draw_circle(Vector2(0,5),26,Color(0.15,0.24,0.14,0.3))
+        draw_circle(Vector2.ZERO,23,Color("d5b066") if seed.mode != "rooted" else Color("a7b55c"))
+        draw_arc(Vector2.ZERO,17,0.2,5.0,24,Color("f6e9a0"),3,true)
+        for i in range(3):
+            var angle := i*TAU/3
+            var direction := Vector2.from_angle(angle)
+            var side := direction.orthogonal()
+            draw_polygon(PackedVector2Array([direction*13-side*9,direction*39,direction*13+side*9]),PackedColorArray([Color("789342") if seed.mode == "rooted" else Color("e2c363")]))
+            draw_line(direction*15,direction*34,Color("b9c974"),2,true)
+        if seed.mode == "rooted": draw_line(Vector2(0,22),Vector2(0,35),Color("667849"),5,true)
+        draw_set_transform(Vector2.ZERO)
+    for effect in battle.fx:
+        if effect.kind == "plant_burst":
+            var r: float = (1-effect.life/0.55)*125
+            draw_arc(effect.pos,r,0,TAU,40,Color(0.91,0.85,0.45,effect.life/0.55),6,true)
     # Wide lanes remain on both sides of each stump.
     if battle.phase in ["clear", "complete"]:
         draw_circle(Battle.EXIT, 88, Color(0.95, 0.78, 0.40, 0.13))

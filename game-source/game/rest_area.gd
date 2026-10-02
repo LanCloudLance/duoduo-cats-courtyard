@@ -141,7 +141,7 @@ func _refresh() -> void:
     ending_card.visible = state.finished
     if state.finished:
         ending_title.text = "一起把这段路点亮了" if state.full_run() else "歇好脚，再一起出发"
-        ending_body.text = "合作调桥  ✓    林间战斗  ✓    双猫灯廊  ✓\n\n朵朵、团团、圆圆，一个也没落下。" if state.full_run() else "休息点体验完成。\n\n回到准备室，可以从庭院入口开始完整旅程。"
+        ending_body.text = ("合作调桥  ✓  林间战斗  ✓  双猫灯廊  ✓\n"+("风铃门 ✓" if state.progress.has("gate") else "旧版旅程 · 风铃门未记录")+"\n\n朵朵、团团、圆圆，一个也没落下。") if state.full_run() else "休息点体验完成。\n\n回到准备室，可以从庭院入口开始完整旅程。"
         ending_hint.text = ("E / 空格：回到菜单" if session.keyboard_mode else "面键下：回到菜单") + "   ·   Esc / 菜单键：暂停"
     dialogue_label.text = state.message
     journey_board.progress = state.progress

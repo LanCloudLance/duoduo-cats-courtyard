@@ -5,6 +5,7 @@ func fixture():
     var b = Battle.new()
     b.solo_mode = true
     b._start_wave(1)
+    b.enemies.resize(1) # This fixture asserts support in an explicitly safe lane.
     b.positions[0] = Vector2(350,440)
     b.positions[1] = Vector2(410,440)
     b.positions[2] = Vector2(400,580)

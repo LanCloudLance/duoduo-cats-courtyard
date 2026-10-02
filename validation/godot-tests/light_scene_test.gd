@@ -139,7 +139,7 @@ func run() -> void:
     if not check_gate(await finish_route("safe"),"safe route completes from spawn using normal inputs"): return
     tap_key(KEY_E)
     await frames(3)
-    check(lobby.stage == "rest" and not lobby.rest_area.can_save,"preview completion hands off to rest without replacing save")
+    check(lobby.stage == "gate" and lobby.preview_run,"preview completion continues to bell gate without save authority")
     lobby.free()
     await frames(2)
     await launch()

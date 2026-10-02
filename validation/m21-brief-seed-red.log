@@ -1,0 +1,13 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+ERROR: FAIL: briefing practice propels the seed instead of freezing it
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/m21_battle_garden_test.gd:7)
+       [1] _initialize (res://tests/m21_battle_garden_test.gd:21)
+ERROR: FAIL: briefing seed bursts safely and ends without combat
+   at: push_error (core/variant/variant_utility.cpp:1023)
+   GDScript backtrace (most recent call first):
+       [0] check (res://tests/m21_battle_garden_test.gd:7)
+       [1] _initialize (res://tests/m21_battle_garden_test.gd:23)
+M21_BATTLE_GARDEN: 17 checks, 2 failed

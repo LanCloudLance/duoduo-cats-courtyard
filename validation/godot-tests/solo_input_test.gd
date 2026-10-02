@@ -59,6 +59,10 @@ func run() -> void:
     target.hp = 10
     target.mode = "rest"
     target.timer = 100
+    # Release semantics need a quiet contact fixture, rather than a live caster
+    # interrupting the charge. Continuous journeys still retain every enemy.
+    b.enemies.resize(1)
+    b.hazards.clear()
     await frames(60)
     # Isolate controller release damage from the companion's valid attacks.
     b.positions[0] = Vector2(1050,260)

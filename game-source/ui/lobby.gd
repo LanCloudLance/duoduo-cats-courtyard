@@ -7,9 +7,11 @@ const Prologue = preload("res://game/prologue.gd")
 const Courtyard = preload("res://game/courtyard.gd")
 const Arena = preload("res://game/arena.gd")
 const LightCorridor = preload("res://game/light_corridor.gd")
+const ChimeGate = preload("res://game/chime_gate.gd")
 const RestArea = preload("res://game/rest_area.gd")
 const Checkpoint = preload("res://game/checkpoint.gd")
 const TEAM = preload("res://assets/team.png")
+const Music = preload("res://game/music_director.gd")
 const CREAM := Color("f6eedc")
 const MUTE := Color("a8b9ad")
 const GOLD := Color("e9c981")
@@ -27,6 +29,7 @@ var prologue: Node2D
 var courtyard: Node2D
 var arena: Node2D
 var light_corridor: Node2D
+var chime_gate: Node2D
 var rest_area: Node2D
 var checkpoint = Checkpoint.new()
 var solo_checkpoint = Checkpoint.new("user://courtyard-solo-safe-v1.json")
@@ -43,6 +46,11 @@ var claim_buttons: Array[Button] = []
 var slot_titles: Array[Label] = []
 var slot_badges: Array[Label] = []
 var slot_details: Array[Label] = []
+var music: Node
+var music_started := false
+var music_setting := 1
+var music_button: Button
+var music_feedback_cursor := 0
 
 func _ready() -> void:
     Input.ignore_joypad_on_unfocused_application = true
@@ -53,6 +61,30 @@ func _ready() -> void:
     theme_value.default_font_size = 20
     theme = theme_value
     _build()
+    music = Music.new()
+    # Offline state suites have no mixing device. Their scene context still runs;
+    # the dedicated playback suite explicitly exercises real decoder voices.
+    music.audible = DisplayServer.get_name() != "headless"
+    music.name = "JourneyMusic"
+    add_child(music)
+    var music_hud := CanvasLayer.new()
+    music_hud.layer = 30
+    add_child(music_hud)
+    music_button = Button.new()
+    music_button.position = Vector2(18,774)
+    music_button.size = Vector2(142,24)
+    music_button.add_theme_font_override("font",theme.default_font)
+    music_button.add_theme_font_size_override("font_size",14)
+    music_button.text = "♫ 音乐：标准"
+    music_button.tooltip_text = "轻声 / 标准 / 关闭；音效另行控制"
+    music_hud.add_child(music_button)
+    menu_controls.append(music_button)
+    music_button.pressed.connect(func():
+        music_setting = (music_setting+1)%3
+        music.level = 0.12 if music_setting == 0 else 0.28
+        music.set_muted(music_setting == 2)
+        music_button.text = ["♫ 音乐：轻声","♫ 音乐：标准","♫ 音乐：关闭"][music_setting]
+    )
     prologue = Prologue.new(session)
     prologue.name = "Prologue"
     add_child(prologue)
@@ -65,12 +97,16 @@ func _ready() -> void:
     light_corridor = LightCorridor.new(session)
     light_corridor.name = "LightCorridor"
     add_child(light_corridor)
+    chime_gate = ChimeGate.new(session)
+    chime_gate.name = "ChimeGate"
+    add_child(chime_gate)
     rest_area = RestArea.new(session)
     rest_area.name = "RestArea"
     add_child(rest_area)
     courtyard.next_level_requested.connect(enter_combat)
     arena.next_level_requested.connect(enter_light)
-    light_corridor.next_level_requested.connect(enter_rest)
+    light_corridor.next_level_requested.connect(enter_gate)
+    chime_gate.next_level_requested.connect(enter_rest)
     rest_area.checkpoint_requested.connect(_save_checkpoint)
     router.action_pressed.connect(_action)
     router.action_released.connect(func(slot, button):
@@ -97,7 +133,7 @@ func _ready() -> void:
         JavaScriptBridge.get_interface("window").duoduoPause = web_pause_callback
         print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())
     if web_story.contains("mode=trial-"):
-        start_trial("combat" if web_story.contains("trial-combat") else "light",web_story.contains("-solo"))
+        start_trial("combat" if web_story.contains("trial-combat") else ("gate" if web_story.contains("trial-gate") else "light"),web_story.contains("-solo"))
     elif web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
         start_story(web_story.contains("story-solo"))
     elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
@@ -113,6 +149,9 @@ func _ready() -> void:
         leave_solo()
         preview_run = true
         enter_light()
+        router.start_keyboard()
+    elif "--gate-preview" in OS.get_cmdline_user_args():
+        start_trial("gate",false)
         router.start_keyboard()
     elif "--rest-preview" in OS.get_cmdline_user_args():
         leave_solo()
@@ -217,6 +256,9 @@ func _build() -> void:
         elif stage == "light":
             light_corridor.restart()
             session.pause_all("双猫灯廊已重置 · Enter 或双手柄准备")
+        elif stage == "gate":
+            chime_gate.restart()
+            session.pause_all("风铃门已重置 · Enter 或手柄准备")
         elif stage == "combat":
             arena.restart()
             arena.allow_next_level = not preview_run or not session.single_player
@@ -267,6 +309,8 @@ func _action(slot: int, button: int) -> void:
         rest_area.handle_action(slot, button)
     elif stage == "light":
         light_corridor.handle_action(slot, button)
+    elif stage == "gate":
+        chime_gate.handle_action(slot, button)
     elif stage == "combat":
         arena.handle_action(slot, button)
     else:
@@ -302,18 +346,32 @@ func _show_rest() -> void:
     courtyard.set_active(false)
     arena.set_active(false)
     light_corridor.set_active(false)
+    chime_gate.set_active(false)
     rest_area.set_active(session.running())
+
+func enter_gate() -> void:
+    router.clear_keyboard()
+    chime_gate.puzzle.solo_mode = session.single_player
+    if stage == "light":
+        chime_gate.puzzle.hp = light_corridor.puzzle.hp.duplicate()
+        chime_gate.puzzle.current_cat = light_corridor.puzzle.current_cat
+    stage = "gate"
+    courtyard.set_active(false)
+    arena.set_active(false)
+    light_corridor.set_active(false)
+    rest_area.set_active(false)
+    chime_gate.set_active(session.running())
 
 func enter_rest() -> void:
     if stage != "rest":
         rest_area.state = rest_area.Rest.new()
         rest_area.state.solo_mode = session.single_player
         rest_area.selection = rest_area.Selection.new()
-        rest_area.state.progress = {"bridge":courtyard.bridge.finished,"combat":arena.battle.phase == "complete","light":light_corridor.puzzle.finished}
-        rest_area.state.current_cat = light_corridor.puzzle.current_cat if stage == "light" else arena.battle.current_cat
-        rest_area.state.hp = light_corridor.puzzle.hp.duplicate() if stage == "light" else arena.battle.hp.duplicate()
+        rest_area.state.progress = {"bridge":courtyard.bridge.finished,"combat":arena.battle.phase == "complete","light":light_corridor.puzzle.finished,"gate":chime_gate.puzzle.finished}
+        rest_area.state.current_cat = chime_gate.puzzle.current_cat if stage == "gate" else light_corridor.puzzle.current_cat if stage == "light" else arena.battle.current_cat
+        rest_area.state.hp = chime_gate.puzzle.hp.duplicate() if stage == "gate" else light_corridor.puzzle.hp.duplicate() if stage == "light" else arena.battle.hp.duplicate()
         rest_area.reported = false
-        rest_area.can_save = stage == "light" and light_corridor.puzzle.finished and not preview_run
+        rest_area.can_save = stage == "gate" and chime_gate.puzzle.finished and light_corridor.puzzle.finished and not preview_run
         rest_area.save_status = "坐下休息后记录安全点" if rest_area.can_save else "单独试玩 · 不覆盖上次旅程"
     if preview_run:
         rest_area.can_save = false
@@ -368,6 +426,8 @@ func restart_journey() -> void:
     arena.restart()
     arena.allow_next_level = true
     light_corridor.restart()
+    chime_gate.restart()
+    chime_gate.set_active(false)
     light_corridor.puzzle.hp[0] = 3
     light_corridor.puzzle.hp[1] = 3
     rest_area.state = rest_area.Rest.new()
@@ -401,7 +461,7 @@ func _process(_delta: float) -> void:
         web_probe_clock += _delta
         if web_probe_clock >= 0.1:
             web_probe_clock = 0
-            var current = prologue.state if stage == "prologue" else courtyard.party if stage == "bridge" else (arena.battle if stage == "combat" else (light_corridor.puzzle if stage == "light" else rest_area.state))
+            var current = prologue.state if stage == "prologue" else courtyard.party if stage == "bridge" else (arena.battle if stage == "combat" else (light_corridor.puzzle if stage == "light" else (chime_gate.puzzle if stage == "gate" else rest_area.state)))
             var points: Array = []
             for point in current.positions: points.append([point.x,point.y])
             var report := {"stage":stage,"running":session.running(),"solo":session.single_player,"positions":points,"cat":1 if stage == "prologue" else current.current_cat,"bridge_locks":courtyard.bridge.unlocked,"bridge_done":courtyard.bridge.finished,"phase":arena.battle.phase,"wave":arena.battle.wave,"hp":arena.battle.hp,"persistent":OS.is_userfs_persistent(),"rested":rest_area.state.rested,"finished":rest_area.state.finished,"can_save":rest_area.can_save,"solo_saved":not solo_checkpoint.read_checkpoint().is_empty(),"dual_saved":not checkpoint.read_checkpoint().is_empty()}
@@ -413,10 +473,24 @@ func _process(_delta: float) -> void:
                 report["beam"] = [light_corridor.puzzle.beam.x,light_corridor.puzzle.beam.y]
                 report["operator"] = light_corridor.puzzle.operator_slot
                 report["recoveries"] = light_corridor.puzzle.recoveries
+            if stage == "gate":
+                report["mirrors"] = chime_gate.puzzle.mirrors
+                report["lens"] = chime_gate.puzzle.lens_site
+                report["bells"] = chime_gate.puzzle.receivers
+                report["gate_open"] = chime_gate.puzzle.finished
             JavaScriptBridge.eval("window.duoduoStatus = " + JSON.stringify(report),true)
     var playing: bool = session.running()
+    if playing: music_started = true
+    if not music_started: music.set_context("home")
+    elif playing: music.set_context(music.context_for(stage,arena.battle.phase,arena.battle.wave))
+    if playing and stage == "combat":
+        if arena.battle.feedback_id < music_feedback_cursor: music_feedback_cursor = 0
+        for event in arena.battle.feedback_since(music_feedback_cursor):
+            if event.kind in ["hit","heavy","hurt","parry","danger","plant_burst"]: music.duck(0.18)
+        music_feedback_cursor = arena.battle.feedback_id
+    music.set_paused(not session.focused or (music_started and not playing))
     for child in get_children():
-        if child is CanvasItem and child != prologue and child != courtyard and child != arena and child != light_corridor and child != rest_area:
+        if child is CanvasItem and child != prologue and child != courtyard and child != arena and child != light_corridor and child != chime_gate and child != rest_area:
             child.visible = not playing
     if prologue.active != (playing and stage == "prologue"):
         prologue.set_active(playing and stage == "prologue")
@@ -426,6 +500,8 @@ func _process(_delta: float) -> void:
         arena.set_active(playing and stage == "combat")
     if light_corridor.active != (playing and stage == "light"):
         light_corridor.set_active(playing and stage == "light")
+    if chime_gate.active != (playing and stage == "gate"):
+        chime_gate.set_active(playing and stage == "gate")
     if rest_area.active != (playing and stage == "rest"):
         rest_area.set_active(playing and stage == "rest")
     get_node("ReplayCourtyard").text = "重走庭院" if stage == "rest" else ("重玩庭院" if stage == "bridge" else "重玩本关")
@@ -518,18 +594,21 @@ func start_solo_combat() -> void:
     if session.keyboard_mode or session.devices[0] < 0: router.start_keyboard()
 
 func start_trial(target: String, single: bool) -> void:
-    if session.running() or target not in ["combat","light"]: return
+    if session.running() or target not in ["combat","light","gate"]: return
     if target == "combat" and single:
         start_solo_combat()
         return
     start_preview(target)
-    if target == "light" and single:
+    if target in ["light","gate"] and single:
         session.single_player = true
         session.devices[1] = -1
         session.ready_flags[1] = false
         light_corridor.puzzle.solo_mode = true
         light_corridor.selection = light_corridor.Selection.new()
         light_corridor._refresh()
+        chime_gate.puzzle.solo_mode = true
+        chime_gate.selection = chime_gate.Selection.new()
+        chime_gate._refresh()
 
 func leave_solo() -> void:
     if not session.single_player: return
@@ -577,6 +656,10 @@ func start_preview(target: String) -> void:
     leave_solo()
     preview_run = true
     match target:
+        "gate":
+            chime_gate.restart()
+            chime_gate.puzzle.solo_mode = false
+            enter_gate()
         "combat":
             arena.configure_solo(false)
             enter_combat()

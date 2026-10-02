@@ -5,7 +5,7 @@ var cues: Array[AudioStreamWAV] = []
 var players: Array[AudioStreamPlayer] = []
 var combat := false
 var voice_cursor := 0
-const COMBAT_CUES := {"swing":0,"dodge":0,"hit":1,"heavy":2,"blocked":3,"hurt":4,"parry":5,"guard":3,"ready":6,"charge":7,"defeat":8,"interrupt":9,"combo":2,"assist":9}
+const COMBAT_CUES := {"swing":0,"dodge":0,"hit":1,"heavy":2,"blocked":3,"hurt":4,"parry":5,"guard":3,"ready":6,"charge":7,"defeat":8,"interrupt":9,"combo":2,"assist":9,"plant_burst":2}
 
 func _ready() -> void:
     for kind in range(10 if combat else 4):

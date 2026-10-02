@@ -3,18 +3,18 @@ const Space = preload("res://game/battle_space.gd")
 
 static func start(b, number: int) -> void:
     if number == 1:
-        b._spawn("thorn",Vector2(920,390))
-        b._spawn("sprout",Vector2(930,570))
-        b._spawn("sprout",Vector2(1080,470))
+        b._spawn("thorn",Vector2(920,390),true)
+        b._spawn("sprout",Vector2(1040,730),true)
+        b._spawn("weaver",Vector2(1200,220),true)
     elif number == 2:
-        b._spawn("armored",Vector2(930,420))
-        b._spawn("weaver",Vector2(1080,580))
-        b._spawn("sprout",Vector2(1020,280))
+        b._spawn("armored",Vector2(930,420),true)
+        b._spawn("weaver",Vector2(1250,700),true)
+        b._spawn("sprout",Vector2(1060,220),true)
     else:
-        b._spawn("elder",Vector2(950,430))
-        b._spawn("weaver",Vector2(1080,600))
-        b._spawn("roller",Vector2(1080,280))
-        if not b.solo_mode: b._spawn("sprout",Vector2(920,610))
+        b._spawn("elder",Vector2(950,430),true)
+        b._spawn("weaver",Vector2(1260,730),true)
+        b._spawn("roller",Vector2(1200,220),true)
+        if not b.solo_mode: b._spawn("sprout",Vector2(1000,740),true)
 
 static func danger(enemy: Dictionary, point: Vector2, margin := 0.0) -> bool:
     if enemy.hp <= 0: return false
@@ -45,20 +45,21 @@ static func step(b, enemy: Dictionary, dt: float) -> bool:
                 enemy.hit.clear()
                 return true
             return false
-        var reach := 78.0 if enemy.kind == "sprout" else 350.0
+        var reach := 78.0 if enemy.kind == "sprout" else 1500.0
         if offset.length() > reach or not Space.clear_line(enemy.pos,goal,0):
             enemy.pos = Space.move(enemy.pos,Space.direction(enemy.pos,goal,Space.ENEMY_RADIUS)*(125 if enemy.kind == "sprout" else 85)*dt,Space.ENEMY_RADIUS)
         elif enemy.timer <= 0 and not b._busy(enemy):
             enemy.direction = offset.normalized() if offset.length() > 1 else Vector2.LEFT
             enemy.mode = "melee_windup" if enemy.kind == "sprout" else "cast"
             enemy.timer = (0.5 if enemy.kind == "sprout" else 0.85)+(0.15 if b.solo_mode else 0.0)
-            enemy.aim = goal
+            enemy.aim = goal if enemy.kind == "sprout" else (goal+b.velocity[target].limit_length(215)*enemy.timer).clamp(b.FIELD.position+Vector2(40,40),b.FIELD.end-Vector2(40,40))
             enemy.hit.clear()
         elif enemy.kind == "weaver" and offset.length() < 150:
             enemy.pos = Space.move(enemy.pos,-offset.normalized()*55*dt,Space.ENEMY_RADIUS)
         return true
     if enemy.mode in ["cast","melee_windup","slam_windup"]:
         if enemy.timer <= 0:
+            if enemy.mode == "cast": b.garden.cast(b,enemy.aim)
             enemy.mode = {"cast":"burst","melee_windup":"melee","slam_windup":"slam"}[enemy.mode]
             enemy.timer = 0.22
             b.feedback("danger",enemy.get("aim",enemy.pos) if enemy.mode == "burst" else enemy.pos,-1)

@@ -3,6 +3,9 @@ const Session = preload("res://input/session_state.gd")
 const Arena = preload("res://game/arena.gd")
 func _initialize() -> void: call_deferred("run")
 func run() -> void:
+    # Equal sampling cadence across snapshots; occluded windows can ignore VSync.
+    Engine.max_fps = 60
+    DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
     var host := Control.new()
     host.theme = Theme.new()
     host.theme.default_font = load("res://assets/fonts/CourtyardSans.ttf")
@@ -14,6 +17,10 @@ func run() -> void:
     var arena = Arena.new(s)
     host.add_child(arena)
     arena.set_active(true)
+    if ResourceLoader.exists("res://game/music_director.gd"):
+        var music = load("res://game/music_director.gd").new()
+        host.add_child(music)
+        music.set_context("boss")
     arena.battle._start_wave(3)
     # Stress fixture: keep four enemies and both players present for all samples.
     for enemy in arena.battle.enemies:
@@ -47,4 +54,8 @@ func run() -> void:
     updates.sort()
     physics.sort()
     print("COMBAT_CPU_MS process_p95=",updates[int(updates.size()*0.95)]," physics_p95=",physics[int(physics.size()*0.95)]," enemies=",arena.battle.enemies.size())
+    host.queue_free()
+    await process_frame
+    await process_frame
+    await create_timer(0.3).timeout
     quit()

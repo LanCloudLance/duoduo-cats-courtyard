@@ -1,0 +1,5 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5
+
+COMBAT_FRAME_MS samples=361 median=16.659 p95=17.278 p99=17.775 max=17.911
+COMBAT_CPU_MS process_p95=11.903 physics_p95=1.794 enemies=4

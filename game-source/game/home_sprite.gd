@@ -3,6 +3,7 @@ const HOME = preload("res://assets/story-prologue/home-party.png")
 func _ready() -> void:
     super._ready()
     for atlas in frame_cache: atlas.atlas = HOME
+    _prepare_actions()
 func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     super.pose(phase,stride,facing,reaction)
     for atlas in frame_cache: atlas.atlas = HOME
@@ -10,7 +11,7 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
 const ACTIONS = preload("res://assets/story-prologue/home-actions.png")
 var action_sprite := Sprite2D.new()
 var action_frames: Array[AtlasTexture] = []
-func show_action(kind: String, time: float, direction: float) -> void:
+func _prepare_actions() -> void:
     if not is_instance_valid(action_sprite.get_parent()):
         action_sprite.material = sprite.material
         action_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -21,6 +22,9 @@ func show_action(kind: String, time: float, direction: float) -> void:
             atlas.region = Rect2(index*418,[0,478,833][role],418,[478,355,421][role])
             atlas.filter_clip = true
             action_frames.append(atlas)
+
+func show_action(kind: String, time: float, direction: float) -> void:
+    _prepare_actions()
     sprite.visible = kind.is_empty()
     action_sprite.visible = not kind.is_empty()
     if kind.is_empty(): return

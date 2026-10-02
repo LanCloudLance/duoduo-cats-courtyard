@@ -21,7 +21,7 @@ var message := "朵朵：该认真的时候认真。现在嘛……先找张椅�
 func actor(slot: int) -> int:
     return 0 if slot == 0 else current_cat
 func full_run() -> bool:
-    return progress.get("bridge", false) and progress.get("combat", false) and progress.get("light", false)
+    return progress.get("bridge", false) and progress.get("combat", false) and progress.get("light", false) and (not progress.has("gate") or progress.gate)
 func switch_cat() -> void:
     if finished: return
     current_cat = 3 - current_cat

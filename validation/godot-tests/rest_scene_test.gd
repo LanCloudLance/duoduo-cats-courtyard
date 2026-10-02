@@ -18,7 +18,8 @@ func pad_walk(slot: int, target: Vector2) -> bool:
     return false
 func walk(slot: int, target: Vector2) -> bool:
     for i in range(700):
-        var offset: Vector2 = target - s.positions[s.actor(slot)]
+        var current = lobby.chime_gate.puzzle if lobby.stage == "gate" else s
+        var offset: Vector2 = target - current.positions[current.actor(slot)]
         if offset.length() < 7:
             axes(9 if slot == 0 else 18, Vector2.ZERO)
             return true
@@ -46,9 +47,10 @@ func run() -> void:
     lobby.light_corridor.puzzle.finished = true
     tap_key(KEY_E)
     await frames(2)
+    check(await load("res://tests/chime_driver.gd").solve(self,false),"upstream fixture still needs actual bell gate inputs")
     world = lobby.rest_area
     s = world.state
-    check(lobby.stage == "rest" and world.can_save and not s.rested, "light completion enters rest without reusing interaction")
+    check(lobby.stage == "rest" and world.can_save and not s.rested, "gate completion enters rest without reusing interaction")
     check(s.hp == [1,2] and s.full_run(), "normal route brings health and completed-stage facts")
     check(await walk(0, Vector2(610,460)), "girl walks from entry to bench")
     check(await walk(1, Vector2(690,460)), "cat walks from entry to bench")
@@ -59,10 +61,13 @@ func run() -> void:
     await frames(2)
     check(s.rested and s.hp == [3,3] and FileAccess.file_exists(SAVE), "both sit, restore health and persist checkpoint")
     check(not lobby.resume_button.disabled, "successful save enables continue button")
+    if s.current_cat != 1: tap_key(KEY_TAB)
+    await frames(75)
     tap_key(KEY_E)
     tap_key(KEY_SPACE)
     check(s.pets[0] == 1 and s.greetings[0] == 1, "both players can initiate black cat contact")
-    tap_key(KEY_TAB)
+    if s.current_cat != 2: tap_key(KEY_TAB)
+    check(await walk(1,Vector2(690,460)),"white cat approaches before contact")
     await frames(75)
     tap_key(KEY_E)
     check(s.pets[1] == 1, "white cat has a separately recorded interaction")
@@ -92,13 +97,14 @@ func run() -> void:
     await frames(2)
     world = lobby.rest_area
     s = world.state
-    check(world.visible and s.rested and s.full_run() and s.current_cat == 1 and s.hp == [3,3], "continue reconstructs saved safe rest in a fresh scene")
+    check(world.visible and s.rested and s.full_run() and s.current_cat == 2 and s.hp == [3,3], "continue reconstructs saved safe rest in a fresh scene")
     tap_key(KEY_ESCAPE)
     await frames(2)
     lobby.get_node("LightPreview").pressed.emit()
     lobby.light_corridor.puzzle.finished = true
     tap_key(KEY_E)
     await frames(2)
+    check(await load("res://tests/chime_driver.gd").solve(self,false),"preview gate exits with normal movement and tools")
     s = lobby.rest_area.state
     check(lobby.stage == "rest" and not lobby.rest_area.can_save and not s.full_run(), "single-level preview handoff cannot claim full run or overwrite save")
     check(await walk(0, Vector2(610,460)) and await walk(1, Vector2(690,460)), "preview party can still reach bench")

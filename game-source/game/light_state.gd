@@ -3,6 +3,13 @@ const Map = preload("res://game/light_layout.gd")
 const BEAM_RADIUS := 68.0
 const SUPPORT_RADIUS := 56.0
 const SPEED := 220.0
+const CHARGE_SECONDS := 0.35
+const CHARGE_MEMORY := 10.0
+const MEMORY_RADIUS := 36.0
+var charge_points := PackedVector2Array()
+var charge_levels := PackedFloat32Array()
+var charge_remaining := PackedFloat32Array()
+var charge_context := ""
 var positions: Array[Vector2] = [Vector2(165,425),Vector2(220,470),Vector2(130,495)]
 var checkpoints: Array[Vector2] = [Vector2(260,520),Vector2(260,440),Vector2(150,540)]
 var recovery_delay: Array[float] = [0.0,0.0,0.0]
@@ -65,7 +72,7 @@ func request_hint() -> void:
         hint_level = 0
     hint_level = mini(3,hint_level+1)
     var hints := {
-        "light":["观察：圆圆坐稳灯架后，石板会在光下显出边缘。","规则：团团的体重能走窄路；移动光斑会改变落脚的位置。","试试：圆圆稳住近岸灯架，朵朵操作反光台，照着团团的下一步。"],
+        "light":["观察：光在石板上停一会儿，移开后石板还会亮着。","规则：团团能走窄路；石板蓄光能维持十秒，圆圆离灯就会熄灭。","试试：圆圆稳住近岸灯架，朵朵用反光台留下一段亮路，再让团团走过去。"],
         "cross":["观察：中岛反光台旁还有一组更宽的石板。","规则：团团能展开反光台；朵朵需要宽一些的落脚面。","试试：团团接手照光，让朵朵走下方宽路；检查前桥的金属扣槽。"],
         "reuse":["观察：两座桥的扣槽形状一样；前桥扣可以取出。","规则：桥扣只有一枚。撤去支撑会收桥，朵朵也能暂时撑住前桥。","试试：接圆圆到中岛后回收前桥扣。团团牵住远岸桥绳，朵朵带扣到中岛绞盘。"],
         "exit":["观察：远岸木桥已稳住。","规则：圆圆收光后也能走固定木桥。","试试：带三位到远岸出口，再确认出发。"]}
@@ -93,7 +100,40 @@ func _source_ready() -> bool:
 func _physical_path(index: int, point: Vector2) -> bool:
     return index == traveler() and _source_ready() and not permanent and Map.distance_to_path(point,path()) <= path_width()
 func _supported(point: Vector2) -> bool:
-    return point.distance_to(beam) <= SUPPORT_RADIUS
+    if point.distance_to(beam) <= SUPPORT_RADIUS: return true
+    if charge_context != _charge_key() or not _source_ready(): return false
+    for i in range(charge_points.size()):
+        if charge_remaining[i] > 0 and point.distance_to(charge_points[i]) <= MEMORY_RADIUS: return true
+    return false
+
+func _charge_key() -> String:
+    return phase+":"+source+":"+route
+
+func charge_strengths() -> PackedFloat32Array:
+    var result := PackedFloat32Array()
+    result.resize(32)
+    if not _source_ready() or charge_context != _charge_key(): return result
+    for i in range(charge_points.size()): result[i] = charge_remaining[i]/CHARGE_MEMORY
+    return result
+
+func _charge_step(dt: float) -> void:
+    if charge_context != _charge_key():
+        charge_context = _charge_key()
+        charge_points = Map.samples(path(),45.0)
+        charge_levels.resize(charge_points.size())
+        charge_remaining.resize(charge_points.size())
+        charge_levels.fill(0)
+        charge_remaining.fill(0)
+    for i in range(charge_points.size()):
+        if not _source_ready():
+            charge_levels[i] = 0
+            charge_remaining[i] = 0
+        elif charge_points[i].distance_to(beam) <= SUPPORT_RADIUS:
+            charge_levels[i] = minf(1,charge_levels[i]+dt/CHARGE_SECONDS)
+            if charge_levels[i] >= 1: charge_remaining[i] = CHARGE_MEMORY
+        else:
+            charge_remaining[i] = maxf(0,charge_remaining[i]-dt)
+            if charge_remaining[i] <= 0: charge_levels[i] = 0
 func park_traveler(index: int) -> void:
     if solo_mode and index == traveler() and _physical_path(index,positions[index]) and _supported(positions[index]) and slipping[index] <= 0 and recovery_delay[index] <= 0:
         held_actor = index
@@ -116,7 +156,7 @@ func _start_aim(slot: int) -> void:
         message = "反光台没有接到光，石板还是暗的。"
         return
     operator_slot = slot
-    message = "反光片转起来了，方向控制光；再按互动键松手。"
+    message = "反光片转起来了，方向移光，停一会儿石板会蓄光；再按互动键松手。"
 func interact(slot: int) -> void:
     if slot < 0 or slot > 1 or finished: return
     if slot == 0 and operator_slot == 0:
@@ -242,6 +282,8 @@ func _release_light() -> void:
     held_actor = -1
     lit = false
     operator_slot = -1
+    charge_levels.fill(0)
+    charge_remaining.fill(0)
     for i in range(3):
         if not is_safe(positions[i]): _recover(i)
     message = "圆圆收光了，临时路上的伙伴已回安全点；桥扣进度保留。"
@@ -325,6 +367,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
         beam += inputs[operator_slot]*280.0*dt
         var bounds := Rect2(250,305,360,270) if phase != "route" else Rect2(730,280,365,310)
         beam = beam.clamp(bounds.position,bounds.end)
+    _charge_step(dt)
     for index in range(3):
         recovery_delay[index] = maxf(0,recovery_delay[index]-dt)
         if not is_safe(positions[index]) and not _held(index) and (not _source_ready() or not _supported(positions[index]) or slipping[index] > 0):

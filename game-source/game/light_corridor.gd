@@ -46,16 +46,16 @@ func _ready() -> void:
     _build_art()
     hud.layer = 12
     add_child(hud)
-    _panel(Rect2(24, 20, 1232, 124))
-    _label("你照着我", Rect2(48, 34, 250, 38), 28)
-    status_label = _label("", Rect2(48, 80, 250, 50), 16)
-    girl_label = _label("P1 朵朵 · 照路 / 过桥", Rect2(330, 34, 420, 38), 22, Color("346857"))
-    cat_label = _label("", Rect2(754, 34, 470, 38), 22)
-    p1_help = _label("", Rect2(330, 81, 405, 50), 17)
-    p2_help = _label("", Rect2(754, 81, 470, 50), 17)
-    _panel(Rect2(24, 685, 1232, 91))
-    objective_label = _label("", Rect2(48, 697, 1170, 32), 21)
-    hint_label = _label("", Rect2(48, 738, 1170, 27), 16, Color("647253"))
+    _panel(Rect2(24, 20, 1232, 90))
+    _label("你照着我", Rect2(48, 31, 250, 34), 25)
+    status_label = _label("", Rect2(48, 72, 250, 24), 14)
+    girl_label = _label("P1 朵朵", Rect2(330, 31, 420, 34), 20, Color("346857"))
+    cat_label = _label("", Rect2(754, 31, 470, 34), 19)
+    p1_help = _label("", Rect2(330, 72, 405, 24), 15)
+    p2_help = _label("", Rect2(754, 72, 470, 24), 15)
+    _panel(Rect2(24, 698, 1232, 78))
+    objective_label = _label("", Rect2(48, 708, 1170, 28), 19)
+    hint_label = _label("", Rect2(48, 744, 1170, 24), 15, Color("647253"))
     var hint_button := Button.new()
     hint_button.text = "提示 · 逐层展开"
     hint_button.position = Vector2(1050,645)
@@ -133,27 +133,23 @@ func _refresh() -> void:
     if not is_instance_valid(cat_label):
         return
     cat_label.text = "P2 " + ("团团 · 爪钩" if puzzle.current_cat == 1 else "圆圆 · 定光扣")
-    status_label.text = "双猫灯廊 · 观察与尝试\nEsc / 菜单键暂停"
+    status_label.text = "双人 · Esc / 菜单暂停"
     if session.keyboard_mode:
-        p1_help.text = "WASD 移动光斑 · E 离开操作台" if puzzle.operator_slot == 0 else "WASD 走路 · E 操台 / 固桥 / 集合"
-        p2_help.text = "方向键移动光斑 · R 离台" if puzzle.operator_slot == 1 else "方向键走路 · R 工具 · Tab 切猫"
-        p2_help.text += "\n空格：集合 / 安全岛返回中岛"
+        p1_help.text = "WASD 移光 · E 离台 · G 提示" if puzzle.operator_slot == 0 else "WASD 移动 · E 互动 · T 工具 · G 提示"
+        p2_help.text = "方向键移光 · R 离台" if puzzle.operator_slot == 1 else "方向键移动 · R 工具 · Tab 切猫 · 空格互动"
     else:
-        p1_help.text = "左摇杆移光 · 面键下离台" if puzzle.operator_slot == 0 else "左摇杆走路 · 面键下操台 / 固桥"
-        p2_help.text = "左摇杆移光 · 右肩离台" if puzzle.operator_slot == 1 else "左摇杆走路 · 右肩工具 · 面键上切猫"
-        p2_help.text += "\n面键下：集合 / 安全岛返回中岛"
-    p1_help.text += "\n" + ("G 请求提示 · T 工具 / 撑桥" if session.keyboard_mode else "左肩请求提示 · 右肩工具 / 撑桥")
+        p1_help.text = "摇杆移光 · 下离台 · 左肩提示" if puzzle.operator_slot == 0 else "摇杆移动 · 下互动 · 右肩工具 · 左肩提示"
+        p2_help.text = "摇杆移光 · 右肩离台" if puzzle.operator_slot == 1 else "摇杆移动 · 下互动 · 右肩工具 · 上切猫"
     objective_label.text = puzzle.objective()
     hint_label.text = puzzle.message
     if puzzle.finished:
         hint_label.text = "再按互动键，带猫猫去林边长椅休息。"
-    girl_label.text = selection.title() if session.single_player else "P1 朵朵 · 照路 / 过桥"
+    girl_label.text = selection.title() if session.single_player else "P1 朵朵"
     if session.single_player:
-        status_label.text = "单人灯廊 · 手动解谜\nEsc / 菜单键暂停"
-        cat_label.text = "切换时保留脚下已照亮的落脚点"
-        p1_help.text = ("WASD 移光 · E / R 离台" if puzzle.is_operator(selection.actor) else "WASD 移动 · E 互动 · R 工具") if session.keyboard_mode else ("摇杆移光 · 下 / 右肩离台" if puzzle.is_operator(selection.actor) else "摇杆移动 · 面键下互动 · 右肩工具")
-        p1_help.text += "\n" + selection.help(session.keyboard_mode)
-        p2_help.text = "换角色后保留导光 / 撑桥 / 牵绳\nG / 左肩：主动请求分层提示"
+        status_label.text = "单人 · Esc / 菜单暂停"
+        cat_label.text = "余光渐暗，圆圆离灯就会熄灭" if puzzle.lit else "观察灯光、石板与桥绳"
+        p1_help.text = ("WASD 移光 · E / R 离台" if puzzle.is_operator(selection.actor) else "WASD 移动 · E 互动 · R 工具") if session.keyboard_mode else ("摇杆移光 · 下 / 右肩离台" if puzzle.is_operator(selection.actor) else "摇杆移动 · 下互动 · 右肩工具")
+        p2_help.text = "Tab / Q 换角色 · G 请求提示" if session.keyboard_mode else "上 / 右换角色 · 左肩请求提示"
         objective_label.text = objective_label.text.replace("朵朵与猫咪分别确认","按互动键确认")
     queue_redraw()
 func _panel(rect: Rect2) -> void:
@@ -186,22 +182,21 @@ func _draw() -> void:
     _text(Vector2(1055,218),"远岸 · 团聚",150,21)
     if front_mix > 0: _bridge(595-330*front_mix,595)
     if far_mix > 0: _bridge(745,745+330*far_mix)
-    _text(Vector2(364,313),"安全点",90,15)
-    _text(Vector2(866,275),"安全岛",90,15)
-    if not puzzle.permanent:
-        _text(Vector2(820,247),"稳妥线 · 有休息岛",210,16,Color("afe4d8"))
-        _text(Vector2(810,621),"捷径 · 连续弯道",240,16,Color("eed49e"))
     if puzzle.lit:
         var source: Vector2 = Map.LAMP_NEAR if puzzle.source == "near" else (Map.LAMP_SAFE if puzzle.source == "safe" else Map.LAMP_FAST)
         var desk: Vector2 = Map.GUIDE_NEAR if puzzle.phase == "cat" else (Map.RELAY if puzzle.phase == "girl" else Map.GUIDE_MID)
-        draw_line(source,desk,Color(0.6,0.91,0.85,0.35),3,true)
+        draw_line(source+Vector2(0,-18),desk+Vector2(0,-49),Color(0.6,0.91,0.85,0.35),3,true)
         if puzzle._source_ready() and not puzzle.permanent:
-            draw_line(desk,puzzle.beam,Color(0.8,0.96,0.8,0.18),6,true)
+            draw_line(desk+Vector2(0,-49),puzzle.beam,Color(0.8,0.96,0.8,0.18),6,true)
             draw_circle(puzzle.beam,Light.BEAM_RADIUS,Color(0.9,1,0.78,0.07))
             draw_arc(puzzle.beam,Light.SUPPORT_RADIUS,0,TAU,60,Color("fff0ac"),2,true)
             draw_line(puzzle.beam-Vector2(7,0),puzzle.beam+Vector2(7,0),Color("fff5c7"),2)
             draw_line(puzzle.beam-Vector2(0,7),puzzle.beam+Vector2(0,7),Color("fff5c7"),2)
-            _text(puzzle.beam+Vector2(-40,83),("团团光斑" if puzzle.phase == "girl" else "朵朵光斑") if session.single_player else "P%d 光斑" % (2 if puzzle.phase == "girl" else 1),80,14)
+        var strengths: PackedFloat32Array = puzzle.charge_strengths()
+        for i in range(puzzle.charge_points.size()):
+            var strength: float = strengths[i]
+            if strength > 0 and not puzzle.is_safe(puzzle.charge_points[i]):
+                draw_circle(puzzle.charge_points[i],2,Color(1,0.91,0.51,strength))
     if puzzle.held_actor >= 0 and puzzle._held(puzzle.held_actor):
         draw_arc(puzzle.held_point,10,0,TAU,24,Color("fff0aa"),3,true)
     _lamp(Map.LAMP_NEAR,"近岸灯架",true,puzzle.source == "near")
@@ -247,13 +242,17 @@ func _bridge(start: float, end: float) -> void:
 func _lamp(point: Vector2,title: String,available: bool,selected: bool) -> void:
     var color := Color("b1ebdf") if selected and puzzle.lit else Color("c9c7ae")
     if selected and puzzle.lit: draw_arc(point,31,0,TAU,32,Color("fff0a8"),3,true)
-    _text(point+Vector2(-48,44),title,96,14,color)
+    if _nearby(point): _text(point+Vector2(-48,44),title,96,14,color)
 func _desk(point: Vector2,title: String,available: bool,selected: bool) -> void:
     var color := Color("fff0b6") if selected else Color("c9c7ae")
-    _text(point+Vector2(-55,49),"导光中" if selected else title,110,15,color)
+    if selected or _nearby(point): _text(point+Vector2(-55,49),"导光中" if selected else title,110,15,color)
 func _lock(point: Vector2,title: String,done: bool,available: bool) -> void:
     var color := Color("c0eab1") if done else Color("c9c7ae")
-    _text(point+Vector2(-48,38),"绳索绷紧" if done else title,96,14,color)
+    if _nearby(point): _text(point+Vector2(-48,38),"绳索绷紧" if done else title,96,14,color)
+
+func _nearby(point: Vector2) -> bool:
+    if session.single_player: return puzzle.positions[selection.actor].distance_to(point) <= 125
+    return puzzle.positions[0].distance_to(point) <= 125 or puzzle.positions[puzzle.current_cat].distance_to(point) <= 125
 
 func _prop(index: int, size: Vector2, point: Vector2, depth: int) -> Sprite2D:
     var view := Prop.make(index,size)
@@ -273,11 +272,11 @@ func _build_art() -> void:
         add_child(path_view)
         path_views.append(path_view)
     for point in [Map.GUIDE_NEAR,Map.RELAY,Map.GUIDE_MID]:
-        _prop(0,Vector2(46,64),point+Vector2(35,-3),int(point.y)-1)
-        var mirror := _prop(1,Vector2(37,37),point+Vector2(35,-49),int(point.y)-1)
+        _prop(0,Vector2(46,64),point+Vector2(0,-3),int(point.y)-1)
+        var mirror := _prop(1,Vector2(37,37),point+Vector2(0,-49),int(point.y)-1)
         mirror_views.append(mirror)
     for point in [Map.LAMP_NEAR,Map.LAMP_SAFE,Map.LAMP_FAST]:
-        _prop(2,Vector2(30,43),point+Vector2(31,8),int(point.y)-1)
+        _prop(2,Vector2(30,43),point+Vector2(0,8),int(point.y)-1)
     for point in [Map.FRONT_LOCK,Map.FAR_WINCH,Map.FAR_LOCK]:
         lock_views.append(_prop(7,Vector2(46,44),point+Vector2(21,-4),int(point.y)-1))
         open_lock_views.append(_prop(8,Vector2(46,44),point+Vector2(21,-4),int(point.y)-1))

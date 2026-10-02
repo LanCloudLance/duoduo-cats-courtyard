@@ -1,0 +1,62 @@
+{
+  "iteration": "M20",
+  "regression": {
+    "suites": 46,
+    "checks": 817,
+    "failed_suites": 0
+  },
+  "graphical_support_checks": 16,
+  "normal_input_charge_crossings": 8,
+  "controlled_previews": {
+    "enemy_phase_grid": 1,
+    "light_states": 3
+  },
+  "web_smoke": {
+    "local_build_loaded": true,
+    "version_label": "M20",
+    "battle_solo_loaded": true,
+    "light_dual_loaded": true,
+    "hint_and_pause_checked": true,
+    "error_warning_logs": [],
+    "manual_full_journey": false,
+    "user_production_tab_refreshed": false
+  },
+  "performance_samples": [
+    {
+      "sample": "m20_initial",
+      "log": "m20-combat-perf.log",
+      "samples": 697,
+      "median_ms": 8.223,
+      "p95_ms": 16.211,
+      "p99_ms": 22.352,
+      "max_ms": 100.499,
+      "exit_objectdb_warning": false
+    },
+    {
+      "sample": "baseline",
+      "log": "m20-perf-baseline.log",
+      "samples": 681,
+      "median_ms": 8.604,
+      "p95_ms": 13.906,
+      "p99_ms": 21.195,
+      "max_ms": 25.907,
+      "exit_objectdb_warning": false
+    },
+    {
+      "sample": "m20_repeat",
+      "log": "m20-combat-perf-repeat.log",
+      "samples": 683,
+      "median_ms": 8.5,
+      "p95_ms": 13.707,
+      "p99_ms": 20.584,
+      "max_ms": 27.786,
+      "exit_objectdb_warning": true
+    }
+  ],
+  "physical_windows_gamepad_verified": false,
+  "subjective_feel_accepted": false,
+  "build": {
+    "pck_bytes": 26063612,
+    "per_file_limit_bytes": 26214400
+  }
+}

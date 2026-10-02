@@ -7,6 +7,10 @@ uniform float half_width = 23.0;
 uniform bool lit = false;
 uniform vec2 beam = vec2(0.0);
 uniform float support_radius = 56.0;
+uniform vec2 charge_centers[32];
+uniform float charge_strength[32];
+uniform int charge_count = 0;
+uniform float memory_radius = 36.0;
 uniform vec4 route_color : source_color = vec4(0.65,0.83,0.79,1.0);
 uniform sampler2D terrain : source_color, filter_linear;
 varying vec2 world_point;
@@ -29,12 +33,20 @@ void fragment() {
     }
     if (d > half_width || bank || island) { discard; }
     bool supported = lit && distance(p,beam) <= support_radius;
+    float stored = 0.0;
+    if (lit) {
+        for (int i=0; i<32; i++) {
+            if (i >= charge_count) { break; }
+            if (distance(p,charge_centers[i]) <= memory_radius) { stored = max(stored,charge_strength[i]); }
+        }
+    }
+    supported = supported || stored > 0.0;
     float rim = smoothstep(half_width-1.7,half_width,d);
     if (supported) {
         vec3 stone = texture(terrain,vec2(0.5,0.0)+fract(p/210.0)*0.5).rgb;
         float joint = step(mod(along,24.0),1.3);
         vec3 color = mix(stone*vec3(1.22,1.15,0.92),vec3(0.33,0.34,0.26),joint*0.5);
-        COLOR = vec4(mix(color,vec3(1.0,0.88,0.55),rim*0.55),1.0);
+        COLOR = vec4(mix(color,vec3(1.0,0.88,0.55),rim*(0.35+0.35*stored)),1.0);
     } else {
         // Only a dashed outline in darkness, never a misleading solid bridge.
         float dash = step(3.0,mod(along,16.0));

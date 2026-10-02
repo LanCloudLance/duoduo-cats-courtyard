@@ -365,6 +365,20 @@ func _rush(enemy: Dictionary, dt: float) -> void:
         enemy.mode = "rest"
         enemy.timer = 1.4 if enemy.kind == "armored" else (1.25 if enemy.kind == "thorn" else 1.65)
 func _enemy_step(enemy: Dictionary, dt: float) -> void:
+    if enemy.get("pose_mode","") != enemy.mode:
+        enemy.pose_mode = enemy.mode
+        enemy.pose_duration = maxf(enemy.timer,0.001)
+        enemy.pose_elapsed = 0.0
+    var held: bool = enemy.get("impact_pause",0.0) > 0 or enemy.get("control_time",0.0) > 0
+    _enemy_ai(enemy,dt)
+    if enemy.pose_mode != enemy.mode:
+        enemy.pose_mode = enemy.mode
+        enemy.pose_duration = maxf(enemy.timer,0.001)
+        enemy.pose_elapsed = 0.0
+    elif not held:
+        enemy.pose_elapsed += dt
+
+func _enemy_ai(enemy: Dictionary, dt: float) -> void:
     enemy.flash = maxf(0,enemy.flash-dt)
     enemy.bounce = maxf(0,enemy.bounce-dt)
     if enemy.get("impact_pause",0.0) > 0:

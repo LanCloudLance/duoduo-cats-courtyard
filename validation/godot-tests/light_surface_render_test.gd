@@ -28,8 +28,14 @@ func run() -> void:
         var view := PathView.new()
         view.configure(paths[i],s.path_width(),["cat","girl","safe","fast"][i])
         viewport.add_child(view)
-        for powered in [true,false]:
-            s.lit = powered
+        for scenario in ["beam","dark","stored","expired"]:
+            s.lit = scenario != "dark"
+            if scenario == "stored":
+                s.beam = beams[i]
+                for tick in range(5): s.step(0.1,Vector2.ZERO,Vector2.ZERO,true)
+                s.beam = Vector2(1180,610)
+            if scenario == "expired":
+                for tick in range(110): s.step(0.1,Vector2.ZERO,Vector2.ZERO,true)
             view.update_state(s)
             for frame in range(3): await process_frame
             await RenderingServer.frame_post_draw
@@ -45,7 +51,7 @@ func run() -> void:
             checks += 1
             if mismatches:
                 failed += 1
-                push_error("Path %d powered=%s has %d mismatched support pixels" % [i,powered,mismatches])
+                push_error("Path %d scenario=%s has %d mismatched support pixels" % [i,scenario,mismatches])
         view.free()
     print("LIGHT_SURFACE_RENDER: %d checks, %d failed" % [checks,failed])
     quit(1 if failed else 0)

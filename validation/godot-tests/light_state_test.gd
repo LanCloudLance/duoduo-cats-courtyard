@@ -36,6 +36,13 @@ func run_rules(s) -> void:
     s.beam = Vector2(300,440)
     for i in range(30): s.step(0.05,Vector2.ZERO,Vector2.RIGHT,true)
     check(s.positions[1].x < 365, "stationary beam cannot pre-light whole crossing")
+    # Fresh dark foothold: the previous illumination now intentionally retains charge.
+    s = load("res://game/light_state.gd").new()
+    s.lit = true
+    s.source = "near"
+    s.operator_slot = 0
+    s.positions[0] = L.GUIDE_NEAR
+    s.positions[2] = L.LAMP_NEAR
     # Off-light actor is caught in place; recentering rescues before timeout.
     s.positions[1] = Vector2(330,440)
     s.beam = Vector2(480,430)

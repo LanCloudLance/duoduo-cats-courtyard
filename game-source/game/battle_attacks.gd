@@ -14,6 +14,7 @@ var buffered_release := false
 var combo := 0
 var combo_window := 0.0
 var current_combo := 0
+var impact_times: Array[float] = [0.065,0.0]
 
 func available(b, slot: int) -> bool:
     return slot >= 0 and slot <= 1 and b.hp[slot] > 0 and b.attack_cooldown[slot] <= 0 and b.dodge_time[slot] <= 0 and b.phase != "complete" and not (slot == 0 and b.guarding)
@@ -54,13 +55,15 @@ func press(b, slot: int) -> void:
         charging = true
         charge_time = 0
         kinds[1] = "charge"
+        b.feedback("charge",b.positions[2],1)
 
 func _begin(b, slot: int, duration: float, impact: float) -> void:
     durations[slot] = duration
     b.attack_cooldown[slot] = duration
     b.attack_flash[slot] = duration
     pending[slot] = impact
-    if b.has_method("feedback"): b.feedback("swing",b.positions[b.actor(slot)],slot)
+    impact_times[slot] = maxf(0,impact)
+    b.feedback("swing",b.positions[b.actor(slot)],slot,{"attack":kinds[slot],"direction":b.attack_direction[slot],"combo":current_combo if slot == 0 else 0})
 
 func release(b, slot: int) -> void:
     if slot != 1: return
@@ -85,6 +88,7 @@ func cancel(b, slot := -1) -> void:
         buffered_release = false
     for index in range(2):
         if slot == -1 or slot == index:
+            b.contact_hold[index] = 0
             b.attack_flash[index] = 0
             pending[index] = -1
             buffered[index] = 0
@@ -92,6 +96,7 @@ func cancel(b, slot := -1) -> void:
 func step(b, dt: float) -> bool:
     combo_window = maxf(0,combo_window-dt)
     for enemy in b.enemies:
+        enemy.impact_age = enemy.get("impact_age",1.0)+dt
         enemy.control_immune = maxf(0,enemy.get("control_immune",0.0)-dt)
         enemy.control_time = maxf(0,enemy.get("control_time",0.0)-dt)
         enemy.mark_time = maxf(0,enemy.get("mark_time",0.0)-dt)
@@ -144,7 +149,7 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
         var blocked: bool = enemy.kind == "armored" and (enemy.mode != "exposed" or enemy.direction.dot(enemy.pos.direction_to(origin)) > -0.258819)
         if blocked:
             enemy.bounce = 0.2
-            b.feedback("blocked",enemy.pos,slot)
+            b.feedback("blocked",enemy.pos,slot,{"direction":direction,"attack":kinds[slot]})
             if b.hp[0] > 0 and b.hp[1] > 0: b.message = "树皮挡住了！盾挡或引它撞树桩，再绕到背后。"
         else:
             var amount := float(damage)
@@ -153,7 +158,7 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
                 elif enemy.direction.dot(enemy.pos.direction_to(origin)) > 0.2: amount *= 0.4
             enemy.hp = maxf(0,enemy.hp-amount)
             enemy.flash = 0.13
-            b.feedback("heavy" if heavy else "hit",enemy.pos,slot)
+            b.feedback("heavy" if heavy else "hit",enemy.pos,slot,{"direction":direction,"attack":kinds[slot]})
             if slot == 1 and b.current_cat == 1:
                 enemy.mark_time = 1.8
                 enemy.assist_used = false
@@ -181,5 +186,6 @@ func strike(b, slot: int, reach: float, half_angle: float, damage: int, single: 
                         b.message = "接住机会！圆圆把它掀翻了。"
             elif enemy.kind in ["sprout","weaver"] and enemy.mode not in ["rush","cast","melee_windup"]:
                 enemy.pos = Space.move(enemy.pos,direction*12,Space.ENEMY_RADIUS)
+        b.contact(enemy,slot,direction,heavy,blocked)
         if single: break
     return not targets.is_empty()

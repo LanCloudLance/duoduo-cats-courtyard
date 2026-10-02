@@ -6,7 +6,7 @@ var engagement := 0.0
 
 func cancel(b) -> void:
     b.cancel_attacks()
-    b.guarding = false
+    b.hold_guard(false)
     b._cancel_rescue()
     engagement = 0
     companion.reset()
@@ -35,13 +35,13 @@ func press(b, button: int, direction: Vector2) -> void:
             b.dodge(human_slot,direction)
             if b.hp[human_slot] > 0: engagement = 3.5
         JOY_BUTTON_LEFT_SHOULDER:
-            if human_slot == 0 and b.hp[0] > 0 and b.dodge_time[0] <= 0:
-                b.guarding = true
+            if human_slot == 0 and b.hp[0] > 0:
+                b.hold_guard(true)
                 engagement = 3.5
 
 func release(b, button: int) -> void:
     if button == JOY_BUTTON_X: b.release_attack(human_slot)
-    if button == JOY_BUTTON_LEFT_SHOULDER and human_slot == 0: b.guarding = false
+    if button == JOY_BUTTON_LEFT_SHOULDER and human_slot == 0: b.hold_guard(false)
 
 func step(b, dt: float, direction: Vector2) -> void:
     if not is_finite(dt) or dt <= 0 or not direction.is_finite(): return

@@ -46,10 +46,12 @@ func run() -> void:
     s.positions[0] = Vector2(440,540)
     s.positions[1] = Map.RELAY
     s.beam = Vector2(452,533)
-    s.message = "团团：现在换我接你！朵朵沿下方宽桥来到中岛，再固定前桥。"
+    s.message = "团团拉开反光片，下方的宽石板接到光。"
     corridor._physics_process(0)
     await capture(args[0]+"-handoff.png")
     s.front_fixed = true
+    s.pin_site = "front"
+    corridor.front_mix = 1.0
     s.phase = "route"
     s.source = "safe"
     s.operator_slot = 0
@@ -64,6 +66,10 @@ func run() -> void:
     await capture(args[0]+"-16x9.png")
     root.size = Vector2i(1280,800)
     s.permanent = true
+    s.pin_site = "far"
+    s.front_fixed = false
+    corridor.front_mix = 0
+    corridor.far_mix = 1.0
     s.latched = true
     s.operator_slot = -1
     s.lit = false

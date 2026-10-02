@@ -124,12 +124,15 @@ func first_half() -> bool:
     if not await crossing(0,[Vector2(340,540),Vector2(440,540),Vector2(540,480),Vector2(605,480)]): return false
     if not await walk(0,Map.FRONT_LOCK): return false
     tap_key(KEY_E)
+    tap_key(KEY_E)
     return s.front_fixed
 func route_half(route: String) -> bool:
     if not await walk(2,Vector2(250,480)): return false
     if not await walk(2,Vector2(605,480)): return false
     if not await walk(2,Map.LAMP_SAFE if route == "safe" else Map.LAMP_FAST): return false
     tap_key(KEY_R)
+    if not await walk(0,Map.FRONT_LOCK): return false
+    tap_key(KEY_E)
     if not await walk(0,Map.GUIDE_MID): return false
     tap_key(KEY_E)
     if not await walk(1,Vector2(740,380) if route == "safe" else Vector2(740,530)): return false

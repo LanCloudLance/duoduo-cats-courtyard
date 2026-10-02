@@ -4,6 +4,11 @@ var action_sprite := Sprite2D.new()
 var combat_kind := ""
 var combat_active := false
 var combat_progress := 0.0
+var combat_contact := false
+var combat_combo := 0
+var impact_ratio := 0.22
+var hurt_progress := 0.0
+var dodging := false
 var combat_direction := Vector2.RIGHT
 var guard_direction := Vector2.RIGHT
 var guarding := false
@@ -42,7 +47,7 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     face = facing
     var active_pose: bool = combat_active or guarding or combat_kind == "charge"
     # Bounded visual blending; attack timing, hit resolution and input are unchanged.
-    var blend := 1.0-exp(-maxf(0,pose_delta)*45.0)
+    var blend := 1.0 if combat_contact else 1.0-exp(-maxf(0,pose_delta)*55.0)
     action_mix = lerpf(action_mix,1.0 if active_pose else 0.0,blend)
     if absf(action_mix-(1.0 if active_pose else 0.0)) < 0.015:
         action_mix = 1.0 if active_pose else 0.0
@@ -54,9 +59,9 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     var target_lean := 0.0
     if active_pose:
         var frame := 0
-        if role == 0: frame = 2 if guarding else 1
+        if role == 0: frame = 2 if guarding else 0 if combat_progress < impact_ratio*0.55 else 1
         elif role == 1: frame = 1 if combat_progress < 0.65 else 2
-        else: frame = 1 if combat_kind == "charge" else 2 if combat_kind == "heavy" else 0
+        else: frame = 1 if combat_kind == "charge" or (combat_kind == "heavy" and combat_progress < impact_ratio) else 2 if combat_kind == "heavy" and combat_progress < 0.75 else 0
         if frame != action_frame:
             var tops := [0,478,833]
             var bottoms := [468,827,1254]
@@ -73,15 +78,29 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
             action_sprite.position = Vector2(frame*418-anchors[role][frame],tops[role]-feet[role][frame])
             action_frame = frame
         if combat_kind == "pounce":
-            target_lift = -sin(combat_progress*PI)*9
-            target_lean = sin(combat_progress*PI)*0.06*face
-        if combat_kind == "sword": target_lean = sin(combat_progress*PI)*0.07*face
+            target_lift = -sin(combat_progress*PI)*13
+            target_lean = sin(combat_progress*PI)*0.14*face
+            scale.y *= 0.86 if combat_progress > 0.65 else 0.94
+        if combat_kind == "sword":
+            target_lean = sin(combat_progress*PI)*(0.19 if combat_combo == 2 else 0.13)*face*(1 if combat_combo != 1 else -1)
         if combat_kind == "heavy":
-            target_lean = sin(combat_progress*PI)*0.09*face
-            target_lift = sin(combat_progress*PI)*3
+            target_lean = sin(combat_progress*PI)*0.16*face
+            target_lift = -sin(combat_progress/impact_ratio*PI)*6 if combat_progress < impact_ratio else sin((combat_progress-impact_ratio)*PI)*7
+            scale.y *= 0.83 if combat_progress >= impact_ratio and combat_progress < 0.65 else 1.0
         if combat_kind == "charge":
             target_lean = sin(charge_progress*26)*0.012*charge_progress
-            target_lift = charge_progress*3
+            target_lift = charge_progress*6
+            scale.y *= 1.0-charge_progress*0.12
+            scale.x *= 1.0+charge_progress*0.06
+    if dodging:
+        target_lean = -0.17*face
+        target_lift = 4
+        scale.y *= 0.86
+    if hurt_progress > 0:
+        target_lean = -sin(hurt_progress*PI)*0.17*face
+        scale.x *= 1.0+sin(hurt_progress*PI)*0.10
+        scale.y *= 1.0-sin(hurt_progress*PI)*0.08
+    sprite.material.set_shader_parameter("hit_flash",0.55 if hurt_progress > 0.65 else 0.0)
     smooth_lean = lerpf(smooth_lean,target_lean,blend)
     smooth_lift = lerpf(smooth_lift,target_lift,blend)
     rotation += smooth_lean
@@ -90,7 +109,17 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     var direction := Vector2(0.35,-0.94).normalized()
     if combat_active and combat_kind == "sword":
         hand = Vector2(37,-49)
-        direction = Vector2(combat_direction.x*face,combat_direction.y).rotated(lerpf(-PI/3,PI/3,clampf(combat_progress*2.3,0,1)))
+        var ratio := maxf(0.1,impact_ratio)
+        var turn: float
+        if combat_progress < ratio:
+            turn = lerpf(-1.35,0.0,pow(combat_progress/ratio,2))
+        else:
+            turn = lerpf(0.0,1.05,clampf((combat_progress-ratio)/0.22,0,1))
+        if combat_combo == 1: turn *= -1
+        if combat_combo == 2:
+            turn *= 1.18
+            hand += Vector2(combat_direction.x*face,combat_direction.y)*sin(combat_progress*PI)*7
+        direction = Vector2(combat_direction.x*face,combat_direction.y).rotated(turn)
     var shield := Vector2(-22,-45)
     if guarding: shield = Vector2(0,-49)+Vector2(guard_direction.x*face,guard_direction.y)*31
     smooth_hand = smooth_hand.lerp(hand,blend)

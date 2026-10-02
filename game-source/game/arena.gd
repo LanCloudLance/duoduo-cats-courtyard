@@ -23,6 +23,10 @@ var objective_label: Label
 var hint_label: Label
 var status_label: Label
 var enemy_views: Array[Node2D] = []
+var fallen_views: Array[Node2D] = []
+var impact_shake := 0.0
+var shake_enabled := true
+var shake_clock := 0.0
 const EnemyView = preload("res://game/enemy_visual.gd")
 const BACKDROP = preload("res://assets/visual-m14/arena-painted.png")
 
@@ -31,6 +35,7 @@ func _init(state) -> void:
 
 func _ready() -> void:
     font = get_parent().theme.default_font
+    audio.combat = true
     add_child(audio)
     camera.enabled = false
     camera.position = Vector2(640, 400)
@@ -80,6 +85,15 @@ func _ready() -> void:
         session.stick_deadzone = 0.28 if session.stick_deadzone < 0.25 and session.stick_deadzone > 0.15 else 0.12 if session.stick_deadzone >= 0.25 else 0.20
         deadzone.text = "摇杆死区 %d%%" % roundi(session.stick_deadzone*100))
     hud.add_child(deadzone)
+    var shake_button := Button.new()
+    shake_button.text = "震动反馈 开"
+    shake_button.position = Vector2(775,646)
+    shake_button.add_theme_font_override("font",font)
+    shake_button.pressed.connect(func():
+        shake_enabled = not shake_enabled
+        camera.offset = Vector2.ZERO
+        shake_button.text = "震动反馈 开" if shake_enabled else "震动反馈 关")
+    hud.add_child(shake_button)
     set_active(false)
     _refresh()
 
@@ -93,9 +107,14 @@ func set_active(value: bool) -> void:
 
 func cancel_inputs() -> void:
     audio.silence()
-    battle.guarding = false
+    battle.hold_guard(false)
     battle._cancel_rescue()
     battle.cancel_attacks()
+    heard_feedback = battle.feedback_id
+    impact_shake = 0
+    camera.offset = Vector2.ZERO
+    for device in session.devices:
+        if device >= 0: Input.stop_joy_vibration(device)
     solo.cancel(battle)
     for actor_view in actors:
         if actor_view.painted: actor_view.painted.reset_transition()
@@ -136,15 +155,15 @@ func handle_action(slot: int, button: int) -> void:
             if slot == 1:
                 battle.switch_cat()
         JOY_BUTTON_LEFT_SHOULDER:
-            if slot == 0 and battle.hp[0] > 0 and battle.dodge_time[0] <= 0:
-                battle.guarding = true
+            if slot == 0 and battle.hp[0] > 0:
+                battle.hold_guard(true)
 
 func release_action(slot: int, button: int) -> void:
     if battle.solo_mode:
         if slot == 0 and session.running(): solo.release(battle,button)
         return
     if slot == 0 and button == JOY_BUTTON_LEFT_SHOULDER:
-        battle.guarding = false
+        battle.hold_guard(false)
     if session.running() and button == JOY_BUTTON_X:
         battle.release_attack(slot)
 
@@ -153,12 +172,19 @@ func _physics_process(delta: float) -> void:
         return
     if battle.solo_mode: solo.step(battle,delta,session.movement(0))
     else: battle.step(delta, session.movement(0), session.movement(1), true)
-    if battle.feedback_id != heard_feedback:
-        heard_feedback = battle.feedback_id
-        var cue: String = battle.last_feedback
-        if cue in ["hit","heavy","hurt"]: audio.play(0)
-        elif cue in ["parry","combo","assist","interrupt"]: audio.play(1)
-        elif cue == "ready": audio.play(3)
+    for event in battle.feedback_since(heard_feedback):
+        audio.play_feedback(event)
+        if event.kind in ["heavy","combo","parry","hurt"]:
+            impact_shake = maxf(impact_shake,0.09 if event.kind == "hurt" else 0.07)
+        if shake_enabled and event.slot >= 0 and event.kind in ["hit","heavy","blocked","hurt","parry","combo"]:
+            var device: int = session.devices[0 if session.single_player else event.slot]
+            if device >= 0:
+                var strong: bool = event.kind in ["heavy","combo","hurt"]
+                Input.start_joy_vibration(device,0.25,0.45 if strong else 0.12,0.075 if strong else 0.04)
+    heard_feedback = battle.feedback_id
+    shake_clock += delta
+    impact_shake = maxf(0,impact_shake-delta)
+    camera.offset = Vector2(sin(shake_clock*171),cos(shake_clock*137))*minf(2,impact_shake*27) if shake_enabled else Vector2.ZERO
     for i in range(3):
         var slot := 0 if i == 0 else 1
         var selected: bool = i == 0 or i == battle.current_cat
@@ -176,6 +202,13 @@ func _physics_process(delta: float) -> void:
         actors[i].combat_kind = battle.attacks.kinds[slot] if selected else ""
         var duration: float = battle.attacks.durations[slot]
         actors[i].combat_progress = 1.0-battle.attack_flash[slot]/duration if selected and battle.attack_flash[slot] > 0 else 0.0
+        if selected and battle.contact_hold[slot] > 0:
+            actors[i].combat_progress = battle.contact_progress[slot]
+        actors[i].combat_contact = selected and battle.contact_hold[slot] > 0
+        actors[i].combat_combo = battle.attacks.current_combo if i == 0 else 0
+        actors[i].impact_ratio = battle.attacks.impact_times[slot]/duration
+        actors[i].hurt_progress = battle.hurt_time[slot]/0.22 if selected else 0.0
+        actors[i].dodging = selected and battle.dodge_time[slot] > 0
         actors[i].combat_direction = battle.attack_direction[slot]
         actors[i].charge_progress = battle.attacks.charge_time/battle.attacks.CHARGE_SECONDS if selected and i == 2 else 0.0
         if not battle.attacks.charging and actors[i].combat_kind == "charge": actors[i].combat_kind = ""
@@ -198,6 +231,12 @@ func _refresh() -> void:
         enemy_views.append(view)
     for i in range(enemy_views.size()):
         enemy_views[i].sync(battle.enemies[i])
+    while fallen_views.size() > battle.fallen.size(): fallen_views.pop_back().queue_free()
+    while fallen_views.size() < battle.fallen.size():
+        var view = EnemyView.new()
+        add_child(view)
+        fallen_views.append(view)
+    for i in range(fallen_views.size()): fallen_views[i].sync(battle.fallen[i])
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
     status_label.text = "协作战斗   %d / 3\nEsc / 菜单键暂停" % battle.wave
@@ -327,24 +366,27 @@ func _draw() -> void:
             draw_arc(enemy.pos,82,angle-1.3,angle+1.3,24,Color("efb072"),5,true)
         _draw_enemy(enemy)
     for effect in battle.fx:
-        if effect.kind in ["swing","ready","danger"]: continue
-        var progress: float = 1-effect.life/0.26
-        var color := Color("9bf3d7") if effect.kind in ["parry","combo","assist","interrupt"] else Color("fff0bc")
-        color.a = 1-progress
-        var center: Vector2 = effect.pos+Vector2(0,-30)
-        for ray in range(6):
-            var axis := Vector2.from_angle(ray*TAU/6)
-            draw_line(center+axis*(10+progress*12),center+axis*(25+progress*28),color,4,true)
-        if effect.kind in ["parry","combo","assist","interrupt"]:
-            _text(center+Vector2(-70,-45-progress*18),{"parry":"完美挡招","combo":"接力掀翻","assist":"接棒追击","interrupt":"打断成功"}[effect.kind],140,18)
+        _draw_impact(effect)
     for slot in range(2):
         var p: Vector2 = battle.positions[battle.actor(slot)]
         if battle.dodge_time[slot] > 0:
             draw_line(p - battle.dodge_direction[slot] * 80, p, Color("b4e5d4"), 6, true)
+        elif battle.dodge_cooldown[slot] > 0 and (not battle.solo_mode or slot == solo.human_slot):
+            draw_set_transform(p+Vector2(0,4),0,Vector2(1,0.42))
+            draw_arc(Vector2.ZERO,39,-PI/2,-PI/2+TAU*(1-battle.dodge_cooldown[slot]/0.72),32,Color(0.65,0.82,0.77,0.72),2,true)
+            draw_set_transform(Vector2.ZERO)
         if battle.attack_flash[slot] > 0 and battle.attacks.pending[slot] < 0:
             var direction: Vector2 = battle.attack_direction[slot]
             if slot == 0:
-                draw_arc(p,103,direction.angle()-PI/3,direction.angle()+PI/3,28,Color(0.52,0.86,0.74,0.85),7,true)
+                var t: float = actors[0].combat_progress
+                var ratio: float = battle.attacks.impact_times[0]/battle.attacks.durations[0]
+                var fade := clampf(1-(t-ratio)/0.42,0,1)
+                var reverse := -1.0 if battle.attacks.current_combo == 1 else 1.0
+                var angle: float = direction.angle()+reverse*clampf((t-ratio)/0.22,0,1)*1.05
+                var center := p+Vector2(0,-32)
+                var reach := 94.0 if battle.attacks.current_combo == 2 else 84.0
+                draw_arc(center,reach,angle-0.85,angle,18,Color(0.83,0.96,0.87,fade*0.68),6 if battle.attacks.current_combo == 2 else 4,true)
+                draw_arc(center,reach-4,angle-0.55,angle,14,Color(1,0.97,0.73,fade),2,true)
             elif battle.attacks.kinds[1] == "pounce":
                 for side in [-1,0,1]:
                     var offset: Vector2 = direction.orthogonal()*side*10
@@ -413,3 +455,44 @@ func _draw_enemy(enemy: Dictionary) -> void:
     _text(label_point, label, 230, 17)
     draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50, 5)), Color("424e3e"))
     draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))
+
+func _draw_impact(effect: Dictionary) -> void:
+    if effect.kind in ["swing","charge","ready","danger"]: return
+    var t: float = clampf(1-effect.life/0.26,0,1)
+    var center: Vector2 = effect.pos+Vector2(0,-30)
+    var axis: Vector2 = effect.get("direction",Vector2.RIGHT)
+    var color := Color("fff1b9")
+    color.a = 1-t
+    if effect.kind in ["heavy","combo"]:
+        var ground: Vector2 = effect.pos
+        draw_set_transform(ground,0,Vector2(1,0.45))
+        draw_arc(Vector2.ZERO,14+t*58,0,TAU,32,Color(1,0.84,0.45,(1-t)*0.8),4*(1-t)+1,true)
+        draw_set_transform(Vector2.ZERO)
+        for i in range(7):
+            var ray := Vector2.from_angle(float(i)*TAU/7)
+            var dust := ground+ray*(14+t*45)+Vector2(0,-sin(t*PI)*13)
+            draw_circle(dust,3*(1-t)+1,Color(0.86,0.73,0.43,(1-t)*0.75))
+    elif effect.kind in ["blocked","guard"]:
+        color = Color(0.85,0.9,1,1-t)
+        for i in range(4):
+            var ray := axis.rotated(-0.8+float(i)*0.55)
+            draw_line(center+ray*(7+t*13),center+ray*(17+t*23),color,2,true)
+        draw_arc(center,13,axis.angle()-1.1,axis.angle()+1.1,12,color,2,true)
+    elif effect.kind == "hurt":
+        for i in range(4):
+            var ray := Vector2.from_angle(i*PI/2+0.4)
+            draw_line(center+ray*(8+t*14),center+ray*(20+t*22),Color(1,0.52,0.39,1-t),3,true)
+    elif effect.kind == "defeat":
+        for i in range(5):
+            var ray := Vector2.from_angle(i*TAU/5)
+            var leaf := center+ray*(12+t*28)+Vector2(0,t*t*40)
+            draw_line(leaf,leaf+ray.orthogonal()*5,Color(0.69,0.81,0.47,1-t),3,true)
+    else:
+        for i in range(5):
+            var ray := axis.rotated(-PI/2+float(i)*PI/4)
+            draw_line(center+ray*(3+t*8),center+ray*(14+t*17),color,2.5,true)
+        var slash := axis.orthogonal()
+        draw_line(center-slash*(15*(1-t)),center+slash*(15*(1-t)),Color(1,1,0.96,1-t),4*(1-t)+1,true)
+    if effect.kind in ["parry","combo","assist","interrupt"]:
+        var title: String = {"parry":"完美挡招","combo":"接力掀翻","assist":"接棒追击","interrupt":"打断成功"}[effect.kind]
+        _text(center+Vector2(-70,-44-t*15),title,140,18)

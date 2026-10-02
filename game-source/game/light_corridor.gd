@@ -18,6 +18,8 @@ var mirror_views: Array[Node2D] = []
 var lock_views: Array[Node2D] = []
 var open_lock_views: Array[Node2D] = []
 var presentation_clock := 0.0
+var front_mix := 0.0
+var far_mix := 0.0
 var girl_label: Label
 var cat_label: Label
 var status_label: Label
@@ -54,6 +56,14 @@ func _ready() -> void:
     _panel(Rect2(24, 685, 1232, 91))
     objective_label = _label("", Rect2(48, 697, 1170, 32), 21)
     hint_label = _label("", Rect2(48, 738, 1170, 27), 16, Color("647253"))
+    var hint_button := Button.new()
+    hint_button.text = "提示 · 逐层展开"
+    hint_button.position = Vector2(1050,645)
+    hint_button.add_theme_font_override("font",font)
+    hint_button.pressed.connect(func():
+        puzzle.request_hint()
+        _refresh())
+    hud.add_child(hint_button)
     set_active(false)
     _refresh()
 func set_active(value: bool) -> void:
@@ -67,6 +77,8 @@ func restart() -> void:
     puzzle.solo_mode = session.single_player
     selection = Selection.new()
     puzzle.hp = health
+    front_mix = 0
+    far_mix = 0
     _refresh()
 func handle_action(slot: int, button: int) -> void:
     if not session.running():
@@ -85,16 +97,17 @@ func handle_action(slot: int, button: int) -> void:
     if button == JOY_BUTTON_A:
         puzzle.interact(slot)
     elif button == JOY_BUTTON_RIGHT_SHOULDER:
-        if slot == 0:
-            puzzle.interact(slot)
-        else:
-            puzzle.tool(slot)
+        puzzle.tool(slot)
+    elif button == JOY_BUTTON_LEFT_SHOULDER:
+        puzzle.request_hint()
     elif slot == 1 and button == JOY_BUTTON_Y:
         puzzle.switch_cat()
 func _physics_process(delta: float) -> void:
     if not active or not session.running():
         return
     presentation_clock += maxf(0,delta)
+    front_mix = move_toward(front_mix,1.0 if puzzle.front_fixed else 0.0,delta*5)
+    far_mix = move_toward(far_mix,1.0 if puzzle.permanent else 0.0,delta*5)
     if session.single_player:
         puzzle.step(delta, selection.movement(session.movement(0),0), selection.movement(session.movement(0),1), true)
     else:
@@ -110,7 +123,7 @@ func _physics_process(delta: float) -> void:
         var selected: bool = i == selection.actor if session.single_player else i == 0 or i == puzzle.current_cat
         actors[i].caption_override = ["朵朵","团团","圆圆"][i]+(" · 你控制" if selected else "") if session.single_player else ""
         actors[i].caption_visible = selected or actors[i].caption_visible
-        actors[i].social_kind = "operate" if puzzle.is_operator(i) else "lamp" if i == 2 and puzzle.lit else ""
+        actors[i].social_kind = "operate" if puzzle.is_operator(i) or (i == 0 and puzzle.bracing) or (i == 1 and puzzle.latched and not puzzle.permanent) else "lamp" if i == 2 and puzzle.lit else ""
         actors[i].presentation_clock = presentation_clock
         if puzzle.is_operator(i): actors[i].facing = 1
         actors[i].update_pose(puzzle.positions[i], selected, i == 2 and puzzle.lit, delta)
@@ -120,7 +133,7 @@ func _refresh() -> void:
     if not is_instance_valid(cat_label):
         return
     cat_label.text = "P2 " + ("团团 · 爪钩" if puzzle.current_cat == 1 else "圆圆 · 定光扣")
-    status_label.text = "双猫灯廊 · %s\nEsc / 菜单键暂停" % ({"cat":"① 探路","girl":"② 接应","route":"③ 选路"}[puzzle.phase])
+    status_label.text = "双猫灯廊 · 观察与尝试\nEsc / 菜单键暂停"
     if session.keyboard_mode:
         p1_help.text = "WASD 移动光斑 · E 离开操作台" if puzzle.operator_slot == 0 else "WASD 走路 · E 操台 / 固桥 / 集合"
         p2_help.text = "方向键移动光斑 · R 离台" if puzzle.operator_slot == 1 else "方向键走路 · R 工具 · Tab 切猫"
@@ -129,7 +142,7 @@ func _refresh() -> void:
         p1_help.text = "左摇杆移光 · 面键下离台" if puzzle.operator_slot == 0 else "左摇杆走路 · 面键下操台 / 固桥"
         p2_help.text = "左摇杆移光 · 右肩离台" if puzzle.operator_slot == 1 else "左摇杆走路 · 右肩工具 · 面键上切猫"
         p2_help.text += "\n面键下：集合 / 安全岛返回中岛"
-    p1_help.text += "\n" + ("正在导光 · 看伙伴脚下" if puzzle.operator_slot == 0 else ("走近岸下方宽桥，伙伴接应你" if puzzle.phase == "girl" else "与伙伴一起观察下一块踏石"))
+    p1_help.text += "\n" + ("G 请求提示 · T 工具 / 撑桥" if session.keyboard_mode else "左肩请求提示 · 右肩工具 / 撑桥")
     objective_label.text = puzzle.objective()
     hint_label.text = puzzle.message
     if puzzle.finished:
@@ -140,7 +153,7 @@ func _refresh() -> void:
         cat_label.text = "切换时保留脚下已照亮的落脚点"
         p1_help.text = ("WASD 移光 · E / R 离台" if puzzle.is_operator(selection.actor) else "WASD 移动 · E 互动 · R 工具") if session.keyboard_mode else ("摇杆移光 · 下 / 右肩离台" if puzzle.is_operator(selection.actor) else "摇杆移动 · 面键下互动 · 右肩工具")
         p1_help.text += "\n" + selection.help(session.keyboard_mode)
-        p2_help.text = "先照亮下一小段，再切回伙伴前进\n圆圆持续定光；收光会撤掉临时落脚点"
+        p2_help.text = "换角色后保留导光 / 撑桥 / 牵绳\nG / 左肩：主动请求分层提示"
         objective_label.text = objective_label.text.replace("朵朵与猫咪分别确认","按互动键确认")
     queue_redraw()
 func _panel(rect: Rect2) -> void:
@@ -169,10 +182,10 @@ func _text(point: Vector2, value: String, width: float, size := 17, color := Col
         draw_string(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, color)
 func _draw() -> void:
     _text(Vector2(85,218),"近岸 · 出发",190,21)
-    _text(Vector2(580,218),"中岛 · 交换职责",180,21)
+    _text(Vector2(580,218),"中岛 · 桥绳相连",180,21)
     _text(Vector2(1055,218),"远岸 · 团聚",150,21)
-    if puzzle.front_fixed: _bridge(265,595)
-    if puzzle.permanent: _bridge(745,1075)
+    if front_mix > 0: _bridge(595-330*front_mix,595)
+    if far_mix > 0: _bridge(745,745+330*far_mix)
     _text(Vector2(364,313),"安全点",90,15)
     _text(Vector2(866,275),"安全岛",90,15)
     if not puzzle.permanent:
@@ -191,15 +204,29 @@ func _draw() -> void:
             _text(puzzle.beam+Vector2(-40,83),("团团光斑" if puzzle.phase == "girl" else "朵朵光斑") if session.single_player else "P%d 光斑" % (2 if puzzle.phase == "girl" else 1),80,14)
     if puzzle.held_actor >= 0 and puzzle._held(puzzle.held_actor):
         draw_arc(puzzle.held_point,10,0,TAU,24,Color("fff0aa"),3,true)
-    _lamp(Map.LAMP_NEAR,"圆圆 · 定光",not puzzle.front_fixed,puzzle.source == "near")
-    _lamp(Map.LAMP_SAFE,"圆圆 · 稳妥",puzzle.front_fixed,puzzle.source == "safe")
-    _lamp(Map.LAMP_FAST,"圆圆 · 捷径",puzzle.front_fixed,puzzle.source == "fast")
-    _desk(Map.GUIDE_NEAR,"朵朵导光",puzzle.phase == "cat",puzzle.operator_slot == 0 and puzzle.phase == "cat")
-    _desk(Map.RELAY,"团团反光",puzzle.phase in ["cat","girl"],puzzle.operator_slot == 1)
-    _desk(Map.GUIDE_MID,"朵朵导光",puzzle.phase == "route" and not puzzle.latched,puzzle.operator_slot == 0 and puzzle.phase == "route")
-    _lock(Map.FRONT_LOCK,"固定前桥",puzzle.front_fixed,puzzle.phase == "girl")
-    _lock(Map.FAR_WINCH,"放下后桥",puzzle.permanent,puzzle.latched and not puzzle.permanent)
-    _lock(Map.FAR_LOCK,"远岸桥锁",puzzle.latched,puzzle.phase == "route")
+    _lamp(Map.LAMP_NEAR,"近岸灯架",true,puzzle.source == "near")
+    _lamp(Map.LAMP_SAFE,"上路灯架",true,puzzle.source == "safe")
+    _lamp(Map.LAMP_FAST,"下路灯架",true,puzzle.source == "fast")
+    _desk(Map.GUIDE_NEAR,"反光台",true,puzzle.operator_slot == 0 and puzzle.phase == "cat")
+    _desk(Map.RELAY,"折叠反光片",true,puzzle.operator_slot == 1)
+    _desk(Map.GUIDE_MID,"反光台",true,puzzle.operator_slot == 0 and puzzle.phase == "route")
+    _lock(Map.FRONT_LOCK,"绞柄 · 扣槽",puzzle.front_fixed,false)
+    _lock(Map.FAR_WINCH,"绞盘 · 扣槽",puzzle.permanent,false)
+    _lock(Map.FAR_LOCK,"弹簧桥绳",puzzle.latched,false)
+    var rope_color := Color("efd4a0") if puzzle.latched or puzzle.permanent else Color("7e8571")
+    draw_line(Map.FAR_WINCH+Vector2(21,0),Map.FAR_LOCK+Vector2(16,0),rope_color,3 if puzzle.latched else 1,true)
+    if not puzzle.permanent:
+        var sag := Vector2(908,452 if puzzle.latched else 472)
+        draw_polyline(PackedVector2Array([Map.FAR_WINCH,sag,Map.FAR_LOCK]),rope_color,2,true)
+    for socket in [Map.FRONT_LOCK,Map.FAR_WINCH]:
+        draw_line(socket+Vector2(13,-3),socket+Vector2(28,-3),Color("423f34"),5,true)
+        draw_line(socket+Vector2(13,6),socket+Vector2(28,6),Color("423f34"),5,true)
+    var pin_point: Vector2 = Map.FRONT_LOCK+Vector2(21,0) if puzzle.pin_site == "front" else Map.FAR_WINCH+Vector2(21,0) if puzzle.pin_site == "far" else puzzle.pin_pos
+    draw_line(pin_point-Vector2(0,11),pin_point+Vector2(0,11),Color("383e38"),9,true)
+    draw_line(pin_point-Vector2(0,10),pin_point+Vector2(0,10),Color("edc875"),5,true)
+    draw_line(pin_point-Vector2(7,7),pin_point+Vector2(7,-7),Color("edc875"),4,true)
+    if puzzle.pin_site == "loose" and puzzle.positions[0].distance_to(pin_point) < 100:
+        _text(pin_point+Vector2(-40,37),"桥扣 · E 拿起" if session.keyboard_mode else "桥扣 · 下拿起",100,14,Color("ffdfa2"))
     draw_arc(Map.EXIT,57,0,TAU,40,Color("edda9c") if puzzle.permanent else Color("86947a"),3,true)
     _text(Map.EXIT+Vector2(-55,84),"集合出口",110,18)
     if puzzle.permanent:
@@ -218,19 +245,15 @@ func _bridge(start: float, end: float) -> void:
         draw_line(Vector2(x+3,497),Vector2(x+w-2,499),Color("a48a56"),1,true)
     for y in [447,513]: draw_line(Vector2(start,y),Vector2(end,y),Color("ead39b"),2,true)
 func _lamp(point: Vector2,title: String,available: bool,selected: bool) -> void:
-    var color := Color("b1ebdf") if available else Color("839083")
-    draw_arc(point,25,0,TAU,32,color,3,true)
+    var color := Color("b1ebdf") if selected and puzzle.lit else Color("c9c7ae")
     if selected and puzzle.lit: draw_arc(point,31,0,TAU,32,Color("fff0a8"),3,true)
     _text(point+Vector2(-48,44),title,96,14,color)
 func _desk(point: Vector2,title: String,available: bool,selected: bool) -> void:
-    var color := Color("e8d7a2") if available else Color("8a9783")
-    if available: draw_arc(point,30,0,TAU,28,color,2,true)
+    var color := Color("fff0b6") if selected else Color("c9c7ae")
     _text(point+Vector2(-55,49),"导光中" if selected else title,110,15,color)
 func _lock(point: Vector2,title: String,done: bool,available: bool) -> void:
-    var color := Color("c0eab1") if done else (Color("f1cd8b") if available else Color("879581"))
-    if available and not done: draw_arc(point,25,0,TAU,32,color,2,true)
-    if not done:
-        _text(point+Vector2(-48,38),title,96,14,color)
+    var color := Color("c0eab1") if done else Color("c9c7ae")
+    _text(point+Vector2(-48,38),"绳索绷紧" if done else title,96,14,color)
 
 func _prop(index: int, size: Vector2, point: Vector2, depth: int) -> Sprite2D:
     var view := Prop.make(index,size)

@@ -83,6 +83,7 @@ func first_half() -> bool:
     if not await crossing(0,[Vector2(340,540),Vector2(440,540),Vector2(540,480),Vector2(605,480)]): return false
     if not await walk(0,Vector2(625,505)): return false
     tap_key(KEY_E)
+    tap_key(KEY_E)
     check(s.front_fixed and s.phase == "route","girl fixes front bridge after actual assisted crossing")
     return true
 func select_route(route: String) -> bool:
@@ -93,6 +94,8 @@ func select_route(route: String) -> bool:
     tap_key(KEY_R)
     tap_key(KEY_TAB)
     check(s.lit and s.route == route and s.current_cat == 1,"white relocation chooses branch through actual controls")
+    if not await walk(0,Map.FRONT_LOCK): return false
+    tap_key(KEY_E)
     if not await walk(0,Vector2(710,420)): return false
     tap_key(KEY_E)
     if not await walk(1,Vector2(740,380) if route == "safe" else Vector2(740,530)): return false

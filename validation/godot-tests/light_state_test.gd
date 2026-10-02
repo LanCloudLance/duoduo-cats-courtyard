@@ -76,6 +76,7 @@ func run_rules(s) -> void:
     s.current_cat = 1
     s.positions[0] = L.FRONT_LOCK
     s.interact(0)
+    s.interact(0)
     check(s.front_fixed and s.phase == "route", "girl secures front bridge before source relocation")
     s.current_cat = 2
     var black_wait: Vector2 = s.positions[1]
@@ -106,6 +107,8 @@ func run_rules(s) -> void:
     check(s.latched and not s.permanent, "black unlocks far latch but girl must fix bridge")
     s.positions[0] = L.GUIDE_MID
     if s.operator_slot == 0: s.interact(0)
+    s.positions[0] = L.FRONT_LOCK
+    s.interact(0)
     s.positions[0] = L.FAR_WINCH
     s.interact(0)
     check(s.permanent and s.allows(2,Vector2(900,480)), "permanent far bridge supports white without beam")

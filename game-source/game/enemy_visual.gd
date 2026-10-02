@@ -38,12 +38,28 @@ func sync(enemy: Dictionary) -> void:
     z_index = int(position.y)
     body.flip_h = enemy.direction.x < 0
     body.modulate = Color(1.45,1.35,1.10) if enemy.flash > 0 else (Color("dcc6f7") if kind == "weaver" else Color("bce7a5") if kind == "sprout" else Color.WHITE)
-    # A 40 ms contact pose only holds this enemy artwork, never the simulation.
-    if enemy.flash <= 0.09:
-        body.position.y = -sin(clampf(enemy.timer,0,1)*PI)*5 if enemy.mode in ["windup","cast","melee_windup","slam_windup"] else 0.0
+    body.position = Vector2(0,-sin(clampf(enemy.timer,0,1)*PI)*5 if enemy.mode in ["windup","cast","melee_windup","slam_windup"] and enemy.get("impact_pause",0.0) <= 0 else 0.0)
     body.rotation = -0.06*signf(enemy.direction.x) if enemy.flash > 0.09 else 0.0
+    var age: float = enemy.get("impact_age",1.0)
+    var impact: Vector2 = enemy.get("impact_direction",Vector2.ZERO)
+    var power: float = enemy.get("impact_power",0.0)
+    var recoil: float = clampf(1-(age-0.04)/0.16,0,1)
+    body.position.x = -impact.x*power*recoil
+    body.position.y -= impact.y*power*recoil
+    body.rotation += -impact.x*recoil*0.14
+    var factor: float = (132.0 if kind == "elder" else 65.0 if kind == "sprout" else 80.0 if kind == "weaver" else 94.0)/REGIONS[0 if kind in ["thorn","sprout"] else 1 if kind in ["armored","elder"] else 2].size.x
+    body.scale = Vector2(factor*(1.0+recoil*0.11),factor*(1.0-recoil*0.10))
+    body.material.set_shader_parameter("hit_flash",0.84 if enemy.flash > 0.075 else 0.0)
     bud.visible = (kind in ["armored","elder"] and enemy.mode == "exposed") or kind == "weaver"
     bud.position = Vector2(0,-65) if kind == "weaver" else -enemy.direction*29
+    modulate.a = 1.0
+    if enemy.has("death_age"):
+        var death: float = enemy.death_age/0.38
+        body.rotation = lerpf(body.rotation,0.65*signf(impact.x if impact.x != 0 else 1.0),smoothstep(0.08,0.75,death))
+        body.position.y += death*17
+        body.scale.y *= 1-death*0.32
+        modulate.a = 1.0-smoothstep(0.48,1.0,death)
+        bud.visible = false
     queue_redraw()
 
 func _draw() -> void:

@@ -25,7 +25,51 @@ var permanent := false
 var finished := false
 var recoveries := 0
 var confirmed: Array[bool] = [false,false]
-var message := "圆圆先在近岸灯位坐稳；朵朵照路，团团去中岛。"
+var message := "风把桥板掀起来了。灯架、反光台和桥绳都还完好。"
+var pin_site := "loose"
+var pin_actor := -1
+var pin_pos := Map.FRONT_LOCK+Vector2(24,15)
+var bracing := false
+var hint_level := 0
+var hint_context := ""
+
+func _front_support() -> void:
+    front_fixed = pin_site == "front" or bracing
+
+func _bridge_loaded() -> bool:
+    for point in positions:
+        if point.x > 280 and point.x < 580 and absf(point.y-480) < 36: return true
+    return false
+
+func _take_pin(index: int) -> bool:
+    if pin_site == "front":
+        if _bridge_loaded():
+            message = "桥绳还承着重量，金属扣被压紧了。"
+            return false
+        pin_site = "carried"
+        pin_actor = index
+        _front_support()
+        message = "桥扣拔出来了，前桥板顺着绳索收了回去。"
+        return true
+    if pin_site == "loose":
+        pin_site = "carried"
+        pin_actor = index
+        message = "一枚沉甸甸的桥扣，侧面有两道凹槽。"
+        return true
+    return false
+
+func request_hint() -> void:
+    var context := "exit" if permanent else "reuse" if phase == "route" else "cross" if phase == "girl" else "light"
+    if context != hint_context:
+        hint_context = context
+        hint_level = 0
+    hint_level = mini(3,hint_level+1)
+    var hints := {
+        "light":["观察：圆圆坐稳灯架后，石板会在光下显出边缘。","规则：团团的体重能走窄路；移动光斑会改变落脚的位置。","试试：圆圆稳住近岸灯架，朵朵操作反光台，照着团团的下一步。"],
+        "cross":["观察：中岛反光台旁还有一组更宽的石板。","规则：团团能展开反光台；朵朵需要宽一些的落脚面。","试试：团团接手照光，让朵朵走下方宽路；检查前桥的金属扣槽。"],
+        "reuse":["观察：两座桥的扣槽形状一样；前桥扣可以取出。","规则：桥扣只有一枚。撤去支撑会收桥，朵朵也能暂时撑住前桥。","试试：接圆圆到中岛后回收前桥扣。团团牵住远岸桥绳，朵朵带扣到中岛绞盘。"],
+        "exit":["观察：远岸木桥已稳住。","规则：圆圆收光后也能走固定木桥。","试试：带三位到远岸出口，再确认出发。"]}
+    message = "提示 %d / 3 · %s" % [hint_level,hints[context][hint_level-1]]
 func actor(slot: int) -> int:
     return 0 if slot == 0 else current_cat
 func path() -> Array:
@@ -69,10 +113,10 @@ func switch_cat() -> void:
     message = "团团接棒，圆圆继续定光。" if current_cat == 1 and lit else "切到%s；非主动猫在安全处等候。" % ("团团" if current_cat == 1 else "圆圆")
 func _start_aim(slot: int) -> void:
     if not _source_ready():
-        message = "先让圆圆在这一段的灯位展开定光扣。"
+        message = "反光台没有接到光，石板还是暗的。"
         return
     operator_slot = slot
-    message = "你照着我，我接住你。方向控制光斑；再按操作键离开台子。"
+    message = "反光片转起来了，方向控制光；再按互动键松手。"
 func interact(slot: int) -> void:
     if slot < 0 or slot > 1 or finished: return
     if slot == 0 and operator_slot == 0:
@@ -80,6 +124,9 @@ func interact(slot: int) -> void:
         message = "朵朵离开导光台，光斑停在原处。"
         return
     var point := positions[actor(slot)]
+    if slot == 0 and pin_site == "loose" and point.distance_to(pin_pos) <= 44:
+        _take_pin(0)
+        return
     if permanent and point.distance_to(Map.EXIT) <= 85:
         confirmed[slot] = true
         _check_finish()
@@ -95,46 +142,85 @@ func interact(slot: int) -> void:
         return
     if phase == "cat" and point.distance_to(Map.GUIDE_NEAR) <= 42:
         _start_aim(0)
-    elif phase == "girl" and point.distance_to(Map.FRONT_LOCK) <= 38:
-        front_fixed = true
-        phase = "route"
-        operator_slot = -1
-        beam = Vector2(740,380)
-        checkpoints[0] = Map.FRONT_LOCK
-        checkpoints[1] = Vector2(740,380)
-        message = "前桥固定！接圆圆到中岛：左灯位稳妥，右灯位走捷径。"
-    elif phase == "route" and point.distance_to(Map.FAR_WINCH) <= 34 and latched:
-        permanent = true
-        operator_slot = -1
-        message = "永久桥放稳了！切圆圆收光，三位到出口集合。"
+    elif phase in ["girl","route"] and point.distance_to(Map.FRONT_LOCK) <= 38:
+        if pin_site == "carried" and pin_actor == 0:
+            pin_site = "front"
+            pin_actor = -1
+            bracing = false
+            _front_support()
+            phase = "route"
+            operator_slot = -1
+            beam = Vector2(740,380)
+            checkpoints[0] = Map.FRONT_LOCK
+            message = "桥扣落进槽里，前桥板放平了。"
+        elif pin_site == "front": _take_pin(0)
+        else: message = "扣槽是空的，桥绳一松就缩回去。朵朵能用工具键撑住绞柄。"
+    elif point.distance_to(Map.FAR_WINCH) <= 34:
+        if not latched: message = "绞盘空转，远岸的桥绳还没有绷住。"
+        elif pin_site != "carried" or pin_actor != 0: message = "绞盘拉得动了，扣槽里却少一枚金属扣。"
+        else:
+            pin_site = "far"
+            pin_actor = -1
+            permanent = true
+            operator_slot = -1
+            message = "同一枚桥扣扣紧后桥，木板稳稳放下了。"
     elif phase == "route" and not latched and point.distance_to(Map.GUIDE_MID) <= 40:
         _start_aim(0)
-    else: message = "走近当前发亮的操作台或桥扣，再按互动键。"
+    else: message = "这里没有够得着的机关。观察绳索和石板的变化；左肩可请求提示。"
 func tool(slot: int) -> void:
-    if slot != 1 or finished: return
+    if finished: return
+    if slot == 0:
+        if phase in ["girl","route"] and positions[0].distance_to(Map.FRONT_LOCK) <= 42:
+            bracing = not bracing
+            _front_support()
+            if bracing:
+                phase = "route"
+                operator_slot = -1
+            message = "朵朵撑住绞柄，前桥板放下了；走开就会松手。" if bracing else "朵朵松开了绞柄。"
+        elif operator_slot == 0: interact(0)
+        else: message = "朵朵伸手够了够，附近没有可用的绞柄。"
+        return
+    if slot != 1: return
+    if current_cat == 1:
+        if pin_site == "loose" and positions[1].distance_to(pin_pos) <= 44:
+            _take_pin(1)
+            return
+        if positions[1].distance_to(Map.FRONT_LOCK) <= 38:
+            if pin_site == "front":
+                _take_pin(1)
+                return
+            if pin_site == "carried" and pin_actor == 1:
+                pin_site = "loose"
+                pin_actor = -1
+                pin_pos = Map.FRONT_LOCK+Vector2(24,15)
+                message = "团团把桥扣放到绞柄旁，朵朵可以拿到。"
+                return
     if current_cat == 2:
         if lit:
             _release_light()
             return
         var point := positions[2]
-        if not front_fixed and point.distance_to(Map.LAMP_NEAR) <= 34:
+        if point.distance_to(Map.LAMP_NEAR) <= 34:
             source = "near"
-        elif front_fixed and point.distance_to(Map.LAMP_SAFE) <= 34:
+            phase = "girl" if phase != "cat" else "cat"
+        elif point.distance_to(Map.LAMP_SAFE) <= 34:
             source = "safe"
-        elif front_fixed and point.distance_to(Map.LAMP_FAST) <= 34:
+            phase = "route"
+        elif point.distance_to(Map.LAMP_FAST) <= 34:
             source = "fast"
+            phase = "route"
         else:
-            message = "圆圆要先走到当前可用灯位，再展开定光扣。"
+            message = "圆圆坐下了，附近没有与反光台相连的灯架。"
             return
         lit = true
-        if front_fixed:
+        if source != "near":
             held_actor = -1
             route = source
             # Old-route temporary positions are never carried into another branch.
             if not is_safe(positions[1]): _recover(1)
             beam = Vector2(740,380 if route == "safe" else 530)
             checkpoints[1] = beam
-        message = "圆圆坐稳了，切团团开始配合。" if source == "near" else ("稳妥线：路宽，中途能休息。" if route == "safe" else "捷径：连续弯道，没有中途安全岛。")
+        message = "灯架不晃了，反光台接到光，水上的石板显出轮廓。"
         return
     if operator_slot == 1:
         operator_slot = -1
@@ -143,14 +229,14 @@ func tool(slot: int) -> void:
         phase = "girl"
         operator_slot = -1
         beam = Vector2(260,520)
-        message = "团团展开宽桥面！再按工具键接手照光，朵朵从近岸下方过桥。"
+        message = "团团拉出另一块反光片，下方更宽的石板亮出了边缘。"
     elif phase == "girl" and positions[1].distance_to(Map.RELAY) <= 40:
         _start_aim(1)
     elif phase == "route" and _source_ready() and positions[1].distance_to(Map.FAR_LOCK) <= 40:
-        latched = true
+        latched = not latched
         operator_slot = -1
-        message = "远岸锁开了！朵朵到中岛绞盘放桥。"
-    else: message = "团团到中岛反光台或远岸桥锁旁，使用爪钩。"
+        message = "团团牵住桥绳，另一端的绞盘绳索绷直了；走开会松爪。" if latched else "团团松开桥绳，弹簧把它拉回去了。"
+    else: message = "团团用爪子碰了碰，附近没有能拉动的反光片或桥绳。"
 func _release_light() -> void:
     held_actor = -1
     lit = false
@@ -225,6 +311,14 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if not enabled or finished or not is_finite(delta) or delta <= 0 or not p1.is_finite() or not p2.is_finite(): return
     var dt := minf(delta,0.1)
     var inputs := [p1.limit_length(),p2.limit_length()]
+    if bracing and p1.length() > 0.01:
+        bracing = false
+        _front_support()
+        message = "朵朵松开绞柄，前桥板收回去了。"
+    if latched and not permanent and positions[1].distance_to(Map.FAR_LOCK) > 44:
+        latched = false
+        message = "团团离开后桥绳缩回，绞盘失去拉力。"
+    if pin_site == "carried": pin_pos = positions[pin_actor]+Vector2(24,-18)
     if current_cat == 2 and lit and p2.length_squared() > 0.001: _release_light()
     if operator_slot >= 0 and (not solo_mode or is_operator(solo_actor)):
         beam += inputs[operator_slot]*280.0*dt
@@ -249,9 +343,4 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     _check_finish()
 func objective() -> String:
     if finished: return "灯廊完成 · 再按互动键去林边休息。"
-    if permanent: return "切圆圆收光，三位到远岸出口；朵朵与猫咪分别确认。"
-    if latched: return "远岸锁已开 · 朵朵到中岛下方绞盘放下永久桥。"
-    if phase == "cat": return "① 朵朵照路，团团去中岛 · 光斑只照亮一小段。" if lit else "① 圆圆到近岸灯位定光，切团团；朵朵到导光台。"
-    if phase == "girl": return "② 交换职责 · 团团在中岛导光，朵朵从近岸下方走宽桥。"
-    if not _source_ready(): return "③ 前桥已固定 · 接圆圆到中岛，选稳妥线或捷径灯位。"
-    return "③ %s · 朵朵在中岛导光，团团去远岸开锁。" % ("稳妥线" if route == "safe" else "捷径")
+    return "带朵朵、团团、圆圆一起到远岸 · 桥扣只有一枚，走之前也要接回伙伴。"

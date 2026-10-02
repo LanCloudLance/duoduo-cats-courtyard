@@ -20,10 +20,15 @@ var dodge_cooldown: Array[float] = [0.0, 0.0]
 var dodge_direction: Array[Vector2] = [Vector2.RIGHT, Vector2.RIGHT]
 var invulnerable: Array[float] = [0.0, 0.0]
 var guarding := false
+var guard_held := false
 var guard_age := 0.0
 var fx: Array[Dictionary] = []
 var feedback_id := 0
 var last_feedback := ""
+var contact_hold: Array[float] = [0.0,0.0]
+var contact_progress: Array[float] = [0.0,0.0]
+var hurt_time: Array[float] = [0.0,0.0]
+var fallen: Array[Dictionary] = []
 var assist_cooldown := 0.0
 var assist_role := 1
 var assist_time := 0.0
@@ -39,11 +44,24 @@ var rescuer := -1
 var rescue_progress := 0.0
 var message := "先练 F 横扫、J 猫咪攻击、Tab 切猫；两位按互动键再开战。"
 
-func feedback(kind: String, point: Vector2, slot: int) -> void:
+func feedback(kind: String, point: Vector2, slot: int, detail: Dictionary = {}) -> void:
     feedback_id += 1
     last_feedback = kind
-    fx.append({"kind":kind,"pos":point,"slot":slot,"life":0.26})
-    if fx.size() > 24: fx.pop_front()
+    var event := {"id":feedback_id,"kind":kind,"pos":point,"slot":slot,"role":actor(slot) if slot >= 0 else -1,"life":0.26}
+    event.merge(detail,true)
+    fx.append(event)
+    if fx.size() > 48: fx.pop_front()
+
+func feedback_since(cursor: int) -> Array[Dictionary]:
+    return fx.filter(func(event): return event.id > cursor)
+
+func contact(enemy: Dictionary, slot: int, direction: Vector2, heavy: bool, blocked: bool) -> void:
+    contact_hold[slot] = 0.032 if blocked else 0.070 if heavy else 0.042
+    contact_progress[slot] = 1.0-attack_flash[slot]/attacks.durations[slot]
+    enemy.impact_pause = contact_hold[slot]
+    enemy.impact_age = 0.0
+    enemy.impact_direction = direction
+    enemy.impact_power = 4.0 if blocked else 26.0 if heavy else 11.0
 
 func actor(slot: int) -> int:
     return 0 if slot == 0 else current_cat
@@ -126,15 +144,21 @@ func release_attack(slot: int) -> void:
 func cancel_attacks() -> void:
     attacks.cancel(self)
 
+func hold_guard(value: bool) -> void:
+    guard_held = value
+    guarding = value and hp[0] > 0 and dodge_time[0] <= 0
+
 func dodge(slot: int, direction: Vector2) -> void:
     if slot < 0 or slot > 1 or hp[slot] <= 0 or dodge_cooldown[slot] > 0 or phase == "complete":
         return
     if rescuer == slot:
         _cancel_rescue()
     attacks.cancel(self,slot)
+    attack_cooldown[slot] = minf(attack_cooldown[slot],0.08)
     dodge_direction[slot] = direction.normalized() if direction.length() > 0.1 else facing[slot]
     dodge_time[slot] = 0.22
     dodge_cooldown[slot] = 0.72
+    feedback("dodge",positions[actor(slot)],slot,{"direction":dodge_direction[slot]})
     if slot == 0:
         guarding = false
 
@@ -142,10 +166,14 @@ func hurt(slot: int, source: Vector2, blockable := true) -> bool:
     if hp[slot] <= 0 or invulnerable[slot] > 0 or dodge_time[slot] > 0 or phase != "combat":
         return false
     if blockable and slot == 0 and guarding and facing[0].dot(positions[0].direction_to(source)) >= 0.25:
+        feedback("guard",positions[0],0,{"direction":facing[0]})
         message = "挡住了！朵朵正面举盾，猫咪可以绕到侧面抓击。"
         return false
     attacks.cancel(self,slot)
     feedback("hurt",positions[actor(slot)],slot)
+    hurt_time[slot] = 0.22
+    var away := source.direction_to(positions[actor(slot)])
+    positions[actor(slot)] = Space.move(positions[actor(slot)],away*18,Space.ACTOR_RADIUS)
     hp[slot] -= 1
     invulnerable[slot] = 1.2
     if rescuer == slot:
@@ -167,6 +195,7 @@ func _start_wave(number: int) -> void:
     confirmed[0] = false
     confirmed[1] = false
     enemies.clear()
+    fallen.clear()
     Encounter.start(self,number)
     message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会锁定脚下：先打断后排，或分工拆掉硬壳。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
 
@@ -197,6 +226,11 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if not enabled or not is_finite(delta) or delta <= 0 or not p1.is_finite() or not p2.is_finite():
         return
     var dt := minf(delta, 0.1)
+    if guard_held: guarding = hp[0] > 0 and dodge_time[0] <= 0
+    for body in fallen:
+        body.death_age += dt
+        body.flash = maxf(0,body.flash-dt)
+    fallen = fallen.filter(func(body): return body.death_age < 0.38)
     if hp[0] <= 0 and hp[1] <= 0:
         retry_time += dt
         if retry_time >= 2.0:
@@ -208,6 +242,8 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     for effect in fx: effect.life -= dt
     fx = fx.filter(func(effect): return effect.life > 0)
     for slot in range(2):
+        contact_hold[slot] = maxf(0,contact_hold[slot]-dt)
+        hurt_time[slot] = maxf(0,hurt_time[slot]-dt)
         attack_cooldown[slot] = maxf(0, attack_cooldown[slot] - dt)
         attack_flash[slot] = maxf(0, attack_flash[slot] - dt)
         dodge_cooldown[slot] = maxf(0, dodge_cooldown[slot] - dt)
@@ -251,6 +287,11 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
         for enemy in enemies:
             if enemy.hp > 0:
                 _enemy_step(enemy, dt)
+            else:
+                var body: Dictionary = enemy.duplicate(true)
+                body.death_age = 0.0
+                fallen.append(body)
+                feedback("defeat",enemy.pos,-1,{"direction":enemy.get("impact_direction",-enemy.direction)})
         enemies = enemies.filter(func(e): return e.hp > 0)
         if enemies.is_empty() and (hp[0] > 0 or hp[1] > 0):
             phase = "intermission" if wave < 3 else "clear"
@@ -326,6 +367,9 @@ func _rush(enemy: Dictionary, dt: float) -> void:
 func _enemy_step(enemy: Dictionary, dt: float) -> void:
     enemy.flash = maxf(0,enemy.flash-dt)
     enemy.bounce = maxf(0,enemy.bounce-dt)
+    if enemy.get("impact_pause",0.0) > 0:
+        enemy.impact_pause = maxf(0,enemy.impact_pause-dt)
+        return
     if enemy.get("control_time",0.0) > 0: return
     enemy.timer -= dt
     if Encounter.step(self,enemy,dt): return

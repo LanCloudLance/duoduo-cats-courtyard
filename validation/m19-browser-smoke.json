@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-02",
+  "local_browser_smoke": true,
+  "checks": [
+    "homepage room entries with player count",
+    "solo combat WebGL load",
+    "F/Q/G/E key routing and battle start",
+    "Escape pause",
+    "dual light WebGL load",
+    "G opens level 1 hint"
+  ],
+  "errors": [],
+  "physical_gamepad": false,
+  "user_playtest_accepted": false,
+  "user_tab_refreshed": false
+}

@@ -96,7 +96,9 @@ func _ready() -> void:
         )
         JavaScriptBridge.get_interface("window").duoduoPause = web_pause_callback
         print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())
-    if web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
+    if web_story.contains("mode=trial-"):
+        start_trial("combat" if web_story.contains("trial-combat") else "light",web_story.contains("-solo"))
+    elif web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
         start_story(web_story.contains("story-solo"))
     elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
         start_journey(true)
@@ -514,6 +516,20 @@ func start_solo_combat() -> void:
     light_corridor.set_active(false)
     rest_area.set_active(false)
     if session.keyboard_mode or session.devices[0] < 0: router.start_keyboard()
+
+func start_trial(target: String, single: bool) -> void:
+    if session.running() or target not in ["combat","light"]: return
+    if target == "combat" and single:
+        start_solo_combat()
+        return
+    start_preview(target)
+    if target == "light" and single:
+        session.single_player = true
+        session.devices[1] = -1
+        session.ready_flags[1] = false
+        light_corridor.puzzle.solo_mode = true
+        light_corridor.selection = light_corridor.Selection.new()
+        light_corridor._refresh()
 
 func leave_solo() -> void:
     if not session.single_player: return

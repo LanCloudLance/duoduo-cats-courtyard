@@ -93,6 +93,7 @@ func _key(event: InputEventKey) -> void:
         KEY_SPACE: action_pressed.emit(1, JOY_BUTTON_A)
         KEY_TAB: action_pressed.emit(1, JOY_BUTTON_Y)
         KEY_R: action_pressed.emit(0 if session.single_player else 1, JOY_BUTTON_RIGHT_SHOULDER)
+        KEY_T: action_pressed.emit(0, JOY_BUTTON_RIGHT_SHOULDER)
         KEY_F: action_pressed.emit(0, JOY_BUTTON_X)
         KEY_Q: action_pressed.emit(0, JOY_BUTTON_B)
         KEY_G: action_pressed.emit(0, JOY_BUTTON_LEFT_SHOULDER)

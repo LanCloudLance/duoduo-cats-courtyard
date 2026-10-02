@@ -49,7 +49,7 @@ func _take_pin(index: int) -> bool:
         pin_site = "carried"
         pin_actor = index
         _front_support()
-        message = "桥扣拔出来了，前桥板顺着绳索收了回去。"
+        message = "桥扣拔出来了，朵朵仍撑着绞柄，前桥板保持放平。" if front_fixed else "桥扣拔出来了，前桥板顺着绳索收了回去。"
         return true
     if pin_site == "loose":
         pin_site = "carried"
@@ -156,7 +156,8 @@ func interact(slot: int) -> void:
         elif pin_site == "front": _take_pin(0)
         else: message = "扣槽是空的，桥绳一松就缩回去。朵朵能用工具键撑住绞柄。"
     elif point.distance_to(Map.FAR_WINCH) <= 34:
-        if not latched: message = "绞盘空转，远岸的桥绳还没有绷住。"
+        if permanent: message = "桥扣已经锁紧，后桥板稳稳放平了。"
+        elif not latched: message = "绞盘空转，远岸的桥绳还没有绷住。"
         elif pin_site != "carried" or pin_actor != 0: message = "绞盘拉得动了，扣槽里却少一枚金属扣。"
         else:
             pin_site = "far"
@@ -314,7 +315,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if bracing and p1.length() > 0.01:
         bracing = false
         _front_support()
-        message = "朵朵松开绞柄，前桥板收回去了。"
+        message = "朵朵松开绞柄，桥扣仍锁着前桥板。" if front_fixed else "朵朵松开绞柄，前桥板收回去了。"
     if latched and not permanent and positions[1].distance_to(Map.FAR_LOCK) > 44:
         latched = false
         message = "团团离开后桥绳缩回，绞盘失去拉力。"

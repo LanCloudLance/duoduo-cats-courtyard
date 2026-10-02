@@ -1,0 +1,33 @@
+{
+  "date": "2026-10-02",
+  "base_commit": "0c0db3371e13eeb3c4f52ce5afefbc90a9d6e633",
+  "regression_suites": 44,
+  "regression_checks": 780,
+  "failed_suites": 0,
+  "feedback_regressions": 6,
+  "feedback_failures": 0,
+  "native_perf": {
+    "platform": "Apple M5 OpenGL compatibility",
+    "samples": 871,
+    "median_ms": 7.017,
+    "p95_ms": 8.954,
+    "p99_ms": 9.388,
+    "max_ms": 9.847,
+    "enemies": 4
+  },
+  "local_browser": {
+    "movement_attempted": true,
+    "role_switch_checked": true,
+    "default_puzzle_presentation_checked": true,
+    "manual_light_completion": false,
+    "console_errors": [],
+    "user_live_tab_refreshed": false
+  },
+  "physical_gamepad": false,
+  "windows_performance_verified": false,
+  "reference_videos": [
+    "https://www.youtube.com/watch?v=6MTcG7rQlTg",
+    "https://www.youtube.com/watch?v=AuxUty6sKiE",
+    "https://www.youtube.com/watch?v=rUb-6F1TV6M"
+  ]
+}

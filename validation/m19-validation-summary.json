@@ -1,6 +1,6 @@
 {
-  "suites": 43,
-  "checks": 774,
+  "suites": 44,
+  "checks": 780,
   "failed_suites": 0,
   "results": [
     {
@@ -143,6 +143,12 @@
     },
     {
       "suite": "m19_audio_test",
+      "passed": true,
+      "checks": 6,
+      "details": ""
+    },
+    {
+      "suite": "m19_audit_test",
       "passed": true,
       "checks": 6,
       "details": ""

@@ -1,0 +1,126 @@
+{
+  "generation_tool": "native imagegen",
+  "prompt_record_type": "constraint summaries, not verbatim transcripts",
+  "assets": [
+    {
+      "asset": "duoduo-motion.png",
+      "generated_image_id": "07a81b09-a559-4935-b43e-905ce74e36e2",
+      "original_filename": "exec-07a81b09-a559-4935-b43e-905ce74e36e2.png",
+      "prompt_constraints_summary": "Adventure outfit girl pose sheet; final runtime retains four tool interactions.",
+      "sha256": "58b983aff474c2890a9ed51cb2979146474bd87bff91a9547a2c78c173de52c5",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "duoduo-front.png",
+      "generated_image_id": "038ae03b-5377-4d6f-a86f-24f02b3455cc",
+      "original_filename": "exec-038ae03b-5377-4d6f-a86f-24f02b3455cc.png",
+      "prompt_constraints_summary": "Eight front three-quarter walking poses, opposite lead legs, fixed outfit and body proportions, 4 by 2 magenta chroma sheet.",
+      "sha256": "89862e21803745c8965403395f2e0398cc56952463e340c752cc0ae63b315695",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "duoduo-rear.png",
+      "generated_image_id": "b1d269b6-4968-44d1-85df-c676bf251ebe",
+      "original_filename": "exec-b1d269b6-4968-44d1-85df-c676bf251ebe.png",
+      "prompt_constraints_summary": "Eight rear walking poses matching front adventure girl, alternating feet, 4 by 2 magenta chroma sheet.",
+      "sha256": "e7e16753758a1f4b64c98b789d36ef99e0b2eff5816b79ceb5fd4e404ddd4cc8",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "tuantuan-motion.png",
+      "generated_image_id": "bdf4fe5a-73a5-4352-9dca-426566ce6067",
+      "original_filename": "exec-bdf4fe5a-73a5-4352-9dca-426566ce6067.png",
+      "prompt_constraints_summary": "Black Munchkin older brother, adventure outfit pose sheet, four final tool interactions retained.",
+      "sha256": "23d2c9ccf06e0d12fdd86be99c9b2713cdb79e09fefae2c89bfcafe9340c7158",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "tuantuan-cycle.png",
+      "generated_image_id": "1e994c7e-97e3-491e-98ba-f8bd732e8e32",
+      "original_filename": "exec-1e994c7e-97e3-491e-98ba-f8bd732e8e32.png",
+      "prompt_constraints_summary": "Black short-legged Munchkin, eight front and eight rear walking poses, opposite lead paws, stable outfit, magenta chroma background.",
+      "sha256": "0a39bc8bad50cd01f229ac836c51768afe77994a4741e96993be141acebaabf7",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "yuanyuan-cycle.png",
+      "generated_image_id": "c79c69f8-83ac-46cb-a40a-46eb193cf247",
+      "original_filename": "exec-c79c69f8-83ac-46cb-a40a-46eb193cf247.png",
+      "prompt_constraints_summary": "White short-legged Munchkin younger brother, eight front and eight rear walking poses, opposite lead paws, stable outfit, magenta chroma background.",
+      "sha256": "de948f1570e532f3f8cf7119a88bbb9af647809a9070c51058df07f7cf5e4090",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "yuanyuan-motion-chroma.png",
+      "generated_image_id": "91e1b4f6-ba02-4e48-abc6-08baccfb154a",
+      "original_filename": "exec-91e1b4f6-ba02-4e48-abc6-08baccfb154a.png",
+      "prompt_constraints_summary": "White Munchkin four distinct tool interaction poses, matching adventure outfit, magenta chroma to remove white halos.",
+      "sha256": "ce043d5feaf73c196f5d48dea50e7db92e9430b654d793b5965ce2e733e3f3d5",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "home-motion.png",
+      "generated_image_id": "75437a71-3525-4b1e-adb6-4e39606d8f13",
+      "original_filename": "exec-75437a71-3525-4b1e-adb6-4e39606d8f13.png",
+      "prompt_constraints_summary": "Three rows of eight home walking poses: Duoduo in established black dress, bare black and white short-legged cats, transparent background, storybook illustration.",
+      "sha256": "b41007ebf1402b6324bf1a01fc5255995777df4965967fef40c2a1e985c00a87",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "mechanisms.png",
+      "generated_image_id": "19a902dd-745b-47c7-8601-0ec63f748abe",
+      "original_filename": "exec-19a902dd-745b-47c7-8601-0ec63f748abe.png",
+      "prompt_constraints_summary": "Sixteen isolated wood and brass mechanisms, lanterns, winches, doors, carts, gears and hinges; readable shapes on transparent background.",
+      "sha256": "27f955c20df37911be5b4a9de86628885d9daf6f117db0ee4ddb90272388683d",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "support.png",
+      "generated_image_id": "135bcee2-5206-40af-9201-5627ab594e9c",
+      "original_filename": "exec-135bcee2-5206-40af-9201-5627ab594e9c.png",
+      "prompt_constraints_summary": "Six isolated support props including friendly squirrel merchant and lantern spirit, lantern cover, branch assembly and parchment route map; transparent storybook cutouts.",
+      "sha256": "b2c17daf20b1b30aa576eab83b39e45021fcac62577d045d8147327c4a522f78",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "floor-pieces.png",
+      "generated_image_id": "3ca0ed8f-f023-4253-a2c8-fdf14024e7b1",
+      "original_filename": "exec-3ca0ed8f-f023-4253-a2c8-fdf14024e7b1.png",
+      "prompt_constraints_summary": "Top-down wooden walkway and pit modules, rectangular walkable faces, matching warm storybook material, transparent isolation.",
+      "sha256": "fdb4d3c7ff2437ae669a49b3fe84df8d0d70f98a26affee4b124b2d4472c75df",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "chapter-two.png",
+      "generated_image_id": "0c1c1382-db90-4197-b540-88edef45862d",
+      "original_filename": "exec-0c1c1382-db90-4197-b540-88edef45862d.png",
+      "prompt_constraints_summary": "Morning forest riverbank and clocktower bridge setting; broad open play area, hand-painted wood and vegetation, no characters or UI.",
+      "sha256": "23a23377eb058f0da64aaeff85fad475fac58785e6a79ed0e2fad57afc115571",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "chapter-three.png",
+      "generated_image_id": "0ee4d428-e75f-4330-bfc7-73b0acc36cd3",
+      "original_filename": "exec-0ee4d428-e75f-4330-bfc7-73b0acc36cd3.png",
+      "prompt_constraints_summary": "Clocktower interior cutaway, wooden platforms, deep shaft, clockwork atmosphere and broad playable floor, no characters or UI.",
+      "sha256": "d9b688327ae4af6efa3edee4936f03eb4a551d9b4b63a434ae507d75b554aa46",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "chapter-four.png",
+      "generated_image_id": "0f28c6d6-7598-4a30-9f78-c85066e2313a",
+      "original_filename": "exec-0f28c6d6-7598-4a30-9f78-c85066e2313a.png",
+      "prompt_constraints_summary": "Twilight market sheltered by tree roots, warm wooden stalls and lanterns, open central floor, no characters or UI.",
+      "sha256": "869963c3b26ff52585eca0bf2edafbad72da7c73f5f61ad53ccacf666fe7909a",
+      "png_preserved_without_pixel_edit": true
+    },
+    {
+      "asset": "chapter-five.png",
+      "generated_image_id": "b144037c-68b0-4789-99ad-b607dc69277d",
+      "original_filename": "exec-b144037c-68b0-4789-99ad-b607dc69277d.png",
+      "prompt_constraints_summary": "Hollow tree maintenance workshop, wood and brass shelves, friendly fairy-tale lantern lighting, open playable center, no characters or UI.",
+      "sha256": "65d831735e5e22e8c431257d5ce21a9526b86cf4e515bc13d8bf4a43714d1b0f",
+      "png_preserved_without_pixel_edit": true
+    }
+  ]
+}

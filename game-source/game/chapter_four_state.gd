@@ -201,58 +201,60 @@ func completion_text()->String:
     return "第四章完成 · 破罩已经修牢\n光仍朝树心回流，缠住回位扣的折枝还在。阿灯愿意一起修好主路。\n应急归途灯匣已经重新封好，为三位保留。下一站：树心。"
 
 func draw_world(v:Node2D)->void:
-    var wood:=Color("624334");var gold:=Color("ebbe71");var teal:=Color("74bbb4")
-    v.wood(Rect2(135,255,100,62),wood);v.lamp(Vector2(177,253),true)
-    v.draw_rect(PIT,Color("16262d"))
+    var wood:=Color("937451");var gold:=Color("ebbe71");var teal:=Color("74bbb4")
+    # The merchant and all tools stay at the original interaction anchors.
+    v.prop(4,Rect2(130,258,103,67))
+    v.merchant(Vector2(182,290));v.lamp(Vector2(151,263),true)
+    # A recessed service trench, with the real return boards laid inside it.
+    v.pit(PIT)
+    v.wood(Rect2(185,317,231,13),wood);v.wood(Rect2(185,422,231,12),wood)
     for yy in range(340,421,21):
-        v.wood(Rect2(269,yy,52,13),Color("baa170") if market_beam else Color("35413e"))
+        v.prop(0,Rect2(269,yy,52,16),0.0,Color.WHITE if market_beam else Color("596c65"))
     v.rope(Vector2(262,326),Vector2(262,432));v.rope(Vector2(328,326),Vector2(328,432))
     if not cloth and not cover_carried:
         var cp:Vector2=COVER if cover_hooked else Vector2(220,365)
-        v.draw_arc(cp,23,PI,TAU,18,gold,6);v.draw_line(cp+Vector2(-23,0),cp+Vector2(23,0),gold,3)
-    if cover_carried:v.draw_arc(positions[1]+Vector2(0,-25),15,PI,TAU,14,gold,5)
-    v.draw_arc(HOOK+Vector2(0,-12),13,0,TAU,18,gold,4)
-    v.wood(Rect2(CATCH-Vector2(38,8),Vector2(76,18)),wood)
+        v.support_prop(2,Rect2(cp-Vector2(29,40),Vector2(58,48)))
+    if cover_carried:
+        var carried:Vector2=positions[1]+Vector2(0,-25)
+        v.support_prop(2,Rect2(carried-Vector2(21,28),Vector2(42,35)))
+    v.prop(5,Rect2(HOOK-Vector2(21,32),Vector2(42,43)))
+    v.prop(0,Rect2(CATCH-Vector2(38,8),Vector2(76,23)))
     for station in [MARKET_LIGHT,DUCT_LIGHT,SEAM_LIGHT]:
-        v.wood(Rect2(station-Vector2(18,4),Vector2(36,16)),wood)
-        v.draw_circle(station+Vector2(0,-10),8,gold)
+        v.prop(2,Rect2(station-Vector2(22,49),Vector2(44,59)))
     if actions[2]=="light":
         v.draw_line(positions[2]+Vector2(0,-15),positions[2]+facing[2]*180,Color(0.94,0.85,0.49,0.7),15)
-    v.wood(Rect2(520,213,87,115),wood)
-    v.draw_circle(ALIGHT-Vector2(0,26),20,gold);v.draw_circle(ALIGHT-Vector2(5,29),3,wood)
-    for x in [543,580]:v.lamp(Vector2(x,230),true)
-    v.wood(Rect2(608,235,142,95),Color("403b37"))
-    v.draw_line(Vector2(635,258),Vector2(728,258),teal if duct_seen else Color("526662"),13)
+    v.alight(ALIGHT)
+    v.prop(4,Rect2(505,290,93,52))
+    v.prop(11,Rect2(601,217,155,126))
+    v.draw_line(Vector2(635,258),Vector2(728,258),teal if duct_seen else Color("526662"),9)
     # Moving beads always flow inward until chapter five fixes the machine.
     for i in range(4):
         var x:=635+fposmod(clock*32+i*23,90)
         v.draw_circle(Vector2(x,258),4,gold if duct_seen else Color("778275"))
     v.gear(BRANCH,clock*0.06 if not branch_seen else 0.0,24)
-    v.draw_line(BRANCH+Vector2(-22,-25),BRANCH+Vector2(19,21),Color("a87543"),8)
-    v.draw_line(BRANCH+Vector2(-5,-8),BRANCH+Vector2(18,-22),Color("a87543"),5)
-    v.wood(Rect2(ARROWS-Vector2(35,38),Vector2(70,58)),wood)
+    v.support_prop(3,Rect2(BRANCH-Vector2(31,43),Vector2(62,52)))
+    v.prop(8,Rect2(ARROWS-Vector2(36,45),Vector2(72,66)))
     v.arrow(ARROWS-Vector2(17,15),Vector2.LEFT,gold);v.arrow(ARROWS+Vector2(17,-15),Vector2.RIGHT,teal)
-    v.ink(ARROWS+Vector2(-31,-45),"收    送",90,16)
-    v.draw_line(ARROWS,ARROWS+Vector2(-22,-24),gold,6)
-    v.wood(Rect2(969,243,178,133),Color("3b5556"))
+    v.ink(ARROWS+Vector2(-31,-55),"收    送",90,16)
+    v.prop(3,Rect2(ARROWS-Vector2(12,26),Vector2(24,32)),-0.6)
+    v.prop(11,Rect2(969,238,178,143))
     if not shell_fixed:
-        v.draw_colored_polygon(PackedVector2Array([Vector2(996,266),Vector2(1082,280),Vector2(1020,344)]),Color("16262d"))
         for i in range(4):
             var yy:=274+i*24;var xx:=973+fposmod(clock*80+i*35,150)
             v.draw_line(Vector2(xx,yy),Vector2(xx+35,yy-6),Color(0.7,0.86,0.82,0.45),2)
     if patch_braced or latch_fixed or shell_fixed:
-        var flutter:=0.0 if shell_fixed or latch_fixed else sin(clock*6)*7
-        v.draw_colored_polygon(PackedVector2Array([Vector2(998,259),Vector2(1099,259),Vector2(1099+flutter,348),Vector2(998,348)]),Color("c78870"))
+        var flutter:=0.0 if shell_fixed or latch_fixed else sin(clock*6)*0.04
+        v.prop(12,Rect2(985,247,137,113),flutter)
     v.rope(Vector2(940,376),Vector2(1150,376))
-    v.draw_circle(LATCH,9,gold if latch_fixed else Color("71827e"))
+    v.prop(3,Rect2(LATCH-Vector2(16,27),Vector2(32,39)),0.0,Color.WHITE if latch_fixed else Color("9aa49a"))
     if seam_seen:v.draw_line(Vector2(1006,266),Vector2(1091,266),gold,3)
-    if shell_fixed:
-        for x in range(1004,1098,16):v.draw_line(Vector2(x,260),Vector2(x+7,270),gold,2)
     if lantern_offered:
-        v.wood(Rect2(482,502,76,102),gold)
-        v.draw_rect(Rect2(490,510,60,86),Color("8eaaa4") if reserve_retained else Color("f2d99c"))
         if not reserve_retained:
-            v.wood(Rect2(497,545,46,26),Color("b87366"))
-        else:v.draw_line(Vector2(491,535),Vector2(549,575),gold,5)
-    v.wood(Rect2(REST-Vector2(52,22),Vector2(104,42)),wood);v.lamp(REST+Vector2(0,-30),true)
+            v.draw_texture_rect_region(v.HOME,Rect2(HOME-Vector2(33,82),Vector2(66,92)),Rect2(190,100,560,600))
+            v.prop(7,Rect2(HOME-Vector2(51,110),Vector2(102,132)))
+            v.prop(14,Rect2(HOME-Vector2(28,25),Vector2(56,36)))
+        else:
+            v.prop(13,Rect2(HOME-Vector2(41,55),Vector2(82,71)))
+    v.prop(14,Rect2(REST-Vector2(58,29),Vector2(116,58)))
+    v.lamp(REST+Vector2(0,-30),true)
     if phase in ["meet","investigate","offer"] and near(0,ALIGHT,130):v.ink(ALIGHT+Vector2(-18,27),"阿灯",90,18)

@@ -1,0 +1,14 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+OpenGL API 4.1 Metal - 90.5 - Compatibility - Using Device: Apple - Apple M5
+
+CONNECTED GAMEPADS: []
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-bridge-unloaded.png status=0 | 初始桥叶未锁定；河岸与下层检修道边界
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-bridge-raised.png status=0 | 第一绞盘抬桥；右向灯光接铜片；团团处于可走检修道
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-bridge-second-latch.png status=0 | 前桥永久固定；第二灯朝下；后桥仍抬起卸重
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-bridge-window.png status=0 | 双桥与短桥固定；检修箱、练习车、栏窗中的圆圆
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-closed.png status=0 | 关闭门洞、外墙检修槽、低窗与室内圆圆
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-wick-carried.png status=0 | 灯芯随团团携带；外部灯座仍未装好
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-npc-walk.png status=0 | 灯已照准门锁；圆圆正在走向室内踏板；门尚未打开
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-reunion-aperture.png status=0 | 真实门洞开启；三位能够在门内重逢
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-temporary-walkway.png status=0 | 圆圆向右保持；暗廊临时可走；卡扣尚未锁定
+M26_VISUAL_FIXTURE /Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/qa/m26/m26-clock-map.png status=0 | 永久桥、低检修门和上方出口均开启；真实地图汇入灯树

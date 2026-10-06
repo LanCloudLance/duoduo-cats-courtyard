@@ -1,0 +1,393 @@
+{
+  "version": 1,
+  "image": "duoduo-front.png",
+  "source_height": 285,
+  "front": [
+    0,
+    3,
+    1,
+    2,
+    5,
+    6,
+    4,
+    7
+  ],
+  "rear": [
+    8,
+    9,
+    10,
+    11,
+    12,
+    14,
+    13,
+    15
+  ],
+  "idle_front": 2,
+  "idle_rear": 10,
+  "actions": {
+    "reach": 16,
+    "brace": 17,
+    "hold": 17,
+    "pull": 18,
+    "inspect": 19
+  },
+  "frames": [
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        100,
+        16,
+        225,
+        416
+      ],
+      "anchor": [
+        224.5,
+        427.6
+      ],
+      "source_index": 0,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        546,
+        16,
+        223,
+        415
+      ],
+      "anchor": [
+        651.5,
+        427.4
+      ],
+      "source_index": 1,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        990,
+        16,
+        214,
+        415
+      ],
+      "anchor": [
+        1093.5,
+        427.4
+      ],
+      "source_index": 2,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        1434,
+        16,
+        219,
+        395
+      ],
+      "anchor": [
+        1540.0,
+        423.4
+      ],
+      "source_index": 3,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        99,
+        457,
+        223,
+        412
+      ],
+      "anchor": [
+        222.5,
+        867.8
+      ],
+      "source_index": 4,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        545,
+        457,
+        218,
+        413
+      ],
+      "anchor": [
+        653.5,
+        868.0
+      ],
+      "source_index": 5,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        988,
+        457,
+        215,
+        412
+      ],
+      "anchor": [
+        1094.0,
+        867.8
+      ],
+      "source_index": 6,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-front.png",
+      "region": [
+        1434,
+        457,
+        222,
+        413
+      ],
+      "anchor": [
+        1557.0,
+        868.0
+      ],
+      "source_index": 7,
+      "source_height": 409.0,
+      "orientation": "front",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        73,
+        39,
+        225,
+        505
+      ],
+      "anchor": [
+        209.0,
+        539.2
+      ],
+      "source_index": 0,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        382,
+        45,
+        213,
+        494
+      ],
+      "anchor": [
+        507.5,
+        543.0
+      ],
+      "source_index": 1,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        681,
+        47,
+        204,
+        491
+      ],
+      "anchor": [
+        756.5,
+        544.4
+      ],
+      "source_index": 2,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        974,
+        42,
+        220,
+        497
+      ],
+      "anchor": [
+        1060.5,
+        540.6
+      ],
+      "source_index": 3,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        74,
+        620,
+        222,
+        512
+      ],
+      "anchor": [
+        207.0,
+        1121.6
+      ],
+      "source_index": 4,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        379,
+        621,
+        209,
+        504
+      ],
+      "anchor": [
+        502.5,
+        1121.0
+      ],
+      "source_index": 5,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        665,
+        625,
+        218,
+        499
+      ],
+      "anchor": [
+        764.5,
+        1124.0
+      ],
+      "source_index": 6,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "duoduo-rear.png",
+      "region": [
+        962,
+        622,
+        226,
+        510
+      ],
+      "anchor": [
+        1055.5,
+        1123.2
+      ],
+      "source_index": 7,
+      "source_height": 497.5,
+      "orientation": "rear",
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "region": [
+        94,
+        1112,
+        186,
+        184
+      ],
+      "anchor": [
+        184.0,
+        1294
+      ],
+      "label": "18",
+      "atlas": "duoduo-motion.png",
+      "source_height": 285
+    },
+    {
+      "region": [
+        361,
+        1108,
+        195,
+        185
+      ],
+      "anchor": [
+        473.0,
+        1291
+      ],
+      "label": "19",
+      "atlas": "duoduo-motion.png",
+      "source_height": 285
+    },
+    {
+      "region": [
+        618,
+        1107,
+        221,
+        191
+      ],
+      "anchor": [
+        752.5,
+        1296
+      ],
+      "label": "20",
+      "atlas": "duoduo-motion.png",
+      "source_height": 285
+    },
+    {
+      "region": [
+        933,
+        1119,
+        158,
+        181
+      ],
+      "anchor": [
+        996.0,
+        1298
+      ],
+      "label": "21",
+      "atlas": "duoduo-motion.png",
+      "source_height": 285
+    }
+  ],
+  "review": {
+    "front_opposite_leads": [
+      0,
+      5
+    ],
+    "rear_opposite_leads": [
+      8,
+      11
+    ],
+    "front_note": "Source 0 has screen-right boot ahead; source 5 has screen-left boot ahead. Source 7 repeats right lead, so it is not labelled left contact.",
+    "rear_note": "Dedicated rear source 0 and 3 show opposite lower boots. Anchors use a shared estimated ground projection, not a claim that every painted sole touches the ground.",
+    "limitation": "Pose spacing is uneven in generated art; eight selected source poses are not claimed to be a professionally inbetweened cycle.",
+    "front_group_height": 409.0,
+    "rear_group_height": 497.5,
+    "ground_projection": "Shared standing height relative to each pose top/body reference, with at most 1% source-height sinking. Lifted boot soles are not asserted to be real ground contacts.",
+    "video_review": "Native Godot 1280x800 60 FPS, six-second fixed-sample movement proof. Inspected temporal front/rear samples, stopping and reversing. Opposite-lead poses are present; uneven generated inbetweens remain a quality limit.",
+    "video_front_head_top_span_px": 1,
+    "video_rear_head_top_span_px": 1.67,
+    "video_artifact": "work/qa/m26/m26-native-walk-final.mp4"
+  },
+  "runtime_sources": [
+    "duoduo-front.png",
+    "duoduo-motion.png",
+    "duoduo-rear.png"
+  ]
+}

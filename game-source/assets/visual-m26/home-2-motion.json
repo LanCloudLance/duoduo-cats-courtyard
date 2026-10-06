@@ -1,0 +1,136 @@
+{
+  "version": 1,
+  "image": "home-motion.png",
+  "source_size": [
+    2048,
+    768
+  ],
+  "source_height": 184,
+  "front": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "rear": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "idle_front": 6,
+  "idle_rear": 6,
+  "actions": {},
+  "frames": [
+    {
+      "region": [
+        39,
+        538,
+        191,
+        195
+      ],
+      "anchor": [
+        136.0,
+        732
+      ]
+    },
+    {
+      "region": [
+        287,
+        555,
+        199,
+        181
+      ],
+      "anchor": [
+        389.5,
+        735
+      ]
+    },
+    {
+      "region": [
+        552,
+        541,
+        187,
+        195
+      ],
+      "anchor": [
+        646.0,
+        735
+      ]
+    },
+    {
+      "region": [
+        802,
+        545,
+        192,
+        187
+      ],
+      "anchor": [
+        900.8,
+        731
+      ]
+    },
+    {
+      "region": [
+        1060,
+        540,
+        189,
+        193
+      ],
+      "anchor": [
+        1156.5,
+        732
+      ]
+    },
+    {
+      "region": [
+        1310,
+        557,
+        201,
+        179
+      ],
+      "anchor": [
+        1412.0,
+        735
+      ]
+    },
+    {
+      "region": [
+        1569,
+        546,
+        188,
+        189
+      ],
+      "anchor": [
+        1664.0,
+        734
+      ]
+    },
+    {
+      "region": [
+        1816,
+        546,
+        197,
+        187
+      ],
+      "anchor": [
+        1916.2,
+        732
+      ]
+    }
+  ],
+  "notes": "Source contains only front-three-quarter poses; upward home walking reuses those poses.",
+  "review": {
+    "video_artifact": "m26-native-walk-final.mp4, right column",
+    "review_scope": "Native motion shows eight source poses, real movement and clean stopping. This front-three-quarter home sheet has no rear poses and opposite-lead completeness is not asserted.",
+    "scale": "Fixed per-role source height, no per-frame image stretching."
+  }
+}

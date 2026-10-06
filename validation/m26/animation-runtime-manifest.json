@@ -1,0 +1,64 @@
+{
+  "motion_png_required": [
+    "duoduo-front.png",
+    "duoduo-motion.png",
+    "duoduo-rear.png",
+    "home-motion.png",
+    "tuantuan-cycle.png",
+    "tuantuan-motion.png",
+    "yuanyuan-cycle.png",
+    "yuanyuan-motion-chroma.png"
+  ],
+  "metadata_json_required": [
+    "duoduo-motion.json",
+    "tuantuan-motion.json",
+    "yuanyuan-motion.json",
+    "home-0-motion.json",
+    "home-1-motion.json",
+    "home-2-motion.json"
+  ],
+  "can_exclude_old_motion_png": [
+    "yuanyuan-motion.png"
+  ],
+  "retain_old_sheet_reason": {
+    "duoduo-motion.png": "Four approved interaction frames still used",
+    "tuantuan-motion.png": "Four approved interaction frames still used"
+  },
+  "legacy_dependencies_retained": [
+    "assets/visual-m13/party-atlas.png",
+    "assets/visual-m13/chroma.gdshader",
+    "assets/visual-m14/combat-atlas.png",
+    "assets/visual-m15/social-atlas.png",
+    "assets/story-prologue/home-party.png",
+    "assets/story-prologue/home-actions.png"
+  ],
+  "checks": {
+    "animation": 87,
+    "home_animation": 90
+  },
+  "code_and_source_sha256": {
+    "game/storybook_sprite.gd": "707c8f00981eab3fbb10a2dab90409cc2657cd82af8829f77cc672452a5214a1",
+    "game/actor_view.gd": "86712763c97ba87319a18f6783396af3a497070860dbdaf9f9aa35dc9c3c3f37",
+    "game/home_sprite.gd": "554452ba45d2aaca59b282edb2bce73a7c157e1458c6801db3da11e21ebcc311",
+    "tests/m26_animation_test.gd": "e25dabdb1820e5eeeb73da5ac757ef26c2d14ce4450f92d6d96ba60d9389e717",
+    "tests/m26_animation_home_test.gd": "d9d058a553a2b1f68908644c66bb441bcb68d6e981f1f558517818e3a17845a9",
+    "assets/visual-m26/duoduo-motion.json": "fed72b80fdd8cd07440b850cb2316163caf9fd3268de1050f9d6020f1f9caa30",
+    "assets/visual-m26/tuantuan-motion.json": "e8b9b165cedc7d17ef0e7b4d54e6044779f926476b025974b38b4fffe1453f20",
+    "assets/visual-m26/yuanyuan-motion.json": "379f46f076b355f022ae4708c11f75e4f6afe0d2ee39c03a69311ace746347a6",
+    "assets/visual-m26/home-0-motion.json": "2b9288dcb0a80a11d97a84f557500b301740d30de21d5bac51ef7208b1b51f09",
+    "assets/visual-m26/home-1-motion.json": "d2c67d5a4a292ee7e6315df487e29265d4c01212b4b55a9b8ba977c77077dd51",
+    "assets/visual-m26/home-2-motion.json": "97ea66e69d94aa60a50dd5656c7c5391146a451aaff0df6a973f4f42450de154",
+    "assets/visual-m26/duoduo-front.png": "89862e21803745c8965403395f2e0398cc56952463e340c752cc0ae63b315695",
+    "assets/visual-m26/duoduo-motion.png": "58b983aff474c2890a9ed51cb2979146474bd87bff91a9547a2c78c173de52c5",
+    "assets/visual-m26/duoduo-rear.png": "e7e16753758a1f4b64c98b789d36ef99e0b2eff5816b79ceb5fd4e404ddd4cc8",
+    "assets/visual-m26/home-motion.png": "b41007ebf1402b6324bf1a01fc5255995777df4965967fef40c2a1e985c00a87",
+    "assets/visual-m26/tuantuan-cycle.png": "0a39bc8bad50cd01f229ac836c51768afe77994a4741e96993be141acebaabf7",
+    "assets/visual-m26/tuantuan-motion.png": "23d2c9ccf06e0d12fdd86be99c9b2713cdb79e09fefae2c89bfcafe9340c7158",
+    "assets/visual-m26/yuanyuan-cycle.png": "de948f1570e532f3f8cf7119a88bbb9af647809a9070c51058df07f7cf5e4090",
+    "assets/visual-m26/yuanyuan-motion-chroma.png": "ce043d5feaf73c196f5d48dea50e7db92e9430b654d793b5965ce2e733e3f3d5"
+  },
+  "native_video": "m26-native-walk-final.mp4",
+  "native_contact_sheet": "m26-native-motion-contact-sheet.png",
+  "pack_probe_status": "Final release PCK mounted independently: 32 checks passed",
+  "pack_sha256": "84b2df4ac393fd1ba8c02b7c0483027168b0e09acfacf16041cf253ccc434e34"
+}

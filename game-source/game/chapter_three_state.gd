@@ -172,33 +172,108 @@ func restore_complete()->void:
     positions=[Vector2(1080,305),Vector2(1050,350),Vector2(1110,355)]
     super.restore_complete()
 func draw_world(view:Node2D)->void:
-    view.wood(Rect2(450,195,30,180),Color("615345"));view.wood(Rect2(450,475,30,175),Color("615345"))
-    if not door_open:view.wood(Rect2(450,375,30,100),Color("826346"))
-    view.wood(Rect2(310,505,115,105),Color("504f45"));view.ink(Vector2(305,635),"外墙检修槽",130,16)
-    if not wick_found:view.draw_line(DUCT-Vector2(10,0),DUCT+Vector2(10,0),Color("ffe3a2"),7)
+    const TIMBER_ART=preload("res://assets/visual-m26/mechanisms.png")
+    # Slender timber uprights follow the real wall strips; the door aperture stays clear.
+    for wall in [Rect2(450,195,30,180),Rect2(450,475,30,175)]:
+        view.draw_texture_rect_region(TIMBER_ART,wall,Rect2(741,394,69,132))
+        view.draw_line(wall.position,Vector2(wall.position.x,wall.end.y),Color("634a31"),3,true)
+        view.draw_line(Vector2(wall.end.x,wall.position.y),wall.end,Color("c5a571"),2,true)
+    view.prop(7 if door_open else 6,Rect2(440,365,50,110))
+    view.prop(11,Rect2(310,505,115,105))
+    view.prop(5,Rect2(DUCT-Vector2(20,27),Vector2(40,40)),0,Color("aeb89a"))
+    # The recovered wick travels with Tuantuan, then rests beside the lamp until fitted.
+    var wick_at:=DUCT+Vector2(0,-7)
+    if wick_found and not wick_ready:wick_at=positions[1]+Vector2(43 if facing[1].x>=0 else -43,-38)
+    elif wick_ready:wick_at=DOOR_LAMP+Vector2(23,3)
+    if not wick_fitted:
+        view.draw_line(wick_at-Vector2(9,1),wick_at+Vector2(9,-2),Color("785a3b"),7,true)
+        view.draw_line(wick_at-Vector2(9,2),wick_at+Vector2(9,-3),Color("ffdda1"),3,true)
     view.lamp(DOOR_LAMP,wick_fitted)
-    view.gear(Vector2(465,415),PI/2 if door_open else 0,15)
     var dirs:Array[Vector2]=[Vector2.UP,Vector2.RIGHT,Vector2.DOWN,Vector2.LEFT]
-    view.arrow(DOOR_LAMP+Vector2(0,-18),dirs[door_angle]*38,Color("ffe6a2"))
-    view.draw_rect(Rect2(435,260,45,70),Color("d3c8ad"))
-    for y in [270,290,310]:view.draw_line(Vector2(435,y),Vector2(480,y),Color("50483d"),4)
-    view.draw_circle(INDOOR_PLATE,22,Color("c7b574") if door_open else Color("706e5c"))
-    if not joined:
-        view.white_cat(positions[2])
-    view.wood(Rect2(565,285,45,40));view.ink(EQUIPMENT+Vector2(-35,-45),"背带工具架",120,16)
-    view.draw_rect(Rect2(700,195,155,455),Color(0.08,0.12,0.15,0.75))
-    view.bridge(Rect2(700,390,155,70),bridge_locked or beam_active())
-    view.lamp(LIGHT_STAND,beam_active());view.gear(LOCK,PI/2 if cat_lock else 0,20)
-    view.wood(Rect2(BOARD-Vector2(20,15),Vector2(40,30)));view.arrow(BOARD,dirs[board_angle]*45,Color("ffdf9a"))
-    view.wood(Rect2(839,295,22,22),Color("ccb17b"));view.rope(Vector2(850,315),LOCK)
-    if board_angle==1 and beam_active():view.draw_line(BOARD,Vector2(850,305),Color(1,0.85,0.45,0.55),5)
-    if beam_held:view.draw_line(positions[2],positions[2]+beam_direction*200,Color(1,0.85,0.5,0.7),13)
-    view.wood(Rect2(980,195,25,75),Color("615345"));view.wood(Rect2(980,355,25,165),Color("615345"));view.wood(Rect2(980,595,25,55),Color("615345"))
-    if not exit_revealed:view.wood(Rect2(980,270,25,85),Color("615345"))
-    if not narrow_open:view.wood(Rect2(980,520,25,75),Color("615345"))
-    view.rope(NARROW,Vector2(988,550));view.gear(NARROW,0.8 if narrow_open else 0,17)
-    view.lamp(RIG,rig_ready);view.lamp(SEARCH_STAND,rig_ready)
-    view.draw_line(Vector2(950,410),Vector2(950,300),Color("c5c49c"),3)
-    view.wood(Rect2(1040,255,105,70),Color("d5c79e"))
-    for p in [Vector2(1050,280),Vector2(1050,315),Vector2(1125,315)]:view.arrow(p,(MAP-p)*0.5,Color("6ba9b7"))
-    view.ink(Vector2(1020,225),"灯树送光台",155,18)
+    view.prop(8,Rect2(DOOR_LAMP+Vector2(-16,-28),Vector2(32,32)))
+    view.arrow(DOOR_LAMP+Vector2(0,-18),dirs[door_angle]*32,Color("ffe6a2") if wick_fitted else Color("a1a38b"))
+    view.prop(3,Rect2(450,394,30,42),0,Color("ffe7b8") if door_open else Color.WHITE)
+    if wick_fitted:
+        var beam_end:=Vector2(462,415) if door_angle==1 else DOOR_LAMP+dirs[door_angle]*57
+        view.draw_line(DOOR_LAMP,beam_end,Color(1,0.87,0.51,0.32),7,true)
+        view.draw_line(DOOR_LAMP,beam_end,Color(1,0.94,0.72,0.75),2,true)
+    # A low, latticed window gives the outside caller a sightline to the indoor cat.
+    view.prop(7,Rect2(432,249,52,88))
+    for y in [270,290,310]:
+        view.draw_line(Vector2(438,y),Vector2(478,y),Color("786e54"),3,true)
+    view.draw_texture_rect_region(TIMBER_ART,Rect2(431,327,56,10),Rect2(741,394,69,132))
+    view.prop(8,Rect2(INDOOR_PLATE-Vector2(31,16),Vector2(62,33)),0,Color("ffe3a4") if door_open or (wick_fitted and door_angle==1) else Color("a1aa8d"))
+    view.rope(INDOOR_PLATE-Vector2(28,0),Vector2(480,415))
+    if not joined:view.white_cat(positions[2])
+    view.prop(9,Rect2(EQUIPMENT-Vector2(41,74),Vector2(82,91)))
+    if light_equipped:
+        # An empty peg remains on the rack after Yuanyuan takes the clasp.
+        view.draw_arc(EQUIPMENT+Vector2(12,-25),7,0,TAU,16,Color("9c825a"),2,true)
+    else:
+        view.draw_arc(EQUIPMENT+Vector2(12,-25),10,0,TAU,20,Color("ead59b"),4,true)
+    # The visible service pit follows only its actual non-walkable span.
+    view.pit(Rect2(700,195,155,460))
+    for edge_x in [700.0,855.0]:
+        view.rope(Vector2(edge_x,208),Vector2(edge_x,378))
+        view.rope(Vector2(edge_x,474),Vector2(edge_x,635))
+    if bridge_locked or beam_active():view.bridge(Rect2(700,385,155,80),true)
+    if beam_active() and not bridge_locked:
+        # Warm edge light marks the supported temporary crossing without claiming a lock.
+        view.draw_line(Vector2(705,396),Vector2(850,396),Color(1,0.85,0.46,0.65),2,true)
+        view.draw_line(Vector2(705,454),Vector2(850,454),Color(1,0.85,0.46,0.65),2,true)
+    view.lamp(LIGHT_STAND,beam_active())
+    view.prop(3,Rect2(LOCK-Vector2(25,27),Vector2(50,54)),0,Color("ffe7b8") if cat_lock else Color.WHITE)
+    if cat_lock:view.draw_line(LOCK+Vector2(-17,5),LOCK+Vector2(18,5),Color("e5c785"),4,true)
+    if bridge_locked:
+        for anchor in [Vector2(709,424),Vector2(846,424)]:
+            view.prop(3,Rect2(anchor-Vector2(12,16),Vector2(24,32)))
+    view.prop(8,Rect2(BOARD-Vector2(28,32),Vector2(56,58)))
+    view.arrow(BOARD,dirs[board_angle]*37,Color("ffdf9a"))
+    view.prop(8,Rect2(834,281,32,44),0,Color("ffe6aa") if board_angle==1 and beam_active() else Color("b7c0a3"))
+    view.rope(Vector2(850,315),LOCK)
+    if board_angle==1 and beam_active():
+        view.draw_line(BOARD,Vector2(850,305),Color(1,0.85,0.45,0.25),9,true)
+        view.draw_line(BOARD,Vector2(850,305),Color(1,0.94,0.73,0.8),2,true)
+    if beam_held:
+        var ray_start:=positions[2]+Vector2(0,-19)
+        view.draw_line(ray_start,ray_start+beam_direction*200,Color(1,0.85,0.5,0.18),17,true)
+        view.draw_line(ray_start,ray_start+beam_direction*200,Color(1,0.91,0.64,0.7),3,true)
+    for wall in [Rect2(980,195,25,75),Rect2(980,355,25,165),Rect2(980,595,25,55)]:
+        view.draw_texture_rect_region(TIMBER_ART,wall,Rect2(741,394,69,132))
+        view.draw_line(wall.position,Vector2(wall.position.x,wall.end.y),Color("634a31"),3,true)
+        view.draw_line(Vector2(wall.end.x,wall.position.y),wall.end,Color("c5a571"),2,true)
+    view.prop(7 if exit_revealed else 6,Rect2(975,263,35,92))
+    view.prop(7 if narrow_open else 6,Rect2(975,515,35,80))
+    view.rope(NARROW+Vector2(0,-10),Vector2(988,550))
+    view.prop(5,Rect2(NARROW-Vector2(28,48),Vector2(56,60)),0.1 if narrow_open else 0)
+    view.lamp(RIG,rig_ready)
+    if rig_ready:
+        view.rope(RIG+Vector2(0,-32),RIG+Vector2(-28,9))
+        view.rope(RIG+Vector2(0,-32),RIG+Vector2(28,9))
+    else:
+        view.prop(0,Rect2((Vector2(901,345) if narrow_open else Vector2(1010,565))-Vector2(20,8),Vector2(40,16)),-0.25)
+    view.lamp(SEARCH_STAND,rig_ready)
+    view.draw_line(Vector2(950,410),Vector2(950,300),Color("998c65"),5,true)
+    view.draw_line(Vector2(950,410),Vector2(950,300),Color("d1c795"),2,true)
+    view.prop(8,Rect2(935,275,30,35),0,Color("ffe3a5") if exit_revealed else Color("a8b397"))
+    # A small map fixed to an actual timber easel: painted routes converge at the lamp tree.
+    view.prop(9,Rect2(1029,241,120,119),0,Color("b8aa88"))
+    var parchment:=PackedVector2Array([Vector2(1038,252),Vector2(1070,254),Vector2(1102,251),Vector2(1145,255),Vector2(1143,279),Vector2(1147,324),Vector2(1107,326),Vector2(1074,323),Vector2(1038,328),Vector2(1040,291)])
+    view.draw_colored_polygon(parchment,Color("dec797"))
+    view.draw_polyline(parchment+PackedVector2Array([parchment[0]]),Color("9c7547"),2,true)
+    view.draw_line(Vector2(1045,259),Vector2(1138,260),Color("f7e3b3"),2,true)
+    for pin in [Vector2(1044,259),Vector2(1140,260)]:
+        view.draw_circle(pin,2.5,Color("83643d"))
+        view.draw_circle(pin-Vector2.ONE,1,Color("f1dca0"))
+    var route_points:Array[Vector2]=[Vector2(1050,270),Vector2(1057,307),Vector2(1129,310)]
+    for p in route_points:
+        var bend:=p.lerp(MAP,0.5)+Vector2(0,-8)
+        view.draw_polyline(PackedVector2Array([p,bend,MAP]),Color("699a96"),2,true)
+        view.draw_circle(p,3,Color("9aab87"))
+        if exit_revealed:
+            var dot:=p.lerp(MAP,fmod(clock*0.3,1.0))
+            view.draw_circle(dot,2.5,Color("fff0bb"))
+    view.draw_line(MAP+Vector2(0,4),MAP+Vector2(0,-17),Color("8d7953"),3,true)
+    for offset in [Vector2(-7,-12),Vector2(7,-12),Vector2(0,-20)]:
+        view.draw_circle(MAP+offset,5,Color("b2b47c"))
+    view.ink(Vector2(1026,241),"灯树送光台",135,16)

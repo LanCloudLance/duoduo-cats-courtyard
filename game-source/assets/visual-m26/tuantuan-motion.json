@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "image": "tuantuan-cycle.png",
+  "source_height": 216,
+  "front": [
+    0,
+    7,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "rear": [
+    8,
+    9,
+    10,
+    11,
+    15,
+    12,
+    13,
+    14
+  ],
+  "idle_front": 2,
+  "idle_rear": 10,
+  "actions": {
+    "reach": 16,
+    "brace": 17,
+    "hold": 17,
+    "pull": 18,
+    "inspect": 19
+  },
+  "frames": [
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        61,
+        37,
+        239,
+        266
+      ],
+      "anchor": [
+        189.5,
+        300.2
+      ],
+      "source_index": 0,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        366,
+        37,
+        225,
+        265
+      ],
+      "anchor": [
+        498.0,
+        300.0
+      ],
+      "source_index": 1,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        640,
+        36,
+        232,
+        262
+      ],
+      "anchor": [
+        776.0,
+        298.4
+      ],
+      "source_index": 2,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        981,
+        37,
+        214,
+        266
+      ],
+      "anchor": [
+        1064.5,
+        300.2
+      ],
+      "source_index": 3,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        90,
+        331,
+        231,
+        266
+      ],
+      "anchor": [
+        194.5,
+        594.2
+      ],
+      "source_index": 4,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        392,
+        331,
+        229,
+        264
+      ],
+      "anchor": [
+        480.2,
+        593.8
+      ],
+      "source_index": 5,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        678,
+        330,
+        225,
+        260
+      ],
+      "anchor": [
+        768.0,
+        592.0
+      ],
+      "source_index": 6,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        941,
+        331,
+        232,
+        265
+      ],
+      "anchor": [
+        1070.5,
+        594.0
+      ],
+      "source_index": 7,
+      "orientation": "front",
+      "source_height": 261.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        48,
+        632,
+        226,
+        267
+      ],
+      "anchor": [
+        186.5,
+        896.2
+      ],
+      "source_index": 8,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        366,
+        632,
+        219,
+        265
+      ],
+      "anchor": [
+        496.0,
+        895.8
+      ],
+      "source_index": 9,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        654,
+        632,
+        213,
+        261
+      ],
+      "anchor": [
+        776.5,
+        895.0
+      ],
+      "source_index": 10,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        982,
+        632,
+        225,
+        265
+      ],
+      "anchor": [
+        1066.5,
+        895.8
+      ],
+      "source_index": 11,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        92,
+        922,
+        230,
+        272
+      ],
+      "anchor": [
+        177.5,
+        1187.2
+      ],
+      "source_index": 12,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        396,
+        922,
+        188,
+        269
+      ],
+      "anchor": [
+        484.5,
+        1186.6
+      ],
+      "source_index": 13,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        681,
+        922,
+        187,
+        264
+      ],
+      "anchor": [
+        772.0,
+        1185.6
+      ],
+      "source_index": 14,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "atlas": "tuantuan-cycle.png",
+      "region": [
+        938,
+        922,
+        230,
+        272
+      ],
+      "anchor": [
+        1077.0,
+        1187.2
+      ],
+      "source_index": 15,
+      "orientation": "rear",
+      "source_height": 262.0,
+      "anchor_kind": "ground_projection_estimated"
+    },
+    {
+      "region": [
+        46,
+        1017,
+        264,
+        191
+      ],
+      "anchor": [
+        196.0,
+        1206
+      ],
+      "label": "16",
+      "atlas": "tuantuan-motion.png",
+      "source_height": 216
+    },
+    {
+      "region": [
+        377,
+        1016,
+        209,
+        194
+      ],
+      "anchor": [
+        489.5,
+        1208
+      ],
+      "label": "17",
+      "atlas": "tuantuan-motion.png",
+      "source_height": 216
+    },
+    {
+      "region": [
+        632,
+        1009,
+        308,
+        205
+      ],
+      "anchor": [
+        796.0,
+        1212
+      ],
+      "label": "18",
+      "atlas": "tuantuan-motion.png",
+      "source_height": 216
+    },
+    {
+      "region": [
+        991,
+        1036,
+        228,
+        174
+      ],
+      "anchor": [
+        1105.0,
+        1208
+      ],
+      "label": "19",
+      "atlas": "tuantuan-motion.png",
+      "source_height": 216
+    }
+  ],
+  "review": {
+    "front_opposite_leads": [
+      0,
+      3
+    ],
+    "rear_opposite_leads": [
+      8,
+      15
+    ],
+    "limitation": "Generated inbetweens have uneven paw travel; independent left and right extension is visible, without a claim of professional animation.",
+    "front_group_height": 261.0,
+    "rear_group_height": 262.0,
+    "ground_projection": "Shared standing height relative to each pose top/body reference, with at most 1% source-height sinking. Lifted boot soles are not asserted to be real ground contacts.",
+    "video_review": "Native Godot 1280x800 60 FPS, six-second fixed-sample movement proof. Inspected temporal front/rear samples, stopping and reversing. Opposite-lead poses are present; uneven generated inbetweens remain a quality limit.",
+    "video_front_head_top_span_px": 1,
+    "video_rear_head_top_span_px": 1.67,
+    "video_artifact": "work/qa/m26/m26-native-walk-final.mp4"
+  },
+  "runtime_sources": [
+    "tuantuan-cycle.png",
+    "tuantuan-motion.png"
+  ]
+}

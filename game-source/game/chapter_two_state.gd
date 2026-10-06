@@ -123,37 +123,76 @@ func restore_complete()->void:
     positions=[Vector2(1080,420),Vector2(1100,480),Vector2(1155,360)]
     super.restore_complete()
 func draw_world(view:Node2D)->void:
-    var timber:=Color("806849")
-    view.draw_rect(Rect2(460,240,300,395),Color(0.08,0.13,0.15,0.72))
-    view.bridge(Rect2(460,380,155,85),locked_a)
-    view.bridge(Rect2(615,380,145,85),locked_b)
-    view.bridge(Rect2(460,540,155,38),segment_ready(0))
-    view.bridge(Rect2(615,540,145,38),segment_ready(1))
-    if locked_a:view.wood(Rect2(555,282,60,98),timber)
-    for pair in [[WINCH_A,lifted_a],[WINCH_B,lifted_b]]:
-        view.gear(pair[0],0.6 if pair[1] else 0.0,25)
-        view.rope(pair[0],pair[0]+Vector2(48,-75 if pair[1] else 25))
-    for pair in [[LAMP_A,lamp_a],[LAMP_B,lamp_b]]:
-        view.lamp(pair[0],true)
-        var directions: Array[Vector2]=[Vector2.UP,Vector2.RIGHT,Vector2.DOWN,Vector2.LEFT]
-        view.arrow(pair[0]+Vector2(0,-12),directions[pair[1]]*55,Color("ffe9a3"))
-    # Visible receiver plates and connecting rods make the orientations inferable.
+    const TIMBER_ART=preload("res://assets/visual-m26/mechanisms.png")
+    # The painted river remains visible between the two real, load-bearing leaves.
+    # Shore posts and water ripples describe the collision gap without a dark overlay.
+    for bank_x in [459.0,761.0]:
+        view.rope(Vector2(bank_x,260),Vector2(bank_x,365))
+        view.rope(Vector2(bank_x,482),Vector2(bank_x,518))
+        view.rope(Vector2(bank_x,599),Vector2(bank_x,628))
+    for ripple in [Vector2(500,490),Vector2(675,510),Vector2(540,610),Vector2(695,340)]:
+        view.draw_arc(ripple,22,0.15,2.45,18,Color(0.76,0.91,0.87,0.44),2,true)
+    for data in [[Rect2(460,375,155,95),locked_a,lifted_a],[Rect2(615,375,145,95),locked_b,lifted_b]]:
+        var deck:Rect2=data[0]
+        view.bridge(deck,data[1])
+        if not data[1]:
+            # The unlatched leaf visibly changes height when the winch takes its load.
+            var raised:bool=data[2]
+            var leaf:=Rect2(deck.position+Vector2(2,-43 if raised else 28),Vector2(deck.size.x-4,54))
+            view.prop(0,leaf,-0.32 if raised else 0.18,Color("e9d3a4") if raised else Color("9caa9a"))
+            view.rope(Vector2(deck.position.x+9,370),leaf.get_center()+Vector2(18,-14))
+    view.bridge(Rect2(460,520,155,75),segment_ready(0))
+    view.bridge(Rect2(615,520,145,75),segment_ready(1))
+    if locked_a:
+        view.wood(Rect2(555,280,60,95),Color("c8ad7b"))
+        for edge_x in [555,615]:view.rope(Vector2(edge_x,288),Vector2(edge_x,379))
+    for data in [[WINCH_A,lifted_a,locked_a,Vector2(502,386)],[WINCH_B,lifted_b,locked_b,Vector2(663,386)]]:
+        var tension:bool=data[1] or data[2]
+        var end:Vector2=data[3]+Vector2(0,-43 if tension and not data[2] else 0)
+        view.rope(data[0]+Vector2(12,-8),end)
+        view.gear(data[0],0.6 if tension else 0.0,29)
+        if data[2]:view.prop(3,Rect2(data[0]+Vector2(20,-15),Vector2(24,28)))
+    var directions:Array[Vector2]=[Vector2.UP,Vector2.RIGHT,Vector2.DOWN,Vector2.LEFT]
+    for data in [[LAMP_A,lamp_a],[LAMP_B,lamp_b]]:
+        view.lamp(data[0],true)
+        view.prop(8,Rect2(data[0]+Vector2(-18,-29),Vector2(36,34)))
+        view.arrow(data[0]+Vector2(0,-12),directions[data[1]]*36,Color("ffe9a3"))
+    # Each copper receiver is connected to its own latch, even before illumination.
     for data in [[LAMP_A,Vector2(510,300),LATCH_A,lamp_a==1],[LAMP_B,Vector2(595,490),LATCH_B,lamp_b==2]]:
         view.rope(data[1],data[2])
-        view.wood(Rect2(data[1]-Vector2(11,11),Vector2(22,22)),Color("cdb27c"))
-        if data[3]:view.draw_line(data[0],data[1],Color(1,0.85,0.45,0.55),5)
-    for pair in [[LATCH_A,locked_a,segment_ready(0)],[LATCH_B,locked_b,segment_ready(1)]]:
-        view.gear(pair[0],PI/2 if pair[1] else 0.0,17)
-        view.draw_circle(pair[0]+Vector2(0,-26),6,Color("ffe6a0") if pair[2] else Color("6c7570"))
-    view.wood(Rect2(790,388,50,35),timber)
-    if not hook_owned:view.ink(BOX+Vector2(-12,0),"⌁",40,24)
-    view.draw_arc(LOOP,17,0,TAU,24,Color("bba376"),4)
-    view.wood(Rect2(820 if hook_practiced else 880,590,40,20),timber)
-    view.rope(SHORTCUT,Vector2(972,340));view.bridge(Rect2(940,380,55,85),shortcut_open)
-    view.wood(Rect2(1136,240,35,300),Color("594e45"))
-    view.draw_rect(Rect2(1130,330,60,88),Color("c0b49b"))
+        view.prop(8,Rect2(data[1]-Vector2(17,19),Vector2(34,38)),0,Color("ffe5a5") if data[3] else Color("b3bda4"))
+        if data[3]:
+            view.draw_line(data[0],data[1],Color(1,0.85,0.45,0.28),9,true)
+            view.draw_line(data[0],data[1],Color(1,0.94,0.7,0.8),2,true)
+    for data in [[LATCH_A,locked_a,segment_ready(0)],[LATCH_B,locked_b,segment_ready(1)]]:
+        view.prop(3,Rect2(data[0]-Vector2(26,27),Vector2(52,54)),0,Color("ffe7b8") if data[1] else Color.WHITE)
+        if data[1]:view.draw_line(data[0]+Vector2(-17,5),data[0]+Vector2(18,5),Color("e5c785"),4,true)
+        view.draw_circle(data[0]+Vector2(0,-29),4,Color("ffe6a0") if data[2] else Color("687a73"))
+    view.prop(4,Rect2(BOX-Vector2(36,43),Vector2(72,56)))
+    if not hook_owned:
+        view.draw_arc(BOX+Vector2(1,-21),8,-0.5,4.3,16,Color("ffe0a0"),3,true)
+        view.rope(BOX+Vector2(-6,-17),BOX+Vector2(-10,-4))
+    view.prop(5,Rect2(LOOP-Vector2(29,48),Vector2(58,62)))
+    var cart:=Vector2(840 if hook_practiced else 900,600)
+    view.rope(LOOP+Vector2(0,-10),cart)
+    view.prop(0,Rect2(cart-Vector2(24,15),Vector2(48,28)))
+    for dx in [-15,15]:view.gear(cart+Vector2(dx,11),0,7)
+    view.prop(5,Rect2(SHORTCUT-Vector2(26,50),Vector2(52,62)))
+    view.rope(SHORTCUT+Vector2(0,-25),Vector2(972,340))
+    view.bridge(Rect2(940,375,55,95),shortcut_open)
+    if not shortcut_open:view.prop(0,Rect2(944,310,48,78),-0.13)
+    # Low barred window: the opening and sill frame the waiting cat, not a flat wall block.
+    for post in [Rect2(1130,252,20,75),Rect2(1130,435,20,165)]:
+        view.draw_texture_rect_region(TIMBER_ART,post,Rect2(741,394,69,132))
+        view.draw_line(post.position,Vector2(post.position.x,post.end.y),Color("61482c"),2,true)
+    view.prop(7,Rect2(1129,317,73,112))
     view.white_cat(Vector2(1158,418))
-    for x in [1138,1154,1170,1186]:view.draw_line(Vector2(x,330),Vector2(x,418),Color("504b46"),5)
-    view.ink(Vector2(315,245),"外侧绞盘 / 下层检修道",280,18)
-    view.ink(Vector2(1025,270),"旧钟楼 · 门已闭锁",230,18)
-    if reverse_seen:view.arrow(Vector2(680,220),Vector2(75,0),Color("8dcee0"))
+    for x in [1138,1154,1170,1186]:
+        view.draw_line(Vector2(x,335),Vector2(x,419),Color("625f4a"),4,true)
+        view.draw_line(Vector2(x-1,335),Vector2(x-1,419),Color("c2b591"),1,true)
+    view.draw_texture_rect_region(TIMBER_ART,Rect2(1126,419,78,13),Rect2(741,394,69,132))
+    view.ink(Vector2(310,238),"运输桥 · 检修道在下方",265,16)
+    if reverse_seen:
+        for i in range(4):
+            var flow_x:=fmod(clock*28.0+i*25,100.0)
+            view.draw_circle(Vector2(650+flow_x,220+sin(i*1.4)*5),2.6,Color(0.72,0.91,0.91,0.72))

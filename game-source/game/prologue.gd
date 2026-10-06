@@ -149,13 +149,12 @@ func _physics_process(dt: float) -> void:
         var change: Vector2 = state.positions[role]-old[role]
         if absf(change.x) > 0.01: faces[role] = signf(change.x)
         walk_phase[role] += change.length()*0.09
-        sprites[role].pose(walk_phase[role],1 if change.length() > 0.1 else 0,faces[role],state.affection if role < 2 else 0)
+        sprites[role].update_motion(state.positions[role],dt,state.affection if role < 2 else 0)
         var face: float = faces[role]
         if role < 2 and absf(state.facing[role].x) > 0.1: face = signf(state.facing[role].x)
         if state.actions[role] == "brace": face = 1
         if role == 2 and (state.white_wait > 0 or (state.phase == "peek" and state.timer < 1.2)): face = -1
         sprites[role].show_action(state.actions[role],state.clock,face)
-        sprites[role].position = Vector2(state.positions[role].x,state.positions[role].y+sprites[role].position.y)
         sprites[role].z_index = int(state.positions[role].y)
         sprites[role].visible = role < 2 or state.white_visible
         sprites[role].modulate.a = state.white_alpha if role == 2 else 1.0

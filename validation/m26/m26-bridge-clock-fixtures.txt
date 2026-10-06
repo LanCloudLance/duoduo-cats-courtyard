@@ -1,0 +1,11 @@
+Frozen visual fixtures only; no continuous-input claim.
+bridge-unloaded: 初始桥叶未锁定；河岸与下层检修道边界 | save=0
+bridge-raised: 第一绞盘抬桥；右向灯光接铜片；团团处于可走检修道 | save=0
+bridge-second-latch: 前桥永久固定；第二灯朝下；后桥仍抬起卸重 | save=0
+bridge-window: 双桥与短桥固定；检修箱、练习车、栏窗中的圆圆 | save=0
+clock-closed: 关闭门洞、外墙检修槽、低窗与室内圆圆 | save=0
+clock-wick-carried: 灯芯随团团携带；外部灯座仍未装好 | save=0
+clock-npc-walk: 灯已照准门锁；圆圆正在走向室内踏板；门尚未打开 | save=0
+clock-reunion-aperture: 真实门洞开启；三位能够在门内重逢 | save=0
+clock-temporary-walkway: 圆圆向右保持；暗廊临时可走；卡扣尚未锁定 | save=0
+clock-map: 永久桥、低检修门和上方出口均开启；真实地图汇入灯树 | save=0

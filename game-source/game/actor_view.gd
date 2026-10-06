@@ -6,6 +6,9 @@ var held: bool = false
 var phase: float = 0
 var stride: float = 0
 var facing: float = 1
+var move_direction := Vector2.DOWN
+var motion_kind := ""
+var pose_initialized := false
 var font: Font
 var caption_visible: bool = true
 var caption_override := ""
@@ -41,16 +44,27 @@ func _ready() -> void:
         add_child(painted)
 
 func update_pose(point: Vector2, selected: bool, staying: bool, delta: float) -> void:
-    var distance := position.distance_to(point)
-    if absf(point.x - position.x) > 0.01:
-        facing = signf(point.x - position.x)
-    stride = move_toward(stride, 1.0 if distance > 0.1 else 0.0, delta * 12)
-    phase += distance * 0.09
+    var displacement := point - position
+    var distance := displacement.length()
+    # Placement and checkpoint jumps are not steps. Sampling is scene-owned so
+    # paused/zero-time refreshes cannot advance gait or its settling transition.
+    var placement := not pose_initialized or distance > 96.0
+    pose_initialized = true
+    if delta > 0:
+        var walking := not placement and distance > 0.001
+        if walking:
+            move_direction = displacement.normalized()
+            if absf(displacement.x) > 0.01:
+                facing = signf(displacement.x)
+            phase += distance * 0.09
+        stride = 0.0 if placement else move_toward(stride, 1.0 if walking else 0.0, delta * 12)
     position = point
     controlled = selected
     held = staying
     reaction = maxf(0, reaction - delta * 2.0)
     if painted:
+        painted.move_direction = move_direction
+        painted.motion_kind = motion_kind
         if social_visual:
             painted.social_kind = social_kind
             painted.presentation_clock = presentation_clock

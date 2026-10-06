@@ -10,6 +10,13 @@ const GROVE = preload("res://assets/visual-m14/arena-painted.png")
 const HOME = preload("res://assets/story-prologue/home-room-play.png")
 const TERRAIN = preload("res://assets/visual-m15/terrain-atlas.png")
 const PROPS = preload("res://assets/story-chapter-one/props.png")
+const CHAPTER_ART = [preload("res://assets/visual-m26/chapter-two.png"),preload("res://assets/visual-m26/chapter-three.png"),preload("res://assets/visual-m26/chapter-four.png"),preload("res://assets/visual-m26/chapter-five.png")]
+const MECHANISMS = preload("res://assets/visual-m26/mechanisms.png")
+const SUPPORT_ART = preload("res://assets/visual-m26/support.png")
+const FLOOR_ART = preload("res://assets/visual-m26/floor-pieces.png")
+var prop_regions:Dictionary={}
+var foreground:=Node2D.new()
+var refresh_delta:=0.0
 var state = Base.new()
 var session
 var active := false
@@ -34,6 +41,8 @@ var npc_at:=Vector2(-5000,-5000)
 func _init(value)->void:session=value
 func _ready()->void:
     font=get_parent().theme.default_font
+    prop_regions=JSON.parse_string(FileAccess.get_file_as_string("res://assets/visual-m26/props-regions.json"))
+    foreground.z_index=950;add_child(foreground);foreground.draw.connect(_draw_foreground)
     camera.position=Vector2(640,400);camera.enabled=false;add_child(camera)
     add_child(audio)
     for role in range(3):
@@ -104,16 +113,21 @@ func _physics_process(dt:float)->void:
     if heard!=state.event_id:heard=state.event_id;audio.play(state.cue)
     _refresh(dt)
 func _refresh(dt:float)->void:
+    refresh_delta=dt
     var home:bool=state.chapter==5 and state.phase in ["home","complete"]
     for role in range(3):
         var present:bool=role in state.available_roles()
         var selected:bool=state.controlled==role if state.single else role==0 or role==state.current_cat
         actors[role].visible=present and not home;homes[role].visible=present and home
         actors[role].caption_override=["朵朵","团团","圆圆"][role]+(" · 你控制" if state.single and selected else " · 等你" if state.single else "")
-        actors[role].update_pose(state.positions[role],selected,state.actions[role] in ["hold","brace"],dt)
-        actors[role].rotation=sin(state.clock*9)*.035 if state.action_time[role]>0 else 0.0
+        var kind:String=state.actions[role]
+        var pose_kind:String={"light":"reach","touch":"reach","hook":"pull","paw":"inspect","pet":"reach","sniff":"inspect"}.get(kind,kind)
+        if kind=="hold" and ((state.chapter==5 and role==1 and state.hook_held) or (state.chapter==2 and role==0)):pose_kind="pull"
+        actors[role].motion_kind=pose_kind if state.action_time[role]>0 or kind in ["hold","brace","light"] else ""
+        actors[role].update_pose(state.positions[role],selected,kind in ["hold","brace"],dt)
+        actors[role].rotation=0.0
         var direction:float=1 if state.facing[role].x>=0 else -1
-        homes[role].pose(state.clock*3,(state.positions[role]-homes[role].position).length()/8,direction,0)
+        homes[role].update_motion(state.positions[role],dt)
         homes[role].show_action(state.actions[role],state.clock,direction);homes[role].position=state.positions[role];homes[role].z_index=int(state.positions[role].y)
     title.text=state.objective()
     line.text=state.message if state.message_time>0 else ""
@@ -127,7 +141,7 @@ func _refresh(dt:float)->void:
         title.text="故事试玩完成 · 都在就好"
         line.text=state.message if state.message_time>0 else save_status+" · 可在家中继续摸猫，Esc 回访章节。"
     if state.finished:completed_text.text=state.completion_text()+"\n\n"+save_status+("\n\n按互动键继续下一章 · Esc 可重玩 / 选关。" if state.chapter<5 else "\n\n故事试玩完成 · Esc 可回访任意章节。")
-    npc_at=Vector2(-5000,-5000);queue_redraw()
+    npc_at=Vector2(-5000,-5000);queue_redraw();foreground.queue_redraw()
 func _panel(rect:Rect2)->Panel:
     var p:=Panel.new();p.position=rect.position;p.size=rect.size
     var s:=StyleBoxFlat.new();s.bg_color=Color("f5ead0");s.border_color=Color("a78b64");s.set_border_width_all(2);s.set_corner_radius_all(15);p.add_theme_stylebox_override("panel",s);hud.add_child(p);return p
@@ -135,13 +149,21 @@ func _label(rect:Rect2,size:int,parent:Node=null)->Label:
     var l:=Label.new();l.position=rect.position;l.size=rect.size;l.add_theme_font_override("font",font);l.add_theme_font_size_override("font_size",size);l.add_theme_color_override("font_color",Color("344d3c"));(hud if parent==null else parent).add_child(l);return l
 func _draw()->void:
     var home:bool=state.chapter==5 and state.phase in ["home","complete"]
-    draw_texture_rect(HOME if home else RIVER if state.chapter==2 else FOREST if state.chapter in [3,4] else GROVE,Rect2(0,0,1280,800),false)
+    var backdrop:Texture2D=HOME if home else CHAPTER_ART[2] if state.chapter==5 and state.phase=="farewell" else CHAPTER_ART[clampi(state.chapter-2,0,3)]
+    var night:bool=state.chapter==4 and not state.shell_fixed
+    if state.chapter==3:
+        # Align the painted cutaway's partition and service pit with real walls.
+        var source_cuts:=[0,455,875,1090,1586]
+        var world_cuts:=[0,450,700,855,1280]
+        for i in range(4):
+            draw_texture_rect_region(backdrop,Rect2(world_cuts[i],0,world_cuts[i+1]-world_cuts[i],800),Rect2(source_cuts[i],0,source_cuts[i+1]-source_cuts[i],992))
+    else:draw_texture_rect(backdrop,Rect2(0,0,1280,800),false,Color("929db5") if night else Color.WHITE)
     if not active:return
     state.draw_world(self)
     white_npc.visible=npc_at.x>0 and not state.joined
     if white_npc.visible:
         var walking:bool=state.chapter==3 and state.npc_called and not state.door_open
-        white_npc.pose(state.clock,1 if walking else 0,1,0)
+        white_npc.update_motion(npc_at,refresh_delta)
         white_npc.show_action("walk" if walking else "sleep" if state.chapter==2 else "",state.clock,1)
         white_npc.position=npc_at;white_npc.z_index=int(npc_at.y)
     for role in state.available_roles():
@@ -154,25 +176,59 @@ func _draw()->void:
 func ink(p:Vector2,text:String,width:=160.0,size:=17)->void:
     draw_string_outline(font,p,text,HORIZONTAL_ALIGNMENT_CENTER,width,size,4,Color("fff3d8"));draw_string(font,p,text,HORIZONTAL_ALIGNMENT_CENTER,width,size,Color("304a3a"))
 func wood(rect:Rect2,color:=Color("a68453"))->void:
-    var s:=StyleBoxFlat.new();s.bg_color=color;s.border_color=Color("674d31");s.set_border_width_all(3);s.set_corner_radius_all(7);draw_style_box(s,rect)
-    for y in range(int(rect.position.y)+9,int(rect.end.y),18):draw_line(Vector2(rect.position.x+5,y),Vector2(rect.end.x-5,y+1),Color(0.37,.25,.12,.25),1,true)
+    draw_texture_rect_region(FLOOR_ART,rect,Rect2(1090,559,371,371),Color.WHITE.lerp(color,0.25))
 func lamp(p:Vector2,lit:bool)->void:
-    rope(p+Vector2(0,5),p+Vector2(0,-76));wood(Rect2(p+Vector2(-19,-70),Vector2(38,44)),Color("bea66c"))
-    if lit:draw_circle(p+Vector2(0,-47),11,Color("ffe0a0"));draw_circle(p+Vector2(0,-47),28,Color(1,.76,.34,.18))
-    else:draw_circle(p+Vector2(0,-47),9,Color("607162"))
+    prop(2,Rect2(p+Vector2(-25,-78),Vector2(50,84)),0,Color.WHITE if lit else Color("8c9d9a"))
+    if lit:
+        var flame:=p+Vector2(11,-38)
+        for i in range(4):draw_circle(flame,29-i*6,Color(1,.76,.34,.025+i*.035))
+        draw_colored_polygon(PackedVector2Array([flame+Vector2(-4,6),flame+Vector2(-5,-1),flame+Vector2(1,-10),flame+Vector2(5,3),flame+Vector2(3,7)]),Color("ffe3a1"))
 func gear(p:Vector2,angle:float,radius:=25.0)->void:
-    draw_circle(p,radius,Color("917345"));draw_arc(p,radius-5,0,TAU,36,Color("ddc38a"),3,true)
-    for i in range(6):var d:=Vector2.from_angle(angle+i*TAU/6);draw_line(p+d*6,p+d*(radius+5),Color("ddd1a7"),4,true)
-    draw_circle(p,5,Color("4c5a44"))
+    support_prop(5,Rect2(p-Vector2.ONE*radius,Vector2.ONE*radius*2),angle)
 func arrow(p:Vector2,direction:Vector2,color:=Color("efe0a1"))->void:
     var d:=direction.normalized();draw_line(p-d*15,p+d*15,color,4,true);draw_line(p+d*15,p+d*5+d.orthogonal()*9,color,4,true);draw_line(p+d*15,p+d*5-d.orthogonal()*9,color,4,true)
 func rope(a:Vector2,b:Vector2)->void:draw_line(a,b,Color("795f3a"),7,true);draw_line(a,b,Color("c7ad7c"),3,true)
 func bridge(rect:Rect2,open:bool)->void:
-    draw_texture_rect_region(TERRAIN,rect,Rect2(0,0,627,627),Color("5f817c"))
     if open:
-        wood(rect.grow(-4),Color("b09969"));rope(rect.position,Vector2(rect.end.x,rect.position.y));rope(Vector2(rect.position.x,rect.end.y),rect.end)
+        draw_texture_rect_region(FLOOR_ART,rect,Rect2(96,132,855,302));rope(rect.position,Vector2(rect.end.x,rect.position.y));rope(Vector2(rect.position.x,rect.end.y),rect.end)
     else:
-        for y in range(int(rect.position.y)+10,int(rect.end.y),30):draw_line(Vector2(rect.position.x+7,y),Vector2(rect.end.x-7,y-5),Color(.58,.70,.68,.5),2,true)
+        if state.chapter==2:
+            for y in range(int(rect.position.y)+10,int(rect.end.y),30):draw_line(Vector2(rect.position.x+7,y),Vector2(rect.end.x-7,y-5),Color(.72,.91,.85,.28),2,true)
+        else:pit(rect)
+func pit(rect:Rect2)->void:
+    if rect.size.y<=rect.size.x:
+        draw_texture_rect_region(FLOOR_ART,rect,Rect2(100,614,855,249));return
+    # Preserve masonry/pipe proportions along long narrow cuts in the floor.
+    # Two end caps and repeating inner-wall strips keep this a flat service trench.
+    var ratio:=rect.size.x/234.0
+    var cap:=minf(76.0*ratio,rect.size.y*.2)
+    draw_texture_rect_region(FLOOR_ART,Rect2(rect.position,Vector2(rect.size.x,cap)),Rect2(1087,20,234,76))
+    var yy:=rect.position.y+cap
+    while yy<rect.end.y-cap-.01:
+        var h:=minf(342.0*ratio,rect.end.y-cap-yy)
+        draw_texture_rect_region(FLOOR_ART,Rect2(rect.position.x,yy,rect.size.x,h),Rect2(1087,96,234,h/ratio))
+        yy+=h
+    draw_texture_rect_region(FLOOR_ART,Rect2(rect.position.x,rect.end.y-cap,rect.size.x,cap),Rect2(1087,431,234,76))
+func prop(index:int,rect:Rect2,angle:=0.0,tint:=Color.WHITE)->void:
+    _atlas_prop(MECHANISMS,prop_regions.mechanisms[index],rect,angle,tint)
+func support_prop(index:int,rect:Rect2,angle:=0.0,tint:=Color.WHITE)->void:
+    _atlas_prop(SUPPORT_ART,prop_regions.support[index],rect,angle,tint)
+func _atlas_prop(texture:Texture2D,region:Array,rect:Rect2,angle:float,tint:Color)->void:
+    var source:=Rect2(region[0],region[1],region[2],region[3])
+    draw_set_transform(rect.get_center(),angle)
+    draw_texture_rect_region(texture,Rect2(-rect.size*.5,rect.size),source,tint)
+    draw_set_transform(Vector2.ZERO)
+func machine_arm(a:Vector2,b:Vector2,width:float)->void:
+    support_prop(4,Rect2((a+b)*.5-Vector2(a.distance_to(b)*.5,width*.5),Vector2(a.distance_to(b),width)),a.angle_to_point(b))
+    gear(a,0,width*.65);gear(b,0,width*.65)
+func merchant(p:Vector2)->void:support_prop(1,Rect2(p-Vector2(40,116),Vector2(80,116)))
+func alight(p:Vector2)->void:
+    support_prop(0,Rect2(p-Vector2(37,100),Vector2(74,100)))
+func _draw_foreground()->void:
+    if not active or state.chapter!=2:return
+    for x in [1138,1154,1170,1186]:
+        foreground.draw_line(Vector2(x,335),Vector2(x,419),Color("625f4a"),4,true)
+        foreground.draw_line(Vector2(x-1,335),Vector2(x-1,419),Color("c2b591"),1,true)
 func white_cat(p:Vector2)->void:npc_at=p
 func granny(p:Vector2)->void:
     draw_texture_rect_region(PROPS,Rect2(p-Vector2(52,142),Vector2(104,142)),Rect2(80,50,500,620))

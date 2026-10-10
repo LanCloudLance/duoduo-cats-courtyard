@@ -2,6 +2,7 @@ extends "res://game/storybook_sprite.gd"
 const SOCIAL = preload("res://assets/visual-m15/social-atlas.png")
 var social_kind := ""
 var presentation_clock := 0.0
+var seated_support := true
 var social_frames: Array[AtlasTexture] = []
 var social_sprite := Sprite2D.new()
 func _ready() -> void:
@@ -35,7 +36,7 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
         position.y = -sin(presentation_clock*1.5)*0.6
     queue_redraw()
 func _draw() -> void:
-    if role != 0 or social_kind != "rest": return
+    if role != 0 or social_kind != "rest" or not seated_support: return
     # A folding stool under the seated pose works at every valid gathering point.
     draw_set_transform(Vector2.ZERO,0,Vector2.ONE/0.30)
     draw_line(Vector2(-17,-36),Vector2(16,1),Color("694e32"),5,true)

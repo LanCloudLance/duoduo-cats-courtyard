@@ -1,0 +1,13 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+QA_USER_DIR /Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-combat
+PARRY openings=[3.78333333333333, 3.18333333333333] identical_late_attack_hp=[4.0, 5.0]
+NAIVE id=first role=0 phase=clear wave=2 seconds=9.0 hp=2 blocked=0
+NAIVE id=first role=1 phase=clear wave=2 seconds=11.3 hp=1 blocked=0
+NAIVE id=shell role=0 phase=failed wave=1 seconds=7.3 hp=0 blocked=5
+NAIVE id=shell role=1 phase=failed wave=1 seconds=7.3 hp=0 blocked=5
+NAIVE id=shell role=2 phase=failed wave=1 seconds=7.3 hp=0 blocked=5
+NAIVE id=reserve role=0 phase=failed wave=2 seconds=10.2 hp=0 blocked=5
+NAIVE id=reserve role=1 phase=failed wave=2 seconds=10.2 hp=0 blocked=4
+NAIVE id=reserve role=2 phase=failed wave=2 seconds=10.3 hp=0 blocked=3
+M28_COMBAT_REVIEW_REGRESSION: 22 checks, 0 failed

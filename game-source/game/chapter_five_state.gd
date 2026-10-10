@@ -20,6 +20,7 @@ const REPAIR_SLOT := Vector2(875,495)
 const TEST_PLATE := Vector2(755,555)
 const TEST_SOURCE := Vector2(570,555)
 const TEST_END := Vector2(1095,555)
+const TEST_MARKET := Vector2(505,600)
 const FAR_LAMP := TEST_END+Vector2(50,-25)
 const BRANCH_DISPLAY := REPAIR_SLOT+Vector2(88,35)
 const ALIGHT := Vector2(1045,335)
@@ -27,9 +28,44 @@ const LIFT := Vector2(1120,605)
 const MERCHANT := Vector2(360,350)
 const GRANNY := Vector2(660,425)
 const PORTAL := Vector2(1090,470)
-const HOME_RACK := Vector2(350,370)
-const HOME_BOWL := Vector2(630,520)
-const HOME_SOFA := Vector2(955,420)
+const HOME_RACK := Vector2(175,385)
+const HOME_BOWL := Vector2(635,515)
+const HOME_SOFA := Vector2(400,415)
+const FAR_SLOT := Vector2(650,255)
+const FAR_LOCK := Vector2(725,330)
+const PREP_HANDLE := Vector2(560,420)
+const PREP_LATCH := Vector2(620,360)
+const FAR_PLATFORM := Rect2(610,220,135,95)
+const SERVICE_SHORTCUT := Rect2(650,400,165,70)
+const SERVICE_FRONT := Rect2(735,465,350,25)
+const ISOLATOR := Vector2(615,585)
+const PIN_RACK := Vector2(995,600)
+const LEFT_SOCKET := Vector2(815,570)
+const RIGHT_SOCKET := Vector2(920,570)
+const HOME_TABLE := Vector2(175,270)
+var arm_route := 0
+var far_walkway := false
+var prep_held := false
+var isolation_open := false
+var worklight_seen := false
+var load_held := false
+var load_return_time:=0.0
+var load_return_from:=0.0
+var support_site := "rack"
+var left_released := false
+var right_released := false
+var lower_pin := false
+var upper_pin := false
+var pilot_open := false
+var pilot_route := 0
+var pilot_charged := false
+var pilot_waiting:=false
+var gift_pending:=false
+var care_pending:=-1
+var home_rest_pending:=false
+var keepsake_cursor:=0
+var cat_one_clean := false
+var cat_two_clean := false
 var route_lock := false
 var route_supported := false
 var route_lit := false
@@ -85,6 +121,11 @@ func walkable(p:Vector2,role:int)->bool:
     if phase=="approach":
         if GAP.grow(12).has_point(p):return bridge_locked and p.y>=CROSSING.position.y+10 and p.y<=CROSSING.end.y-10
         return true
+    if FAR_PLATFORM.has_point(p) and not far_walkway:return false
+    if arm_locked and arm_route==0 and SERVICE_SHORTCUT.has_point(p):return false
+    # The front-edge catwalk connects both maintenance sides outside the shell.
+    # The near-slot arm blocks the western entry; eastern access stays open.
+    if SERVICE_FRONT.has_point(p):return p.x>=815 or (arm_locked and arm_route==1)
     if BODY.grow(14).has_point(p):return false
     if Rect2(830,457,90,70).has_point(p) and phase in ["lure","unjam","withdraw"]:
         return role==1 and lid_open and fixed_light
@@ -97,14 +138,40 @@ func follow_allowed(role:int,p:Vector2)->bool:
 func faces(role:int,p:Vector2)->bool:
     return facing[role].dot(positions[role].direction_to(p))>0.82
 
+func selected_slot()->Vector2:return SHIELD_SLOT if arm_route==0 else FAR_SLOT
+func selected_lock()->Vector2:return ARM_LOCK if arm_route==0 else FAR_LOCK
+func selected_test_end()->Vector2:return TEST_END if pilot_route==0 else TEST_MARKET
+func load_center_side()->String:
+    if left_released and right_released:return "none"
+    if left_released:return "right"
+    if right_released:return "left"
+    return "both"
+func load_return_progress()->float:return 1.0-clampf(load_return_time/0.4,0.0,1.0)
+func load_tilt()->float:
+    if load_held:return 0.0
+    var bias:=1.0 if load_center_side()=="right" else -1.0 if load_center_side()=="left" else 0.0
+    return bias*0.12*load_return_progress()
+func unloading_wheel_angle()->float:
+    return -0.45 if load_held else lerpf(load_return_from,load_tilt(),load_return_progress())
 func target(role:int)->String:
+    if phase=="shield":
+        if near(role,PREP_HANDLE,42):return "外台升降柄"
+        if near(role,PREP_LATCH,40):return "外台棘轮"
+        if near(role,FAR_SLOT,48):return "远侧维修卡槽"
+        if near(role,selected_lock(),44):return "机械臂锁扣"
+    if phase=="unjam":
+        if near(role,ISOLATOR,37):return "工作灯隔离环"
+        if near(role,PIN_RACK,35):return "备用撑扣"
+        if near(role,LEFT_SOCKET,32):return "左卸重座"
+        if near(role,RIGHT_SOCKET,32):return "右卸重座"
+    if phase in ["home","complete"] and near(role,HOME_TABLE,60):return "旅途纪念"
     if phase=="approach":
         if near(role,LOW_LOCK,52):return "低锁扣"
         if near(role,SUPPORT,54):return "平台撑杆"
         if near(role,ROUTE_LAMP,58):return "通道导光口"
         if bridge_locked and near(role,CORE_GATE,65):return "树心维护门"
     elif phase=="shield":
-        if near(role,ARM_LOCK,62):return "机械臂锁扣"
+        if near(role,selected_lock(),44):return "机械臂锁扣"
         if near(role,SHIELD_SLOT,65):return "盾牌维修卡槽"
     elif phase=="lure":
         if near(role,AIM_STAND,66):return "缓冲导光台"
@@ -116,7 +183,7 @@ func target(role:int)->String:
     elif phase=="withdraw":
         if near(role,CRADLE,65):return "解除定光保持"
     elif phase=="test":
-        if near(role,TEST_END,62):return "观察远灯"
+        if near(role,selected_test_end(),62):return "观察远灯"
         if near(role,TEST_PLATE,62):return "测试导光板"
         if near(role,TEST_SOURCE,64):return "测试接点"
         if near(role,ALIGHT,68):return "阿灯"
@@ -175,56 +242,82 @@ func hint_context_key()->String:
 
 func request_hint()->void:
     hints+=1
-    var context:=hint_context_key()
-    if context!=hint_context:hint_context=context;hint_level=0
+    if hint_context!=phase:hint_context=phase;hint_level=0
     hint_level=mini(3,hint_level+1)
-    var steps:Array=[]
-    match context:
-        "low_lock":steps=["平台下面有一枚低低的小锁，周围留着窄槽。","低锁牵着撑杆；窄槽里的东西需要细小的工具。","让团团走到平台左下的低锁旁，按互动或工具，用爪钩拉开。"]
-        "support":steps=["低锁松开后，上方露出了一个撑杆凹槽。","只有把撑杆扣稳，平台才能承住后续的光路。","让朵朵到平台上方的撑杆旁按互动，把撑杆压进凹槽。"]
-        "route_light":steps=["平台已经撑稳，但左下的导光口还暗着。","导光口要朝着平台对侧接光，机械销才会落锁。","让圆圆站在左下导光口，朝右按互动或工具。"]
-        "cross":steps=["桥边的销已经落下，南侧出现了连续的木板路。","已经锁稳的桥不靠持续照明；伙伴都到门边才能一起进去。","沿南侧桥走到右边的维护门，等三位靠近后按互动。"]
-        "guard":steps=["地面黄色圈对应夹臂落下的位置，旁边还有一个维修卡槽。","盾要迎着来臂的方向；正确举盾可以一直保持，不必猜隐藏时限。","让朵朵站进黄色圈，面向右上方的机器，按住举盾，等夹臂落入槽内。"]
-        "arm_latch":steps=["夹臂暂时停住后，右边露出了一个小锁扣。","临时卡槽会松开，小锁扣才能把这次停稳变成永久固定。","趁夹臂还停着，让团团到卡槽右侧的小锁旁按互动或工具。"]
-        "lid_0":steps=["吸光口旁有上下两个缓冲座，盖边的下销仍受着压力。","吸口会朝亮着的缓冲座偏转，同侧受压的销才有空间松开。","让圆圆在导光台朝右接通下方缓冲座，再让朵朵在外侧维护轮按一次互动。"]
-        "lid_1":steps=["下销已经扣牢，上销还被吸口压住。","已锁住的销不会回退，但另一枚需要不同的缓冲光路。","让圆圆在导光台朝上重新接光，再让朵朵在维护轮按一次互动，扣住上销。"]
-        "safety":steps=["打开的检修盖下很暗，下方还有一个独立灯座。","安全灯座能固定光，不需要持续占住一位操作者。","让圆圆到下方安全灯座按互动或工具，把定光扣接入；再查看盖下的弯枝。"]
-        "bend_0","bend_1","bend_2":
-            var direction:String=["左","上","右"][branch_direction()]
-            var turns:=(branch_direction()-wheel_notch+3)%3
-            if turns==0 and not wheel_ready:turns=3
-            var method:="缺口已经让到正确的一侧。让团团在检修槽旁按互动或工具，主动拉出这一段。"
-            if turns>0:method="当前弯枝朝%s。让朵朵在维护轮再按%s互动，把缺口让到%s侧；再让团团拉一次爪钩。"%[direction,["","一次","两次","三次"][turns],direction]
-            steps=["这一段枝条有明显弯折，旁边的轮架只留出一处缺口。","缺口应让到弯枝伸出的一侧；拉过一段后，下一处弯折可能不同。",method]
-        "withdraw_cat":steps=["机器已经停止，检修槽里还有伙伴，安全光仍亮着。","槽里有人时不能收灯；固定的棘轮会留住全部修复。","让团团从检修槽向下走，直到离开槽口、站回下面的平台。"]
-        "withdraw_light":steps=["检修槽已经空了，安全灯座上的光还没有收回。","收回工具前要确认伙伴在安全处；现在可以解除定光保持。","让圆圆到安全灯座按互动或工具，收回定光扣。"]
-        "test_plate":steps=["测试光路中间有一块可转动的板，右侧远灯还是暗的。","导光板决定光是向外走，还是重新回到树心。","让朵朵在中下方测试导光板旁，朝右边远灯按互动。"]
-        "test_source":steps=["导光板已经朝向远端，左下的测试接点还没有有效光束。","试送只需要一小段连续光路；接点的朝向也必须通向远灯。","让圆圆到左下测试接点，面向右侧，按互动或工具接光。"]
-        "observe":steps=["远处的接收灯已经亮了，光正在离开树心。","修复需要亲自确认送达的结果，亮着等待不会自动完成测试。","让朵朵走到右侧远灯的底座旁按互动，确认光已经送到。"]
-        "release":steps=["试送成功后，送光闸旁的阿灯还在等消息。","远灯的验证只覆盖一小段，整条路网还需要打开送光闸。","让朵朵到机器右上方的阿灯身边按互动，一起打开闸口。"]
-        "network":steps=["送光台下方的灯一路亮到了右下角。","升降台通向集市，但要让三位一起搭乘。","让三位靠近右下角升降台，再按互动前往集市。"]
-        "home_tag":steps=["右侧归途门的灯座上，留着一个熟悉的路牌插口。","路牌记着来时的家门；居民的告别可以慢慢来，不会错过归途。","让三位靠近归途门，再让朵朵按互动插入家门路牌。"]
-        "confirm_falsefalse","confirm_truefalse","confirm_falsetrue","confirm_truetrue":
-            var next:="朵朵" if not portal_confirms[0] else "团团或圆圆"
-            steps=["熟悉的走廊已经出现，门前还有等待确认的位置。","插路牌和愿意出发是两件事；三位要在门边，主角和一只猫各确认一次。","让%s在归途门旁按互动确认；三位仍需一起靠近门。"%next]
-        "gear":steps=["家里左侧的装备架还空着，冒险工具还没有归位。","安心休息前，先给带回来的工具找个固定位置。","让朵朵到左侧装备架旁按互动，收好冒险装备。"]
-        "paws":steps=["中间的水盆旁放着软布，猫爪上还有路上的灰。","检查猫爪时，两只猫都要在水盆旁边。","把三位带到水盆旁，让朵朵按互动擦拭并检查猫爪。"]
-        "rest":steps=["装备和猫爪都整理好了，右侧沙发空着。","这一段没有自动结束的倒计时，可以多待一会儿再决定休息。","让三位靠近右侧沙发，由朵朵按互动，主动结束冒险。"]
-        _:steps=["三位都回到了家，小木灯挂件留在桌上。","已经完成的故事可以保留，家里仍能自由走动。","可以靠近猫咪摸摸它们，或到沙发坐一会儿。"]
-    if phase=="lure" and beam_held and beam_route==lid_pins+1 and near(2,AIM_STAND,70) and actions[2]=="light":
-        steps[2]="当前缓冲光路已经正确，保持它亮着。让朵朵在外侧维护轮按一次互动，扣住露出的销。"
+    var steps:Array[String]=[]
+    match phase:
+        "shield":steps=["地面有两条夹臂弧线，远侧卡槽在尚未升起的外台上。","近槽能直接接住夹臂；远槽需要先把外台锁稳，但会让下面的短道空出来。","朵朵在外台升降柄保持，团团拉棘轮即可开远台；选定卡槽后，朵朵迎着机器举盾，团团拉对应小锁。"]
+        "lure":steps=["两枚盖销，各对应一个缓冲座。","吸口偏向哪一座，哪一侧的销就露出来；两枚不分先后。","圆圆在导光台朝右或朝上接光，朵朵拨维护轮。换另一条光路再试。"]
+        "unjam":steps=["工作灯连着回收口，轮架下面有两个撑扣孔，架上只有一枚扣。","工作光要留在独立支路。卸重后可以放撑扣；一侧棘轮锁住，就可以把扣带去另一侧。","团团断开隔离环，圆圆接入灯座；朵朵在维护轮保持卸重，团团取扣、装任意一侧、拉枝。取回扣再装另一侧，两侧锁定后取出折枝。"]
+        "test":steps=["阿灯守着一条小闸，导光板连向两处居民灯。","便携光能引亮接点；撤掉便携光之后仍亮，才能知道机器真的在送光。","先与阿灯打开试送小闸，朵朵转板选择钟楼或集市，圆圆接光后收回，再去远灯确认。"]
+        "home","complete":steps=["软布放在水盆旁，沙发还是出发前的那一张。","可以先照顾任意一只猫，也可以先慢慢看看带回来的纪念。","朵朵在水盆边照顾猫，两次不分先后；放好装备，准备好后坐回沙发。"]
+        _:steps=[objective(),"留意已咬合的棘齿；这些锁住的修复不会因为放手而退回。","靠近能看见的物件，试试各位擅长的工具。"]
     say("提示 %d / 3 · %s"%[hint_level,steps[hint_level-1]])
 
 func clear_holds()->void:
     beam_held=false;wheel_held=false;hook_held=false;shield_held=false
+    load_held=false;prep_held=false
+    load_return_time=0;load_return_from=0
+    pilot_waiting=false
     beam_route=0;wheel_ready=false;recoil=0;stroke_time=0;wheel_motion=0;wheel_from=0
     for i in range(3):actions[i]="";action_time[i]=0.0
 
 func interact(role:int)->void:
+    if dialogue_active() or social_transition_active():return
     if role not in [0,1,2] or action_time[role]>0.1:return
     var item:=target(role)
     if item.is_empty():return
     match item:
+        "外台升降柄":
+            if role!=0:say("升降柄很重，松手就会回落。");return
+            prep_held=not prep_held;actions[0]="brace" if prep_held else ""
+            observe("outer_raise","外台抬了起来，旁边的棘轮仍未咬合。" if prep_held else "升降柄卸了力。",PREP_HANDLE)
+        "外台棘轮":
+            if role!=1:say("齿间的小绳环，只够爪钩穿过去。");return
+            if not prep_held:say("棘齿压得很紧，钩子拉不动。");return
+            far_walkway=true;prep_held=false;actions[0]="";act(1,"paw")
+            observe("outer_locked","棘齿咬住了抬高的外台，远侧的卡槽也能靠近了。",PREP_LATCH)
+        "远侧维修卡槽":
+            if not far_walkway:return
+            if role!=0:say("卡槽朝着夹臂，地上的弧线延伸到上方。");return
+            arm_route=1;boss_clock=0;observe("far_plan","导轨转向外台，夹臂离开了下方短通道。",FAR_SLOT)
+        "工作灯隔离环":
+            if role!=1:say("细绳连着工作灯与回收口之间的小闸。");return
+            if isolation_open and fixed_light and near(1,REPAIR_SLOT,85):say("灯照着检修槽，暂时不能让它熄掉。");return
+            isolation_open=not isolation_open;act(1,"paw")
+            if not isolation_open:fixed_light=false
+            observe("work_isolation","小闸断开了回收口，灯座现在是一条独立支路。" if isolation_open else "小闸接回主线，灯里的光被吸走。",ISOLATOR)
+        "备用撑扣":
+            if role!=1:say("备用撑扣只有一枚，能沿着检修窄槽带进去。");return
+            if support_site=="rack":support_site="carried";act(1,"paw");observe("pin_taken","团团叼起了唯一的撑扣，架上空了。",PIN_RACK)
+            elif support_site=="carried":support_site="rack";observe("pin_returned","撑扣放回架上。",PIN_RACK)
+        "左卸重座","右卸重座":
+            if role!=1:say("撑扣要从侧面的小孔穿入。");return
+            var side:String="left" if item=="左卸重座" else "right"
+            var already:bool=left_released if side=="left" else right_released
+            if support_site==side:
+                if not already and not load_held:say("轮架的重量还压在撑扣上，它纹丝不动。");return
+                support_site="carried";act(1,"paw");observe("pin_reused","撑扣滑出来了。锁住的那侧由棘轮承重。",LEFT_SOCKET if side=="left" else RIGHT_SOCKET)
+            elif support_site=="carried":
+                if not fixed_light:say("槽内很暗，看不清扣齿。");return
+                if not load_held and not already:say("孔被沉下来的轮架压住，撑扣碰到边缘。");return
+                support_site=side;act(1,"paw");observe("pin_loaded","撑扣托住了这一侧，卸力柄可以松开。",LEFT_SOCKET if side=="left" else RIGHT_SOCKET)
+            else:say("这里有一个撑扣孔，架上没有第二枚扣。")
+        "旅途纪念":
+            if journey_discoveries.is_empty():say("桌面空出了一小块。团团把爪子轻轻放上去。");return
+            var earned:Array=[]
+            for id in ["prologue_ball","one_nightlight","two_cart","three_map","four_stall","four_view"]:
+                if id in journey_discoveries:earned.append(id)
+            var memories:Dictionary={
+                "prologue_ball":["团团把旧毛线球推到朵朵手边。出门前，它也这样来找她玩。","朵朵：认真做完正事，现在可以陪你慢慢玩啦。"],
+                "one_nightlight":["小夜灯暖暖地亮着。驿站那扇窗里，也留着这样一盏灯。","圆圆把脸靠近灯罩，又慢吞吞地趴回朵朵身边。"],
+                "two_cart":["团团用爪子点点货车小纸片。那天，他们走的是运输宽岸。","朵朵：大货车也能从那边过去，这条路留给大家。"],
+                "three_map":["朵朵翻过钟楼线路纸。背面的斜线，曾让他们重新看懂光路。","圆圆望向图上的灯，团团压住了翘起的纸角。"],
+                "four_stall":["小布旗画着集市灯罩的花纹。摊主在亮起来的台面上重新摆好了东西。","团团伸爪摸摸花纹。朵朵：还记得我们借给她的那盏小灯吗？"],
+                "four_view":["观景纸上是远处钟楼的轮廓。带小灯去那里时，他们终于看清了远路。","圆圆贴着纸上的灯点坐下。朵朵：原来多绕一点，会看到这些呀。"]}
+            if earned.is_empty():return
+            var id:String=earned[keepsake_cursor%earned.size()];keepsake_cursor+=1
+            start_dialogue(memories[id],{"role":0,"kind":"touch","target":HOME_TABLE,"duration":2.0,"participants":[0]})
         "检查维护轮":say("轮架已经停稳了。" if machine_stopped else "夹臂仍在扫动，轮架还被安全锁扣住。先看看地上的维修槽。")
         "检查安全灯座":say("安全灯座照着检修槽，检修盖打开后才能接入。" if not lid_open else "安全灯已完成工作，检修槽里没有转动的构件了。")
         "检查导光轨":say("两条导轨通向不同的缓冲座。" if not lid_open else "缓冲座已卸下检修盖的压力，两枚销保持锁定。")
@@ -249,8 +342,10 @@ func interact(role:int)->void:
             if role!=1:say("团团的爪钩能拉到夹臂下的小锁。");return
             if arm_arrest<=0:say("机械臂还在摆。等朵朵把它挡进维修卡槽。");return
             arm_locked=true;stage_checkpoint=1;phase="lure";clear_holds();arm_arrest=0
-            say("第一处锁定。夹臂停住了，吸光口仍然转动——把光引到旁边的缓冲座。",2)
-        "盾牌维修卡槽":say("黄色圈是夹臂将接触的范围。面向机器举盾可以一直挡住，停稳后小锁才够得到。")
+            observe("arm_locked","夹臂锁在外台，下面的短道空出来了。" if arm_route==1 else "夹臂锁稳了，横在中间的短道上；南边的平台仍通着。",selected_slot())
+        "盾牌维修卡槽":
+            if role==0:arm_route=0;boss_clock=0
+            observe("near_plan","导轨停在近槽；夹臂锁在这里，会横过中间的短通道。",SHIELD_SLOT)
         "缓冲导光台":
             if role!=2:say("导光扣能把光接入上下两条导轨。");return
             var chosen:=light_route()
@@ -261,92 +356,114 @@ func interact(role:int)->void:
             say("吸光口朝亮起的缓冲座偏转，盖边的一枚销露出来。" if beam_held else "圆圆收光，吸口回到中央；已经扣牢的销不动。")
         "外侧维护轮":
             if role!=0:say("轮架很重，朵朵才能拨到下一处卡口。");return
-            wheel_from=float(wheel_notch)*TAU/3;wheel_motion=0.4
-            act(0,"hold",0.4);wheel_held=true;stroke_time=0.55
             if phase=="lure":
-                wheel_notch=lid_pins+1
-                if beam_held and beam_route==lid_pins+1:
-                    lid_pins+=1;wheel_progress=float(lid_pins)
-                    say("维护轮扣住露出的销。另一枚仍被吸口压着，光路需要重新调整。",1)
+                wheel_from=float(wheel_notch)*TAU/3;wheel_notch=(wheel_notch+1)%3;wheel_motion=0.4
+                act(0,"hold",0.4)
+                if beam_held and beam_route in [1,2]:
+                    if beam_route==1:lower_pin=true
+                    else:upper_pin=true
+                    lid_pins=int(lower_pin)+int(upper_pin);wheel_progress=float(lid_pins)
+                    observe("lid_pin","露出的销扣住了，另一个缓冲座可以独立试。",WHEEL)
                     if lid_pins==2:
                         lid_open=true;stage_checkpoint=2;phase="unjam";clear_holds();wheel_notch=0
-                        say("两枚销都锁稳，检修盖翻开了。盖下的折枝仍受着轮架挤压。",2)
-                else:
-                    recoil=0.6;say("轮扣碰到遮住的销，轻轻弹回。吸口仍在这边，已锁住的销没有松。")
+                        observe("lid_open","两侧压力都落到销上，检修盖翻开，轮架下还压着一根折枝。",REPAIR_SLOT)
+                else:recoil=0.6;observe("lid_blocked","轮扣碰到被吸口遮住的销，轻轻弹回；已扣牢的一枚没有松。",WHEEL)
             else:
-                wheel_notch=(wheel_notch+1)%3;wheel_ready=true
-                say("卸力架换到下一处缺口，固定住了。看看折枝能否沿着空隙出来。",1)
+                load_held=not load_held;actions[0]="hold" if load_held else ""
+                if load_held:load_return_time=0;load_return_from=0
+                observe("load_lift","轮架被抬起，两个撑扣孔都露出来了。" if load_held else "朵朵松开卸力柄，重量落回撑扣或轮架。",WHEEL)
         "安全固定灯座":
             if role!=2:say("圆圆的定光扣才能接入安全固定座。");return
             if fixed_light:
                 if near(1,REPAIR_SLOT,85):say("团团还在检修槽里。先让它向下退出，再收灯。");return
                 fixed_light=false;actions[2]="";say("圆圆收回安全光，已经拉出的枝条由棘轮锁住。");return
-            fixed_light=true;beam_held=false;act(2,"light");say("光束接入安全固定座。圆圆可以自由走动，不需要第三路同时操作。",2)
+            worklight_seen=true;beam_held=false;act(2,"light")
+            if not isolation_open:
+                fixed_light=false;observe("work_return","光刚到灯座，就沿接回主线的细管被吸走了。",CRADLE);return
+            fixed_light=true;observe("work_kept","圆圆收起爪子，独立灯座仍照着检修槽。",CRADLE)
         "检修槽折枝":
-            if role!=1 or not fixed_light:say("安全光还没接好，窄槽里看不清。");return
+            if role!=1 or not fixed_light:say("窄槽里很暗，看不清折枝下面的重量。");return
             hook_held=true;act(1,"paw",0.55);stroke_time=0.55
-            if not wheel_ready or wheel_notch!=branch_direction():
-                recoil=0.6;say("弯枝顶住了轮架，爪钩轻轻弹回。换个卸力方向再试，棘轮留住了已拉出的部分。");return
-            cleared_segments+=1;pull_progress=0;wheel_ready=false
-            say("团团主动拉出一段，棘轮咔哒锁稳。下一处弯折露出来了。",1)
-            if cleared_segments>=3:
-                machine_stopped=true;stage_checkpoint=3;phase="withdraw";clear_holds()
-                act(1,"paw",0.55);stroke_time=0.55
-                say("最后一段折枝滑出，回位扣落进停止槽。团团先退到安全平台，再收灯。",2)
+            if left_released and right_released:
+                cleared_segments=3;machine_stopped=true;stage_checkpoint=3;phase="withdraw";clear_holds()
+                observe("branch_out","两侧的棘轮都承担了重量，折枝终于自由滑出。机器停稳了。",REPAIR_SLOT);return
+            if support_site=="left" and not left_released:left_released=true
+            elif support_site=="right" and not right_released:right_released=true
+            else:recoil=0.6;observe("branch_pinned","枝条仍被没有支撑的一侧挤住，轻拉只让轮架晃了一下。",REPAIR_SLOT);return
+            cleared_segments=int(left_released)+int(right_released)
+            # A newly latched jaw changes the balance; its cam returns the handle.
+            # A posted hold survives time and role switches, but not this load transfer.
+            load_return_from=-0.45 if load_held else 0.0;load_return_time=0.4
+            if load_held:act(0,"touch",0.35)
+            load_held=false
+            if cleared_segments==1:
+                observe("load_shift","这一侧棘轮落锁，撑扣松了。轮架向"+("右" if left_released else "左")+"侧沉下，卸力柄回到了手边。朵朵：重量换边了，我再接住。",WHEEL)
+            else:observe("jaw_locked","两侧棘轮都接住重量，卸力柄回到中央；折枝已经不受压了。",REPAIR_SLOT)
         "解除定光保持":
             if role!=2:return
             if near(1,REPAIR_SLOT,85):say("团团还在检修槽里。先让它向下退出，再收灯。");return
             fixed_light=false;clear_holds();phase="test";say("三位退回安全平台。阿灯：如果又熄了呢？朵朵：先亮一小段，我们一起看。",1)
         "测试导光板":
             if role!=0:say("朵朵来对准导光板，圆圆照出接点。");return
-            plate_aligned=faces(0,TEST_END);act(role,"hold")
-            say("导光板对准右侧远灯，送出的光沿箭头前进。" if plate_aligned else "导光板还朝错方向。箭头指向右侧的远灯。")
+            pilot_route=0 if facing[0].x>=0 else 1;plate_aligned=true;act(role,"hold")
+            observe("pilot_route","导光板连到钟楼试送支路。" if pilot_route==0 else "导光板连到集市试送支路。",TEST_PLATE)
         "测试接点":
             if role!=2:say("测试接点要圆圆的定光扣照亮。");return
             beam_held=not beam_held;actions[2]="light" if beam_held else "";action_time[2]=0.4
             say("圆圆打开测试光束；看光是在往外送，还是回到树心。" if beam_held else "圆圆暂时收光，测试可以再来。")
         "观察远灯":
             if role!=0:say("远灯的接点就在这里，等朵朵来一起确认。");return
-            if not test_beam_ready():say("远灯还暗着。回头看看光在哪个接点拐走了。");return
+            if not pilot_charged:say("远灯还暗着。回头看看光在哪个接点拐走了。");return
+            if beam_held:
+                pilot_waiting=true;actions[0]="hold";action_time[0]=0
+                say("朵朵留在远灯旁等着：圆圆，先收回便携光。我在这里看看它还亮不亮。");return
             tested=true;phase="release";clear_holds();outward_light=true;act(0,"pet")
-            say("朵朵摸了摸远灯底座：光送到这里了，没有回流。可以去告诉阿灯。",2)
-        "阿灯":say("阿灯：备用灯匣已经分送驿站。我会和居民一起查线路，把收、送两个闸口标清楚。" if network_lit else "阿灯：先试一段吧。我在这儿看着。")
+            start_dialogue(["圆圆收回光，远灯仍稳稳亮着。", "钟楼传来久违的报时声。阿灯抬起头，听完了整段钟声。" if pilot_route==0 else "摊主在远处挥了挥布旗，又把收起的小招牌挂回灯下。"],{"role":0,"kind":"touch","target":selected_test_end(),"duration":2.0,"participants":[0,2]})
+        "阿灯":
+            if phase=="test":
+                pilot_open=true;observe("pilot_open","阿灯只打开一条试送小闸：我先陪你们看这一盏。",ALIGHT)
+            else:say("阿灯：我和居民一起查线路。今天，不把灯都收回来了。")
         "阿灯送光闸":
             if role!=0:return
             network_lit=true;phase="network";clear_holds();extras["outward_verified"]=true
-            say("阿灯打开送光闸。树根、集市、钟楼和运输桥依次亮起。阿灯：原来一直收着，路也会不见。",2)
+            start_dialogue(["驿站窗下的旧灯先亮了。栗婆婆放下油壶，抬头看向路牌。","运输桥边的长灯接着亮起。永久桥锁稳稳承着路，货车重新驶过河岸。","钟楼的铜片亮起来，钟声越过山坡。留在门外的人终于看清回家的路。","集市重新摆出晚间的小摊。阿灯：原来把光送出去，才看得见大家。"],{"role":0,"kind":"network","target":ALIGHT,"duration":0.1,"participants":[]})
         "送往集市的升降台":
             if not exit_gather(LIFT):return
             phase="farewell";clear_holds();positions=[Vector2(230,500),Vector2(285,550),Vector2(210,590)]
             say("升降台到了明亮的集市。摊主挂回路灯，栗婆婆从修好的桥上来接你们。可自由告别，再一起回家。",2)
         "挂好路灯的摊主":act(role,"pet" if role==0 else "paw");say("摊主：灯罩修好了，路灯也回来了。谢谢你们，路上慢慢走。")
         "栗婆婆的木灯挂件":
-            farewell_gift=true;extras["wood_lamp"]=true;act(role,"pet" if role==0 else "paw")
-            say("栗婆婆送来不带魔力的小木灯挂件，也把旅人工具赠给大家。朵朵：回去准备好好休息。",3)
+            if role!=0:say("栗婆婆摸摸猫背，从布包里拿出一个小挂件。");return
+            if farewell_gift:say("栗婆婆：挂件放好了。路上慢慢走。");return
+            gift_pending=true
+            stage_social(["栗婆婆从布包里拿出一枚小木灯挂件，放进朵朵掌心。","栗婆婆：不带魔力。就是记着，这条路有人一起修过。","朵朵：我们会好好收着。还有这些工具，谢谢您。"],{"role":0,"kind":"receive","target":GRANNY,"duration":2.0,"participants":[0,1,2]},{0:GRANNY+Vector2(48,32)})
         "归途门":
             if not exit_gather(PORTAL):return
             if not tag_inserted:
                 if role!=0 or not home_tag:say("朵朵把记着家门的路牌插入灯座，才能找到原来的走廊。");return
-                tag_inserted=true;act(role,"pet");say("家门路牌插好了。熟悉的走廊出现。朵朵：这次一起。朵朵和猫咪各确认一次。",1);return
+                tag_inserted=true;act(role,"pet");start_dialogue(["家门路牌插好了，熟悉的走廊慢慢出现。","朵朵低下头，等团团和圆圆靠过来：这次一起。"],{"role":0,"kind":"pet","target":PORTAL,"duration":2.0,"participants":[0,1,2]});return
             portal_confirms[role]=true;act(role,"pet" if role==0 else "paw")
-            if portal_confirms[0] and (portal_confirms[1] or portal_confirms[2]):
+            if single or (portal_confirms[0] and (portal_confirms[1] or portal_confirms[2])):
                 phase="home";clear_holds();positions=[Vector2(420,540),Vector2(480,580),Vector2(360,590)]
-                farewell_gift=true;extras["wood_lamp"]=true;say("仍是那个下午。三位一起跨回家门，桌上多了一枚小木灯挂件。先放好装备，擦掉猫爪上的灰。",2)
+                start_dialogue(["三位跨回家门。窗外的光，仍停在出发时的位置。","朵朵把手放在两个毛茸茸的脑袋之间，终于慢慢松了一口气。"],{"role":0,"kind":"pet","target":positions[1],"duration":2.0,"participants":[0,1,2]})
             else:say("确认好了，等另一位伙伴也准备好。")
         "收好冒险装备":
             if role!=0:say("猫咪蹭了蹭装备架，等朵朵把剑盾和定光扣放好。");return
             gear_stored=true;act(role,"pet");say("背包、木剑、盾和两套猫咪装备整齐放好。今天不用再出发了。",1)
         "擦擦猫爪":
             if role!=0:return
-            if not all_near(HOME_BOWL,160):say("把两只猫都带到水盆旁，检查一下猫爪。");return
-            paws_clean=true;act(0,"pet");act(1,"paw");act(2,"paw");say("朵朵检查两只猫的爪子，擦掉灰。团团抱住手指，圆圆舒服地眯起眼。",3)
-        "摸摸猫":home_pets+=1;act(0,"pet");say("团团舔了舔手，又抱着手指玩；圆圆把脸送到掌心。都在就好。",3)
+            var cat:int=1 if not cat_one_clean and (cat_two_clean or positions[1].distance_to(HOME_BOWL)<=positions[2].distance_to(HOME_BOWL)) else 2
+            care_pending=cat
+            var care_point:Vector2=HOME_BOWL+Vector2(-35 if cat==1 else 35,15)
+            stage_social(["朵朵拧好软布，轻轻托起团团的前爪。" if cat==1 else "圆圆把爪子放到软布上，眯起了眼睛。", "团团抱住手指，舔了一下，才肯松开。" if cat==1 else "圆圆甩了甩尾尖，顺势把脸送进朵朵掌心。"],{"role":0,"kind":"pet","target":care_point,"duration":2.0,"participants":[0,cat]},{cat:care_point})
+        "摸摸猫":
+            home_pets+=1
+            start_dialogue(["团团舔了舔手，又抱住手指；圆圆把脸送到掌心。","朵朵：都在就好。"],{"role":0,"kind":"pet","target":positions[1],"duration":2.0,"participants":[0,1,2]})
         "安心休息 · 主动结束":
             if role!=0:return
             if not gear_stored or not paws_clean:say("先把装备收好，检查两只猫的爪子，再安心休息。");return
-            if not exit_gather(HOME_SOFA):return
-            finished=true;phase="complete";extras["home_finished"]=true;extras["wood_lamp"]=true
-            act(0,"sit");say("朵朵：好了，现在真的可以休息了。都在就好。\n栗婆婆照看驿站，集市亮着灯，阿灯和居民一起检查道路。",2)
+            home_rest_pending=true
+            stage_social(["朵朵坐回原来的沙发。团团挨着膝盖，圆圆团在另一边。","朵朵：好了……现在真的可以休息了。"],{"role":0,"kind":"sit","target":HOME_SOFA,"duration":120.0,"participants":[0,1,2]},{0:HOME_SOFA+Vector2(-12,18),1:HOME_SOFA+Vector2(50,42),2:HOME_SOFA+Vector2(-60,40)})
         "家里的沙发":act(role,"sit");say("小木灯挂件安静地放在桌上。路已经修好，大家都在家。")
 
 func guard(role:int,held:bool)->void:
@@ -356,6 +473,9 @@ func guard(role:int,held:bool)->void:
     if phase=="shield":actions[0]="brace" if held else ""
 
 func tool(role:int)->void:
+    if dialogue_active() or social_transition_active():return
+    if role==0 and target(role) in ["外台升降柄","外侧维护轮"]:interact(role);return
+    if role==1 and target(role) in ["外台棘轮","工作灯隔离环","备用撑扣","左卸重座","右卸重座"]:interact(role);return
     if role==0:
         guard(0,not shield_held)
         if phase!="shield":say("朵朵举起盾观察周围，附近没有摆动的夹臂。")
@@ -373,17 +493,17 @@ func light_route()->int:
     return 0
 
 func branch_direction()->int:
-    return [1,0,2][mini(cleared_segments,2)]
+    return 0 if support_site=="left" else 2
 
 func test_beam_ready()->bool:
     return plate_aligned and beam_held and near(2,TEST_SOURCE,72) and actions[2]=="light" and faces(2,TEST_END)
 
 func arm_tip()->Vector2:
-    if arm_locked or arm_arrest>0:return SHIELD_SLOT
+    if arm_locked or arm_arrest>0:return selected_slot()
     var t:=fmod(boss_clock,4.6)
     var rest:=Vector2(715,370)
-    if t<=1.8:return rest.lerp(SHIELD_SLOT,smoothstep(1.1,1.8,t))
-    return SHIELD_SLOT.lerp(rest,smoothstep(1.95,2.65,t))
+    if t<=1.8:return rest.lerp(selected_slot(),smoothstep(1.1,1.8,t))
+    return selected_slot().lerp(rest,smoothstep(1.95,2.65,t))
 
 func attack(role:int)->void:
     if role not in [0,1,2]:return
@@ -394,12 +514,22 @@ func safe_setback()->void:
     failed_sweeps+=1;arm_arrest=0;shield_held=false
     var pads:=[Vector2(590,565),Vector2(760,620),Vector2(575,620)]
     for role in available_roles():
-        if near(role,SHIELD_SLOT,ARM_RADIUS):positions[role]=pads[role];actions[role]="sit";action_time[role]=0.6
+        if near(role,selected_slot(),ARM_RADIUS):positions[role]=pads[role];actions[role]="sit";action_time[role]=0.6
     say("柔软夹臂把圈内的伙伴推回安全垫。没有受伤；圈外安全，已锁定的维修不倒退。")
 
 func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
+    if social_transition_active():
+        if enabled and is_finite(dt) and dt>0 and a.is_finite() and b.is_finite():step_social_transition(dt)
+        return
     if not enabled or not is_finite(dt) or dt<=0 or not a.is_finite() or not b.is_finite():return
+    if dialogue_active() or social_transition_active():return
     super.step(dt,a,b,enabled);dt=minf(dt,0.05)
+    if pilot_waiting and (phase!="test" or not near(0,selected_test_end(),62) or actions[0]!="hold"):pilot_waiting=false
+    load_return_time=maxf(0,load_return_time-dt)
+    if prep_held and (not near(0,PREP_HANDLE,58) or actions[0]!="brace"):prep_held=false
+    if load_held and (not near(0,WHEEL,65) or actions[0]!="hold"):load_held=false
+    if load_held:actions[0]="hold"
+    if prep_held:actions[0]="brace"
     if phase=="shield":
         if arm_arrest>0:
             arm_arrest=maxf(0,arm_arrest-dt)
@@ -409,25 +539,28 @@ func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
         boss_clock+=dt
         var now:=fmod(boss_clock,4.6)
         if before<1.8 and now>=1.8:
-            if shield_held and near(0,SHIELD_SLOT,ARM_RADIUS) and faces(0,MACHINE):
+            if shield_held and near(0,selected_slot(),ARM_RADIUS) and faces(0,MACHINE):
                 arm_arrest=5.5;act(0,"brace");say("夹臂落入维修卡槽！团团趁它停稳拉下锁扣。",1)
-            elif near(0,SHIELD_SLOT,ARM_RADIUS) or near(1,SHIELD_SLOT,ARM_RADIUS) or near(2,SHIELD_SLOT,ARM_RADIUS):safe_setback()
+            elif near(0,selected_slot(),ARM_RADIUS) or near(1,selected_slot(),ARM_RADIUS) or near(2,selected_slot(),ARM_RADIUS):safe_setback()
     recoil=maxf(0,recoil-dt);stroke_time=maxf(0,stroke_time-dt);wheel_motion=maxf(0,wheel_motion-dt)
     if stroke_time<=0:
         hook_held=false;wheel_held=false
-        if actions[0]=="hold" and phase in ["lure","unjam"]:actions[0]=""
+    # A lure stroke is brief; unloading is a posted hold until release or movement.
+    if phase=="lure" and action_time[0]<=0 and actions[0]=="hold":actions[0]=""
     if beam_held and actions[2]!="light":beam_held=false;beam_route=0
     if phase=="lure" and beam_held and not near(2,AIM_STAND,70):beam_held=false;beam_route=0
     if phase=="test":
-        outward_light=test_beam_ready()
+        if pilot_open and test_beam_ready():pilot_charged=true
+        outward_light=pilot_charged
         test_progress=0
 
 func restore_complete()->void:
     joined=true;finished=true;allow_epilogue=true;phase="complete"
     route_lock=true;route_supported=true;route_lit=true;bridge_locked=true;arm_locked=true;lid_open=true;machine_stopped=true;stage_checkpoint=3;lid_pins=2;cleared_segments=3
     tested=true;outward_light=true;network_lit=true;gear_stored=true;paws_clean=true
+    lower_pin=true;upper_pin=true;left_released=true;right_released=true;worklight_seen=true;plate_aligned=true;pilot_open=true;pilot_charged=true;cat_one_clean=true;cat_two_clean=true
     farewell_gift=true;tag_inserted=true;clear_holds()
-    positions=[Vector2(850,450),Vector2(940,510),Vector2(835,540)]
+    positions=[HOME_SOFA+Vector2(-12,18),HOME_SOFA+Vector2(50,42),HOME_SOFA+Vector2(-60,40)]
     say("三位已经平安回家。可以继续走走、摸摸猫，桌上的小木灯挂件还在。")
 
 func completion_text()->String:
@@ -491,18 +624,18 @@ func draw_world(v:Node2D)->void:
             for i in range(3):
                 var t:=fmod(clock*0.8+i*0.33,1.0)
                 v.draw_circle((buffer_pos+Vector2(11,-38)).lerp(mouth,t),4,amber)
-    v.prop(8,Rect2(SHIELD_SLOT-Vector2(38,24),Vector2(76,49)))
-    v.draw_line(SHIELD_SLOT+Vector2(-25,-7),SHIELD_SLOT+Vector2(25,-7),amber,5)
+    v.prop(8,Rect2(selected_slot()-Vector2(38,24),Vector2(76,49)))
+    v.draw_line(selected_slot()+Vector2(-25,-7),selected_slot()+Vector2(25,-7),amber,5)
     if phase=="shield" and arm_arrest<=0 and fmod(boss_clock,4.6)<1.8:
         var bright:=0.35+0.35*sin(boss_clock*13)
-        v.draw_circle(SHIELD_SLOT,ARM_RADIUS,Color(1,0.72,0.35,bright*0.2))
-        v.draw_arc(SHIELD_SLOT,ARM_RADIUS,0,TAU,48,Color(1,0.72,0.35,bright),4)
-        v.arrow(SHIELD_SLOT+Vector2(0,-70),SHIELD_SLOT.direction_to(MACHINE),amber)
-        v.ink(SHIELD_SLOT+Vector2(-205,-75),"夹臂将落在圈内",220,22)
+        v.draw_circle(selected_slot(),ARM_RADIUS,Color(1,0.72,0.35,bright*0.2))
+        v.draw_arc(selected_slot(),ARM_RADIUS,0,TAU,48,Color(1,0.72,0.35,bright),4)
+        v.arrow(selected_slot()+Vector2(0,-70),selected_slot().direction_to(MACHINE),amber)
+        v.ink(selected_slot()+Vector2(-205,-75),"夹臂将落在圈内",220,22)
     if shield_held:
         v.draw_arc(positions[0]+facing[0]*25,28,facing[0].angle()-1.1,facing[0].angle()+1.1,14,Color("e9d6a4"),9)
-    v.prop(3,Rect2(ARM_LOCK-Vector2(20,30),Vector2(40,49)),0.0,Color("b3ce9e") if arm_locked else Color.WHITE)
-    v.rope(ARM_LOCK,SHIELD_SLOT)
+    v.prop(3,Rect2(selected_lock()-Vector2(20,30),Vector2(40,49)),0.0,Color("b3ce9e") if arm_locked else Color.WHITE)
+    v.rope(selected_lock(),selected_slot())
     # Both reversible light rails and their pins remain visible in world space.
     for index in range(2):
         var buffer_pos:=BUFFER if index==0 else UPPER_BUFFER
@@ -513,40 +646,24 @@ func draw_world(v:Node2D)->void:
         v.lamp(buffer_pos,live)
         var pin:=Vector2(845+index*58,455-index*20)
         v.draw_line(buffer_pos+Vector2(11,-38),pin,Color(rail_color,0.45),2)
-        v.prop(3,Rect2(pin-Vector2(12,18),Vector2(24,36)),PI/2 if lid_pins>index else 0,Color("b3ce9e") if lid_pins>index else Color.WHITE)
+        var pin_locked:bool=lower_pin if index==0 else upper_pin
+        v.prop(3,Rect2(pin-Vector2(12,18),Vector2(24,36)),PI/2 if pin_locked else 0,Color("b3ce9e") if pin_locked else Color.WHITE)
     v.lamp(AIM_STAND,false)
     v.arrow(AIM_STAND+Vector2(30,-25),Vector2.RIGHT,amber)
     v.arrow(AIM_STAND+Vector2(-15,-45),Vector2.UP,amber)
     var wheel_angle:=lerpf(wheel_from,float(wheel_notch)*TAU/3,1-wheel_motion/0.4)+sin(recoil*30)*recoil*0.2
+    if phase=="unjam":wheel_angle=unloading_wheel_angle()
     v.prop(1,Rect2(WHEEL-Vector2(43,43),Vector2(86,86)),wheel_angle)
-    if phase=="unjam":
-        var dirs:=[Vector2.LEFT,Vector2.UP,Vector2.RIGHT]
-        for i in range(3):
-            v.arrow(WHEEL+dirs[i]*54,dirs[i],amber if wheel_notch==i else Color("737e6e"))
     if lid_open:
         v.prop(11,Rect2(830,452,90,55))
         v.prop(12,Rect2(800,403,63,54),-0.95)
     else:v.prop(12,Rect2(830,452,90,55))
-    if phase=="unjam":
-        var gap_angle:float=[PI,-PI/2,0.0][wheel_notch]
-        # Wooden jaws surround the branch except on the selected unloading side.
-        v.draw_arc(BRANCH_DISPLAY,43,gap_angle+0.65,gap_angle+TAU-0.65,40,Color("493f33"),15)
-        v.draw_arc(BRANCH_DISPLAY,43,gap_angle+0.65,gap_angle+TAU-0.65,40,Color("b6a078"),8)
-        v.draw_line(BRANCH_DISPLAY+Vector2(45,0),WHEEL+Vector2(-40,0),Color("9f8a69"),3)
-        v.machine_arm(REPAIR_SLOT+Vector2(18,8),BRANCH_DISPLAY+Vector2(-45,0),8)
     if lid_open and not machine_stopped:
-        var dirs:=[Vector2.LEFT,Vector2.UP,Vector2.RIGHT]
-        var root_point:=BRANCH_DISPLAY
-        var bend:Vector2=root_point+dirs[branch_direction()]*34+Vector2(sin(recoil*30)*recoil*16,0)
-        var branch_dir:Vector2=dirs[branch_direction()]
-        var end_point:=bend+branch_dir*12+branch_dir.orthogonal()*22
-        for segment in [[root_point,bend],[bend,end_point]]:
-            v.draw_line(segment[0],segment[1],Color("392719"),15,true)
-            v.draw_line(segment[0],segment[1],Color("bd9059"),9,true)
-            v.draw_line(segment[0]+Vector2(0,-2),segment[1]+Vector2(0,-2),Color("e1bf83"),2,true)
-        v.draw_circle(bend,7,Color("392719"));v.draw_circle(bend,4,Color("d6b079"))
-        v.draw_line(end_point,end_point+branch_dir.orthogonal()*10,Color("392719"),5,true)
-        v.ink(BRANCH_DISPLAY+Vector2(-38,75),"棘轮 %d / 3"%cleared_segments,150,16)
+        var branch_points:Array[Vector2]=[BRANCH_DISPLAY+Vector2(-45,4),BRANCH_DISPLAY,BRANCH_DISPLAY+Vector2(20,-22)]
+        for index in range(2):
+            v.draw_line(branch_points[index],branch_points[index+1],Color("392719"),14,true)
+            v.draw_line(branch_points[index],branch_points[index+1],Color("bd9059"),8,true)
+        v.ink(BRANCH_DISPLAY+Vector2(-44,58),"两侧已卸重" if left_released and right_released else "左侧已锁" if left_released else "右侧已锁" if right_released else "轮架压住折枝",160,16)
     if hook_held or stroke_time>0 and phase=="withdraw":
         var pull_end:=BRANCH_DISPLAY+Vector2(-sin(stroke_time/0.55*PI)*22,0)
         v.rope(positions[1]+Vector2(0,-18),pull_end)
@@ -559,19 +676,23 @@ func draw_world(v:Node2D)->void:
     v.ink(MACHINE+Vector2(-64,-147),"停止" if machine_stopped else "回收机构",220,24)
     v.ink(MACHINE+Vector2(-74,-124),"维修进度 %d / 3"%stage_checkpoint,210,17)
     if phase in ["test","release","network"]:
-        v.lamp(TEST_SOURCE,beam_held or tested);v.lamp(FAR_LAMP,tested or outward_light)
-        v.draw_line(TEST_END,FAR_LAMP,Color("9f8a69"),4)
+        v.lamp(TEST_SOURCE,beam_held);v.lamp(selected_test_end()+Vector2(50,-25),tested or outward_light)
+        v.draw_line(selected_test_end(),selected_test_end()+Vector2(50,-25),Color("9f8a69"),4)
         v.prop(8,Rect2(TEST_PLATE-Vector2(31,33),Vector2(62,58)),0.45 if plate_aligned else -0.55)
-        if beam_held or tested:
-            v.draw_line(TEST_SOURCE+Vector2(11,-38),TEST_PLATE+Vector2(0,-10),amber,4)
-            v.draw_line(TEST_PLATE+Vector2(0,-10),FAR_LAMP+Vector2(11,-38) if outward_light else MACHINE,amber if outward_light else Color("8e9bb2"),5)
+        if beam_held or pilot_charged:
+            if beam_held:v.draw_line(TEST_SOURCE+Vector2(11,-38),TEST_PLATE+Vector2(0,-10),amber,4)
+            if pilot_charged:v.draw_line(ALIGHT+Vector2(25,-25),TEST_PLATE+Vector2(0,-10),amber,3)
+            v.draw_line(TEST_PLATE+Vector2(0,-10),selected_test_end()+Vector2(61,-63) if outward_light else MACHINE,amber if outward_light else Color("8e9bb2"),5)
             for i in range(5):
                 var t:=fmod(clock*0.35+i*0.2,1.0)
-                v.draw_circle((TEST_PLATE+Vector2(0,-10)).lerp(FAR_LAMP+Vector2(11,-38) if outward_light else MACHINE,t),5,Color("fff0b4"))
-        v.arrow(TEST_PLATE+Vector2(65,27),Vector2.RIGHT,amber)
+                v.draw_circle((TEST_PLATE+Vector2(0,-10)).lerp(selected_test_end()+Vector2(61,-63) if outward_light else MACHINE,t),5,Color("fff0b4"))
+        v.arrow(TEST_PLATE+Vector2(65,27),Vector2.RIGHT,amber if pilot_route==0 else Color("737e6e"))
+        v.arrow(TEST_PLATE+Vector2(-65,27),Vector2.LEFT,amber if pilot_route==1 else Color("737e6e"))
+        v.ink(TEST_MARKET+Vector2(-30,44),"集市试送",140,16)
+        v.ink(TEST_END+Vector2(-30,44),"钟楼试送",140,16)
     v.alight(ALIGHT)
-    v.prop(3,Rect2(ALIGHT+Vector2(25,-25),Vector2(34,45)),0.8 if network_lit else 0.0)
-    v.lamp(ALIGHT+Vector2(44,-42),network_lit)
+    v.prop(3,Rect2(ALIGHT+Vector2(25,-25),Vector2(34,45)),0.8 if network_lit else 0.4 if pilot_open else 0.0)
+    v.lamp(ALIGHT+Vector2(44,-42),network_lit or pilot_open)
     v.ink(ALIGHT+Vector2(-25,-107),"阿灯",120,20)
     if network_lit:
         for i in range(6):
@@ -579,3 +700,36 @@ func draw_world(v:Node2D)->void:
             v.lamp(p,true)
             if i>0:v.draw_line(p-Vector2(135,0),p,amber,4)
         v.prop(0,Rect2(LIFT-Vector2(47,15),Vector2(94,35)))
+
+func presentation()->Dictionary:
+    var data:Dictionary=super.presentation()
+    data["mechanisms"]=[
+        {"id":"near_slot","position":SHIELD_SLOT,"load":arm_locked and arm_route==0,"lit":false,"angle":0.0,"connection":"selected" if arm_route==0 else "idle"},
+        {"id":"far_slot","position":FAR_SLOT,"load":arm_locked and arm_route==1,"lit":false,"angle":0.0,"connection":"selected" if arm_route==1 else "idle"},
+        {"id":"far_lock","position":FAR_LOCK,"load":arm_locked and arm_route==1,"lit":false,"angle":0.0,"connection":"arm"},
+        {"id":"prep_handle","position":PREP_HANDLE,"load":prep_held,"lit":false,"angle":0.4 if prep_held else 0.0,"connection":"far_platform"},
+        {"id":"prep_latch","position":PREP_LATCH,"load":far_walkway,"lit":false,"angle":0.5 if far_walkway else 0.0,"connection":"far_platform"},
+        {"id":"work_isolator","position":ISOLATOR,"load":false,"lit":fixed_light,"angle":1.0 if isolation_open else 0.0,"connection":"isolated" if isolation_open else "main"},
+        {"id":"pin_rack","position":PIN_RACK,"load":support_site=="rack","lit":false,"angle":0.0,"connection":support_site},
+        {"id":"load_frame","position":Vector2(867.5,540),"load":not load_held and load_center_side()!="none","lit":false,"angle":load_tilt(),"connection":load_center_side()},
+        {"id":"left_socket","position":LEFT_SOCKET,"load":support_site=="left","lit":left_released,"angle":0.0,"connection":"locked" if left_released else "raised" if load_held else "loaded"},
+        {"id":"right_socket","position":RIGHT_SOCKET,"load":support_site=="right","lit":right_released,"angle":0.0,"connection":"locked" if right_released else "raised" if load_held else "loaded"}]
+    data["paths"]=[{"id":"far_platform","points":[Vector2(615,312),Vector2(700,255)],"width":65.0,"state":"permanent" if far_walkway else "closed","roles":[0,1,2]},
+        {"id":"service_shortcut","points":[Vector2(630,435),Vector2(735,435),Vector2(735,478),Vector2(815,478)],"width":22.0,"state":"permanent" if arm_locked and arm_route==1 else "closed","roles":[0,1,2]},
+        {"id":"service_front","points":[Vector2(815,478),Vector2(1070,478)],"width":22.0,"state":"permanent","roles":[0,1,2]}]
+    data["paths"].append({"id":"pilot_light","points":[ALIGHT+Vector2(25,-25),TEST_PLATE,selected_test_end()],"width":3.0,"state":"light" if pilot_charged else "dark","roles":[]})
+    data["selected_test_end"]=selected_test_end()
+    data["arm_route"]=arm_route;data["support_site"]=support_site;data["worklight"]=fixed_light;data["load_held"]=load_held
+    data["load_center_side"]=load_center_side();data["load_tilt"]=load_tilt();data["load_return_progress"]=load_return_progress()
+    data["pilot_route"]=pilot_route;data["pilot_charged"]=pilot_charged;data["lower_pin"]=lower_pin;data["upper_pin"]=upper_pin
+    data["pilot_waiting"]=pilot_waiting
+    data["home_discoveries"]=journey_discoveries.duplicate();data["cat_one_clean"]=cat_one_clean;data["cat_two_clean"]=cat_two_clean
+    return data
+
+func social_arrived()->void:
+    if gift_pending:farewell_gift=true;extras["wood_lamp"]=true;gift_pending=false
+    if care_pending==1:cat_one_clean=true
+    elif care_pending==2:cat_two_clean=true
+    if care_pending>0:paws_clean=cat_one_clean and cat_two_clean;care_pending=-1
+    if home_rest_pending:
+        finished=true;phase="complete";extras["home_finished"]=true;home_rest_pending=false

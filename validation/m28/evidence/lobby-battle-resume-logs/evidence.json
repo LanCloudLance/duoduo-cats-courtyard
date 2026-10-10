@@ -1,0 +1,185 @@
+{
+  "namespace": "/Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-lobby-battle-resume",
+  "engine": "4.7.2.stable.official.ed1daf0bf",
+  "fixture_only_chapter_entry": true,
+  "actual_normal_input_after_fixture": true,
+  "reported_checks": 110,
+  "six_process_exit_codes": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "qa_source_sha256": {
+    "ui/lobby.gd": "934494c5c8027a1ffcd506a6eaebb50f68644e03043cc025660ee0be2ce15622",
+    "game/battle_journey.gd": "3999d9c2be1ea4e955ecccebbfd6b17213293093ae2fe031af97da95c6bc567d",
+    "game/chapter_one.gd": "73a566dba82448e64c44a88771880b3e88ea4a310f087d8a5d57dd241f851dcf",
+    "game/chapter_one_checkpoint.gd": "047179e262579028904ccf52a9be4711ccf806b0ef5ceae8349f7e9351ca1cad",
+    "game/battle_state.gd": "d07a4a4f4750541668bad6240ad4d60be5b8f1993116d3a76b8458c65227e1ea",
+    "tests/m28_lobby_battle_resume_test.gd": "3492d9971b5009b0598219d9bf97d17a21781c678d7bdbaf4795677d272b0489"
+  },
+  "receipts": {
+    "solo": {
+      "attack_events": 9.0,
+      "checkpoint_path": "user://story-run-1791652116816-1251484-one-solo-v2.json",
+      "dodge_events": 2.0,
+      "final_result": {
+        "completed_segments": 2,
+        "current_cat": 1,
+        "encounter_id": "first",
+        "mode": "solo",
+        "outcome": "complete",
+        "return_chapter": 1,
+        "return_phase": "battle",
+        "selected_role_id": 0,
+        "story_run_id": "story-run-1791652116816-1251484"
+      },
+      "final_stage": "chapter-one",
+      "final_story_phase": "station",
+      "first_result": {
+        "completed_segments": 1.0,
+        "current_cat": 1.0,
+        "encounter_id": "first",
+        "mode": "solo",
+        "outcome": "in_progress",
+        "return_chapter": 1.0,
+        "return_phase": "battle",
+        "selected_role_id": 0.0,
+        "story_run_id": "story-run-1791652116816-1251484"
+      },
+      "fixture": true,
+      "fixture_scope": "chapter-one battle checkpoint only; not full-route play",
+      "mode": "solo",
+      "partial_enemies": [
+        {
+          "hp": 5.0,
+          "kind": "weaver",
+          "max_hp": 5.0
+        },
+        {
+          "hp": 4.0,
+          "kind": "thorn",
+          "max_hp": 5.0
+        }
+      ],
+      "partial_wave": 2.0,
+      "prepare_pid": 53725.0,
+      "resume_checks": 23,
+      "resume_pid": 53740,
+      "resumed_waves": [
+        2
+      ],
+      "run_id": "story-run-1791652116816-1251484",
+      "saved_after_pause": {
+        "cleared_segments": 1.0,
+        "current_cat": 1.0,
+        "selected_role_id": 0.0
+      },
+      "segment_checks": 17.0,
+      "segment_pid": 53731.0,
+      "signature_events": 0.0,
+      "source_facts": {
+        "branch_clear": true,
+        "carrier": -1.0,
+        "clue_seen": false,
+        "core_found": false,
+        "core_installed": false,
+        "core_ready": false,
+        "equipment": true,
+        "fork_pos": [
+          585.0,
+          570.0
+        ],
+        "hood": 3.0,
+        "lit": false,
+        "supported": true,
+        "vent": 0.0
+      },
+      "source_history": [
+        "QA fixture: legal first-chapter battle checkpoint; puzzles were not played in this test."
+      ]
+    },
+    "dual": {
+      "attack_events": 9.0,
+      "checkpoint_path": "user://story-run-1791652121074-1171119-one-dual-v2.json",
+      "dodge_events": 2.0,
+      "final_result": {
+        "completed_segments": 2,
+        "current_cat": 1,
+        "encounter_id": "first",
+        "mode": "dual",
+        "outcome": "complete",
+        "return_chapter": 1,
+        "return_phase": "battle",
+        "selected_role_id": 0,
+        "story_run_id": "story-run-1791652121074-1171119"
+      },
+      "final_stage": "chapter-one",
+      "final_story_phase": "station",
+      "first_result": {
+        "completed_segments": 1.0,
+        "current_cat": 1.0,
+        "encounter_id": "first",
+        "mode": "dual",
+        "outcome": "in_progress",
+        "return_chapter": 1.0,
+        "return_phase": "battle",
+        "selected_role_id": 0.0,
+        "story_run_id": "story-run-1791652121074-1171119"
+      },
+      "fixture": true,
+      "fixture_scope": "chapter-one battle checkpoint only; not full-route play",
+      "mode": "dual",
+      "partial_enemies": [
+        {
+          "hp": 5.0,
+          "kind": "weaver",
+          "max_hp": 5.0
+        },
+        {
+          "hp": 4.0,
+          "kind": "thorn",
+          "max_hp": 5.0
+        }
+      ],
+      "partial_wave": 2.0,
+      "prepare_pid": 53741.0,
+      "resume_checks": 23,
+      "resume_pid": 53763,
+      "resumed_waves": [
+        2
+      ],
+      "run_id": "story-run-1791652121074-1171119",
+      "saved_after_pause": {
+        "cleared_segments": 1.0,
+        "current_cat": 1.0,
+        "selected_role_id": 0.0
+      },
+      "segment_checks": 17.0,
+      "segment_pid": 53752.0,
+      "signature_events": 1.0,
+      "source_facts": {
+        "branch_clear": true,
+        "carrier": -1.0,
+        "clue_seen": false,
+        "core_found": false,
+        "core_installed": false,
+        "core_ready": false,
+        "equipment": true,
+        "fork_pos": [
+          585.0,
+          570.0
+        ],
+        "hood": 3.0,
+        "lit": false,
+        "supported": true,
+        "vent": 0.0
+      },
+      "source_history": [
+        "QA fixture: legal first-chapter battle checkpoint; puzzles were not played in this test."
+      ]
+    }
+  }
+}

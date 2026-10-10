@@ -1,0 +1,10 @@
+{
+  "suite": "m28_mainline_playthrough_test",
+  "exit": 0,
+  "passed": true,
+  "checks": 667,
+  "namespace": "DuoduoCatsCourtyard-qa-m28-root",
+  "seconds": 7.29,
+  "issues": [],
+  "warnings": []
+}

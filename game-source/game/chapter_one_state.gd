@@ -54,6 +54,52 @@ var hint_level := 0
 var actions: Array[String] = ["",""]
 var action_time: Array[float] = [0.0,0.0]
 
+const NIGHT_LAMP:=Vector2(1060,505)
+var cloth_found:=false
+var night_shade:=false
+var night_vent:=false
+var night_lit:=false
+var nightlight_taken:=false
+var night_gift_pending:=false
+
+var dialogue:Array[String]=[]
+var dialogue_index:=0
+var social:Dictionary={}
+var social_remaining:=0.0
+var journey_discoveries:Array[String]=[]
+var social_goals:Dictionary={}
+var social_lines:Array[String]=[]
+var social_gesture:Dictionary={}
+func social_transition_active()->bool:return not social_goals.is_empty()
+func stage_social(lines:Array,gesture:Dictionary,goals:Dictionary)->void:
+    social_goals=goals.duplicate();social_lines.assign(lines);social_gesture=gesture.duplicate()
+    social=gesture.duplicate();social["stage"]="approach";social["kind"]="walk";social_remaining=30.0
+func step_social_transition(dt:float)->void:
+    if not is_finite(dt) or dt<=0:return
+    var done:=true
+    for role in social_goals:
+        var destination:Vector2=social_goals[role]
+        var offset:Vector2=positions[role].direction_to(destination)*minf(130.0*minf(dt,0.05),positions[role].distance_to(destination))
+        if offset.length()>0.01:facing[role]=offset.normalized();actions[role]="walk";move(role,offset)
+        if positions[role].distance_to(destination)>1.0:done=false
+    if done:
+        for role in social_goals:actions[role]=""
+        social_goals.clear();social_arrived();start_dialogue(social_lines,social_gesture)
+func social_arrived()->void:
+    if night_gift_pending:nightlight_taken=true;night_gift_pending=false
+
+func dialogue_active()->bool:return dialogue_index<dialogue.size()
+func start_dialogue(lines:Array,gesture:Dictionary={})->void:
+    dialogue.assign(lines);dialogue_index=0;social=gesture.duplicate();social_remaining=float(social.get("duration",1.5))
+    if dialogue_active():say(dialogue[0])
+func advance_dialogue()->void:
+    if not dialogue_active():return
+    dialogue_index+=1
+    if dialogue_active():say(dialogue[dialogue_index])
+func step_social(dt:float)->void:
+    social_remaining=maxf(0,social_remaining-dt)
+    if social_remaining<=0:social.clear()
+
 func say(text: String, sound := 0) -> void:
     message = text;message_time = 6.5;cue = sound;event_id += 1
     if history.is_empty() or history.back()!=text:
@@ -91,6 +137,7 @@ func target(role: int) -> String:
         if carrier < 0 and not supported and near(role,fork_pos): return "木撑"
         if branch_clear and near(role,ROAD_EXIT,85): return "林间小道"
     if phase in ["station","rest"]:
+        if near(role,NIGHT_LAMP,42):return "窗边小灯"
         if not core_found and near(role,BENCH): return "矮柜底" if role == 1 else "矮柜"
         if near(role,LAMP): return "灯座"
         if not lit and role == 0 and near(role,HOOD,58): return "遮风罩"
@@ -106,6 +153,7 @@ func objective() -> String:
     if phase == "rest": return "圆圆来过这里。一起歇一会儿"
     return "第一章完成 · 下一站，山坡钟楼"
 func tool(role:int)->void:
+    if dialogue_active() or social_transition_active():return
     if role not in [0,1] or finished or battle_requested:return
     var item:=target(role)
     if item in ["枝架抬手","放下枝架","木撑","安放木撑","放下木撑","受力绳扣","矮柜底","灯座","遮风罩","进气片"]:
@@ -122,9 +170,20 @@ func request_hint() -> void:
         say(["朵朵：矮柜下有白毛，也有一点灯芯的光。风把门边的布条吹向右边。","朵朵：火苗需要一点空气，也不能迎着风。观察进气片和罩口。","团团找灯芯送到灯座，朵朵装入；遮风罩开向东侧，进气片留小缝。"][hint_level-1])
     else: say("朵朵：路牌记着回家的方向。先问问这里的人，有没有见过一只白猫。")
 func interact(role: int) -> void:
+    if dialogue_active() or social_transition_active():return
     if role not in [0,1] or action_time[role]>0.1 or battle_requested: return
     var item := target(role)
     match item:
+        "窗边小灯":
+            if nightlight_taken:say("小灯已经收在背包里，花布角露在外面。");return
+            if not cloth_found:say("一盏独立的小灯立在窗边，外面灌来的风把细火苗压弯了。");return
+            if role==0:
+                night_shade=facing[0].dot(Vector2.LEFT)>0.6
+                act(0,"touch");say("朵朵把布挂在迎风的西侧，小灯不再左右摇晃。" if night_shade else "布挂到了背风的一边，小灯仍被穿堂风压住。")
+            else:
+                night_vent=not night_vent;act(1,"paw");say("团团给小灯拨开一道细细的进气缝。" if night_vent else "进气缝合上，小火苗暗了下去。")
+            night_lit=lit and night_shade and night_vent
+            if night_lit:say("窗边的小灯站稳了；大灯熄下时，它也能独自照着路牌。",2)
         "空路牌":
             extras["tag"] = true;act(role,"pet" if role==0 else "sniff")
             say("路牌浮出家门的轮廓。朵朵：嗯，回家的地址带上了。",1)
@@ -132,7 +191,10 @@ func interact(role: int) -> void:
             act(role,"pet" if role==0 else "sniff")
             if phase == "arrival":
                 equipment = true;extras["tag"] = true;phase = "road";hint_level = 0
-                say("栗婆婆：白猫往山坡去了。先借你木剑和盾。枝架后就是驿站，我们一起把灯修好。",1)
+                stage_social(["栗婆婆从包里取出一把木剑和小盾，递到朵朵手里。","栗婆婆：白猫往山坡去了。我的驿站也在那条路上。","朵朵接好装备，团团踮起脚，嗅了嗅陌生的木头。"],{"role":0,"kind":"receive","target":GRANNY,"duration":2.5,"participants":[0,1]},{0:GRANNY+Vector2(45,50),1:GRANNY+Vector2(85,65)})
+            elif night_lit and not nightlight_taken:
+                night_gift_pending=true
+                stage_social(["栗婆婆把窗边小灯摘下来，系上刚才挡风的花布。","栗婆婆：这盏自己就能亮着。你们愿意停下来修它，就带着吧。","朵朵双手接过来，团团碰了碰垂下的布角。"],{"role":0,"kind":"receive","target":GRANNY,"duration":2.5,"participants":[0,1]},{0:GRANNY+Vector2(45,50),1:GRANNY+Vector2(85,65)})
             elif lit: say("栗婆婆：圆圆睡够就往钟楼去了。归途门亮起，会带你回到离开的那个下午。")
             else: say("栗婆婆：备用灯芯掉进柜底了。灯罩被风扭歪，火苗总留不住。")
         "枝架抬手":
@@ -181,14 +243,14 @@ func interact(role: int) -> void:
             vent = (vent+1)%3;act(1,"paw")
             say(["进气片合上，灯里几乎没有空气。","进气片留着小缝，气流轻轻进去。","进气片敞开，气流一下子灌进灯座。"][vent])
         "白毛与脚印":
-            clue_seen = true;extras["route"] = true;act(role,"pet" if role==0 else "sniff")
-            say("软垫睡出一个圆坑，白毛旁的脚印朝山坡。朵朵：至少……它睡得挺舒服。",3)
+            clue_seen = true;cloth_found=true;extras["route"] = true;act(role,"pet" if role==0 else "sniff")
+            say("软垫睡出一个圆坑，白毛旁的脚印朝山坡。角落有块栗婆婆裁下的花布，轻轻飘向东边。",3)
         "坐一会儿":
             if not clue_seen: say("朵朵：先看看圆圆有没有留下线索。")
             elif not positions.all(func(p):return p.distance_to(SEAT)<125):say("朵朵：团团，来我这边歇一会儿。")
             else:
                 resting = 0.01;actions = ["sit","sniff"]
-                say("朵朵：休息五分钟。五分钟以后，我还是很勇敢。",2)
+                stage_social(["朵朵坐在驿站的长凳上，团团挨着腿边打了个小哈欠。","朵朵：休息五分钟。五分钟以后，我还是很勇敢。"],{"role":0,"kind":"sit","target":SEAT,"duration":3.0,"participants":[0,1]},{0:SEAT,1:SEAT+Vector2(48,20)})
 func flame_reading() -> String:
     if vent == 0: return "火苗快憋熄了。底下没有空气流进来。"
     if vent == 2: return "气流太急，小火苗一下子被冲散了。"
@@ -201,7 +263,9 @@ func enter_station() -> void:
     say("栗婆婆：荆棘散开了，谢谢你们。窗台有白毛……先把这盏备用灯修好。",1)
 func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
     if not enabled or not is_finite(dt) or dt<=0 or not a.is_finite() or not b.is_finite():return
-    dt = minf(dt,0.05);clock += dt
+    if dialogue_active():return
+    if social_transition_active():step_social_transition(dt);return
+    dt = minf(dt,0.05);step_social(dt);clock += dt
     message_time = maxf(0,message_time-dt);rope_flash = maxf(0,rope_flash-dt)
     if finished:return
     for role in range(2):
@@ -233,6 +297,7 @@ func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
         if steady>=2.0:
             lit = true;phase = "rest";hint_level = 0;say("驿站的灯站稳了。窗里、屋檐下，一盏接一盏亮起来。",2)
     if lit:light_reveal = minf(1,light_reveal+dt*0.6)
+    if not nightlight_taken:night_lit=lit and night_shade and night_vent
     if resting>0:
         resting += dt
         if resting>=1.2:
@@ -241,8 +306,11 @@ func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
 func record() -> Dictionary:
     if not finished:return {}
     return {"version":1,"chapter":"chapter-one","completed":true,"extras":extras.duplicate()}
-func checkpoint()->Dictionary:return Checkpoint.capture(self)
-func restore_checkpoint(value:Dictionary)->bool:return Checkpoint.restore(self,value)
+func checkpoint()->Dictionary:return preload("res://game/puzzle_early_checkpoint.gd").capture(self,1)
+func restore_checkpoint(value:Dictionary)->bool:return preload("res://game/puzzle_early_checkpoint.gd").restore(self,value,1)
 func restore(value: Dictionary) -> void:
     if value.get("version")!=1 or value.get("chapter")!="chapter-one" or value.get("completed")!=true or not value.get("extras",{}) is Dictionary:return
     extras = value.get("extras",{}).duplicate();enter_station();lit = true;light_reveal = 1;finished = true;phase = "complete";clue_seen = true
+
+func presentation()->Dictionary:
+    return {"mechanisms":[{"id":"night_lamp","position":NIGHT_LAMP,"load":night_shade,"lit":night_lit,"angle":float(hood)*PI/2.0,"connection":"taken" if nightlight_taken else "stand"},{"id":"flower_cloth","position":PILLOW,"load":cloth_found,"lit":false,"angle":0.0,"connection":"found" if cloth_found else "cushion"}],"paths":[],"observations":[],"discoveries":["one_nightlight"] if nightlight_taken else [],"social":social.duplicate(),"dialogue_active":dialogue_active(),"phase":phase}

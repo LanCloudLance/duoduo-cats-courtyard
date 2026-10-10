@@ -60,7 +60,7 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
     if active_pose:
         var frame := 0
         if role == 0: frame = 2 if guarding else 0 if combat_progress < impact_ratio*0.55 else 1
-        elif role == 1: frame = 1 if combat_progress < 0.65 else 2
+        elif role == 1: frame = (0 if combat_progress < impact_ratio else 2) if combat_kind == "claw" else (1 if combat_progress < 0.65 else 2)
         else: frame = 1 if combat_kind == "charge" or (combat_kind == "heavy" and combat_progress < impact_ratio) else 2 if combat_kind == "heavy" and combat_progress < 0.75 else 0
         if frame != action_frame:
             var tops := [0,478,833]
@@ -81,6 +81,12 @@ func pose(phase: float, stride: float, facing: float, reaction: float) -> void:
             target_lift = -sin(combat_progress*PI)*13
             target_lean = sin(combat_progress*PI)*0.14*face
             scale.y *= 0.86 if combat_progress > 0.65 else 0.94
+        if combat_kind == "claw":
+            target_lean = sin(combat_progress*PI)*0.085*face
+            target_lift = -sin(combat_progress*PI)*2
+        if combat_kind == "slap":
+            target_lean = sin(combat_progress*PI)*0.06*face
+            scale.y *= 1.0-sin(combat_progress*PI)*0.045
         if combat_kind == "sword":
             target_lean = sin(combat_progress*PI)*(0.19 if combat_combo == 2 else 0.13)*face*(1 if combat_combo != 1 else -1)
         if combat_kind == "heavy":

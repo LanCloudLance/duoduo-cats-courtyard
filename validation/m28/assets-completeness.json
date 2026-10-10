@@ -1,0 +1,1889 @@
+{
+  "schema_version": 1,
+  "audit_date": "2026-10-10",
+  "title": "M28 full-game asset and content completeness audit",
+  "authoritative_root": "/Users/wangyuanlong/Documents/Codex/2026-09-05/ya/outputs/duoduo-game",
+  "release_baseline_reported_by_parent": {
+    "sha": "f244d27a7e5abbe78bd6a7f299fc2c85e820ea8e",
+    "site_version": 18,
+    "independently_rechecked_in_this_lane": false
+  },
+  "scope": [
+    "prologue",
+    "chapter-one",
+    "chapter-two",
+    "chapter-three",
+    "chapter-four",
+    "chapter-five",
+    "home epilogue",
+    "entry and revisit",
+    "combat and audio"
+  ],
+  "evidence_limits": [
+    "Source plus existing rendered image audit; no new GUI in this lane.",
+    "M26 fixture pictures are historical layout evidence corroborated by current source.",
+    "No real child, independent two-person or hardware-controller acceptance.",
+    "No measured full-playthrough duration.",
+    "No completion percentage: files, frames and tests are not player value.",
+    "Exact reference inventory is not proof of runtime liveness; metadata/dynamic loading can add references."
+  ],
+  "severity_definitions": {
+    "P1": "major gap blocking complete-game content/presentation delivery; not necessarily crash severity",
+    "P2": "bounded completeness/polish issue or explicitly identified content decision",
+    "none": "present/valid technique; additional verification may remain"
+  },
+  "findings": [
+    {
+      "id": "A01",
+      "asset": "主线角色休息/亲密/重逢动作",
+      "function": "story_chapter_view._refresh; chapter_one._refresh; storybook_sprite._motion_pose",
+      "location": "序章、第一章休息、第三章重逢、第五章告别",
+      "completion_status": "existing_resource_unwired_and_missing_bespoke_states",
+      "severity": "P1",
+      "remediation_priority": 1,
+      "evidence": [
+        "game/story_chapter_view.gd:153-164",
+        "game/chapter_one.gd:153-162",
+        "game/social_sprite.gd:1-47",
+        "assets/visual-m26/duoduo-motion.json",
+        "assets/visual-m26/tuantuan-motion.json",
+        "assets/visual-m26/yuanyuan-motion.json"
+      ],
+      "player_consequence": "台词描述蹲下摸爪/抱猫，画面通常只显示 reach/inspect；第一章压缩站姿代替坐下。",
+      "remediation": "先接入现有 social pet/rest，再补重逢/擦爪/舔手/穿戴必要动作及双人对齐锚点。",
+      "acceptance_gate": "正常输入可看见动作起手、接触、结果；三位相对位置正确；不靠字幕补完动作。"
+    },
+    {
+      "id": "A02",
+      "asset": "家中三位前后走路",
+      "function": "home_sprite.update_motion; storybook_sprite._motion_pose",
+      "location": "序章、回家",
+      "completion_status": "missing_directional_set",
+      "severity": "P2",
+      "remediation_priority": 2,
+      "evidence": [
+        "assets/visual-m26/home-0-motion.json",
+        "assets/visual-m26/home-1-motion.json",
+        "assets/visual-m26/home-2-motion.json"
+      ],
+      "player_consequence": "home front 与 rear 都是同一组 8 帧，向上行走不能由资源表达背面。",
+      "remediation": "补齐或复用正确家中背向帧；保留位移采样步态。",
+      "acceptance_gate": "四向往返、停止、转向的连续运行时检查。"
+    },
+    {
+      "id": "A03",
+      "asset": "栗婆婆/摊主/阿灯剧情姿态",
+      "function": "story_chapter_view.merchant/alight/granny; chapter_one._refresh",
+      "location": "第一、四、五章",
+      "completion_status": "missing_narrative_state_assets",
+      "severity": "P1",
+      "remediation_priority": 1,
+      "evidence": [
+        "game/story_chapter_view.gd:284-301",
+        "game/chapter_one.gd:171-172",
+        "assets/visual-m26/support.png",
+        "assets/story-chapter-one/props.png"
+      ],
+      "player_consequence": "交付、担心、试送、释然与告别均是同一固定站姿。",
+      "remediation": "制作待机/倾听/交付，阿灯守闸/试送/放光；与剧情确认同步。",
+      "acceptance_gate": "关键剧情看画面能分辨人物态度与动作变化。"
+    },
+    {
+      "id": "A04",
+      "asset": "机关身份：镜面/压板/受力柄/接收器",
+      "function": "chapter_two/three/four/five.draw_world",
+      "location": "第二至五章",
+      "completion_status": "semantic_asset_overload",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "assets/visual-m26/props-regions.json: mechanisms[8]",
+        "game/chapter_two_state.gd:285-315",
+        "game/chapter_three_state.gd:331-364",
+        "game/chapter_five_state.gd:494-516"
+      ],
+      "player_consequence": "同一镜子缩放成数种不同功能，玩家依靠文字才知道用途。",
+      "remediation": "按受力柄、压力板、光接收器、镜子分别定义外形及状态。",
+      "acceptance_gate": "不显示物件名字仍能识别操作种类；相同规则用相同视觉语法。"
+    },
+    {
+      "id": "A05",
+      "asset": "机盖关闭/打开/检修槽状态",
+      "function": "chapter_five.draw_world",
+      "location": "第五章收光机",
+      "completion_status": "wrong_object_reused_as_state",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_five_state.gd:526-547",
+        "assets/visual-m26/props-regions.json: mechanisms[11,12]",
+        "work/m27/five-fixture-final-branch-2.png"
+      ],
+      "player_consequence": "破防风罩、补防风罩被用作小机盖，维修轮/折枝与机体连接关系弱。",
+      "remediation": "补机盖铰链开合、内部回位扣、卸力开口、停止位和折枝分段可视连接。",
+      "acceptance_gate": "挡臂→开盖→卸力→拉枝→停止五种状态与真实触点一致。"
+    },
+    {
+      "id": "A06",
+      "asset": "检修箱、架子、工具授予/归位状态",
+      "function": "chapter_two/three/five.draw_world",
+      "location": "第二章检修箱、第三章定光扣、回家装备架",
+      "completion_status": "missing_taken_empty_equipped_stored_states",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_two_state.gd:313-318",
+        "game/chapter_three_state.gd:334-341",
+        "game/chapter_five_state.gd:452-459",
+        "assets/visual-m26/mechanisms.png"
+      ],
+      "player_consequence": "爪钩拿走箱仍关闭；工具架是锤锯扫帚，无法显示背带/定光扣或剑盾归位。",
+      "remediation": "补开/空箱，人用与猫用工具轮廓，以及空架/放好冒险装备两态。",
+      "acceptance_gate": "取得/穿戴/卸下/归位均在物件与角色两端可回读。"
+    },
+    {
+      "id": "A07",
+      "asset": "第四章空间舞台",
+      "function": "story_chapter_view._draw; chapter_four.draw_world",
+      "location": "集市/阿灯灯匣室/外罩维修/休息",
+      "completion_status": "missing_scene_identity_and_transition",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/story_chapter_view.gd:207-220",
+        "game/chapter_four_state.gd:313-375",
+        "work/m27/labels-final-exclusive-c4-moving-05.png"
+      ],
+      "player_consequence": "不同叙事地点压在一张集市地面，机器电路像工作图叠在广场上。",
+      "remediation": "用清楚分区或相邻独立舞台表现市场、小室、外罩平台；保留状态与返回逻辑。",
+      "acceptance_gate": "从市场进入调查再外修能凭环境辨地点；无无意义长走路填时长。"
+    },
+    {
+      "id": "A08",
+      "asset": "路网重新点亮及世界善后",
+      "function": "chapter_five.draw_world network; interact 阿灯送光闸",
+      "location": "第五章送光后",
+      "completion_status": "missing_world_payoff_states",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_five_state.gd:309-314",
+        "game/chapter_five_state.gd:574-585"
+      ],
+      "player_consequence": "树根/集市/钟楼/运输桥的恢复由文本和本室六盏灯代替，早期劳动缺可见回扣。",
+      "remediation": "沿路线依次展示真实已修地点亮起、居民回归和阿灯巡检，可短回看无强制重跑。",
+      "acceptance_gate": "玩家能认出自己修过的至少四处地方发生了变化。"
+    },
+    {
+      "id": "A09",
+      "asset": "小木灯挂件",
+      "function": "chapter_five.interact farewell gift; draw_world home/farewell",
+      "location": "告别与家中桌上",
+      "completion_status": "missing_distinct_reward_asset",
+      "severity": "P1",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_five_state.gd:317-331",
+        "game/chapter_five_state.gd:456-471"
+      ],
+      "player_consequence": "普通灯代替不带魔力的小挂件，缺物件辨识与留存感。",
+      "remediation": "独立木灯挂件图，交付/携带或收藏/桌上陈列一致。",
+      "acceptance_gate": "不读文字能从告别认出带回家的是同一件纪念物。"
+    },
+    {
+      "id": "A10",
+      "asset": "原房间沙发与装备收纳",
+      "function": "chapter_five.draw_world home",
+      "location": "家中尾声",
+      "completion_status": "wrong_environment_anchor",
+      "severity": "P1",
+      "remediation_priority": 1,
+      "evidence": [
+        "game/chapter_five_state.gd:451-460",
+        "game/chapter_five_state.gd:31-33",
+        "game/prologue_state.gd:6-8",
+        "work/duoduo-web/validation/m26/m26-fixture-c5-home.png"
+      ],
+      "player_consequence": "原沙发被声明为装饰，额外小沙发承担互动，开场与结尾的情感呼应削弱。",
+      "remediation": "恢复原沙发为交互位置；使家中原有家具承接装备/擦爪/纪念品。",
+      "acceptance_gate": "开场与尾声同房间锚点一致；角色实际坐到沙发上且可自主离开。"
+    },
+    {
+      "id": "A11",
+      "asset": "第一章道路/驿站与亮灯状态",
+      "function": "chapter_one._draw/_refresh",
+      "location": "第一章",
+      "completion_status": "partial_environment_state",
+      "severity": "P2",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_one.gd:11",
+        "game/chapter_one.gd:202-239"
+      ],
+      "player_consequence": "道路与驿站共用背景，修复后的世界状态主要是局部圆形光。",
+      "remediation": "区分道路/据点的可见空间并制作窗户/炉火恢复层。",
+      "acceptance_gate": "连续进入据点/修复后变化可辨，不增加不必要过场。"
+    },
+    {
+      "id": "A12",
+      "asset": "角色装备成长时序",
+      "function": "chapter_one_state.interact 栗婆婆; chapter_three_state.interact equipment",
+      "location": "第一至三章",
+      "completion_status": "partial_story_equipment_integration",
+      "severity": "P2",
+      "remediation_priority": 2,
+      "evidence": [
+        "game/chapter_one_state.gd:131-135",
+        "game/chapter_one.gd:146-155",
+        "game/chapter_three_state.gd:171-175"
+      ],
+      "player_consequence": "首次栗婆婆对话立即切全套冒险身体；定光扣获得前后主要是状态，缺穿戴回馈。",
+      "remediation": "先借剑盾、据点换装、团团爪钩、圆圆定光扣以不同外观层/短动作表达。",
+      "acceptance_gate": "技能可用、角色外观、工具架和叙事时序一致。"
+    },
+    {
+      "id": "A13",
+      "asset": "关键剧情确认与表现节奏",
+      "function": "story_chapter_base.say; prologue_state.say; chapter_one_state.say; story_journal",
+      "location": "所有主线关键节点",
+      "completion_status": "partial_replay_without_delivery_guarantee",
+      "severity": "P1",
+      "remediation_priority": 1,
+      "evidence": [
+        "game/story_chapter_base.gd:40-45",
+        "game/chapter_one_state.gd:58-62",
+        "game/prologue_state.gd:83-91",
+        "ui/story_journal.gd:29-32"
+      ],
+      "player_consequence": "8 秒/更短单消息槽可被普通互动覆盖；记事补救不保证首次看到情绪节点。",
+      "remediation": "关键剧情短句确认并与动作同步，普通反馈不抢占；记事继续保留。",
+      "acceptance_gate": "重逢/留下/归家中连续乱按与伙伴互动不覆盖关键句；可按阅读速度停留。"
+    },
+    {
+      "id": "A14",
+      "asset": "成品入口与暂停菜单",
+      "function": "lobby._build/_build_slot",
+      "location": "启动与 Escape 暂停",
+      "completion_status": "development_lobby_exposed",
+      "severity": "P1",
+      "remediation_priority": 1,
+      "evidence": [
+        "ui/lobby.gd:285-391",
+        "root-observation: native QA shows P1/P2 stick diagnostics, 13+ mixed old trial/chapter/new journey buttons, tiny team image inside oversized white panel; Escape exposes lobby behind Web welcome. Screenshot pending root."
+      ],
+      "player_consequence": "入口把玩家置于测试准备室，无清楚主次；新档可直接跳到后章。",
+      "remediation": "继续/新旅程/单人双人/设置为主入口，解锁章节回访、独立挑战为次级；设备诊断进入设置。",
+      "acceptance_gate": "陌生玩家不解释可开始主线、继续进度、暂停调整和返回；键盘/手柄焦点正确。"
+    },
+    {
+      "id": "A15",
+      "asset": "成品文案与验收范围",
+      "function": "story_chapter_view._refresh; ACCEPTANCE.md",
+      "location": "完成页/入口/交付文档",
+      "completion_status": "stale_demo_copy",
+      "severity": "P2",
+      "remediation_priority": 4,
+      "evidence": [
+        "game/story_chapter_view.gd:186-188",
+        "ACCEPTANCE.md:1-3",
+        "ui/lobby.gd:323"
+      ],
+      "player_consequence": "五章完成仍称故事试玩，验收单仍说 M11 与临时素材。",
+      "remediation": "实际内容验收后统一成品入口/结尾文字与验收文档，保留独立挑战的准确名称。",
+      "acceptance_gate": "文案与实际交付范围一致；仅改文字不关闭其他完成度缺口。"
+    },
+    {
+      "id": "A16",
+      "asset": "敌人轮廓/招式态/故事遭遇场地",
+      "function": "enemy_visual.sync; battle_encounter.start; arena._draw",
+      "location": "第一章与第四章战斗",
+      "completion_status": "partial_identity_and_encounter_presentation",
+      "severity": "P2",
+      "remediation_priority": 3,
+      "evidence": [
+        "game/enemy_visual.gd:28-40",
+        "game/battle_encounter.gd:4-36",
+        "game/arena.gd:37,370"
+      ],
+      "player_consequence": "六种逻辑主要映射三种身体，形变可读性未证实；不同故事场景仍同一空地/树桩。",
+      "remediation": "保留现有打击规则，区分招式轮廓/主敌外观与场地目标，至少第四章外修/护归途在空间用途上不同。",
+      "acceptance_gate": "玩家不用敌名能区分预兆；每场说得出不同决策；移动实战中遮挡可读。"
+    },
+    {
+      "id": "A17",
+      "asset": "环境/角色/物件音景",
+      "function": "garden_audio; music_director; lobby music routing",
+      "location": "全游戏",
+      "completion_status": "music_present_soundscape_partial",
+      "severity": "P2",
+      "remediation_priority": 3,
+      "evidence": [
+        "game/garden_audio.gd:1-11,83-112",
+        "game/music_director.gd:4-11",
+        "ui/lobby.gd:643-647"
+      ],
+      "player_consequence": "探索共用四类合成提示音，猫/脚步/木/金属/机关/风水缺独立反馈；不能凭文件计数判断音质。",
+      "remediation": "制作有限物理音色与猫咪反馈，按材质和动作触发，音乐分章层次/情绪节点混音。",
+      "acceptance_gate": "实际听测能分辨成功/失败/材料/角色，音量不过载，可静音并保存。"
+    },
+    {
+      "id": "A18",
+      "asset": "短支路、奖励与家中收藏",
+      "function": "story targets/extras; story_journey; lobby chapter entry",
+      "location": "章节可选发现/通关回访",
+      "completion_status": "design_proposal_not_implemented",
+      "severity": "P2",
+      "remediation_priority": 3,
+      "evidence": [
+        "outputs/朵朵与猫猫-完整剧情设计稿-v1.0.md: 四、支路、日常与换装",
+        "game/story_journey.gd",
+        "game/chapter_five_state.gd:67-73"
+      ],
+      "player_consequence": "原稿纽扣/照片/小包/观景尚无主线目标；现有奖励偏工具与通路，没有完整收藏回访回报。",
+      "remediation": "明确采用哪些已提案短支路，若采用让发现→获得→家中/回访显示成闭环；不盲增商店经济。",
+      "acceptance_gate": "内容账本明确采用/舍弃理由；采用项可选且不锁主线，奖励可持续回读。"
+    },
+    {
+      "id": "A19",
+      "asset": "全主线时长与玩家理解度证据",
+      "function": "whole-game acceptance ledger",
+      "location": "序章至家中",
+      "completion_status": "unmeasured",
+      "severity": "P1",
+      "remediation_priority": 4,
+      "evidence": [
+        "work/m27/loop-state.json: duration_status design budget unmeasured",
+        "outputs/朵朵与猫猫-完整剧情设计稿-v1.0.md: 五、双人体验与篇幅"
+      ],
+      "player_consequence": "175–230 分钟只是预算；没有依据称已达到 3–4 小时，也不能拿脚本耗时宣称实际长度。",
+      "remediation": "正常陌生玩家记录分章时长、卡点、提示、阅读、双人等待；据结果校准篇幅和节奏。",
+      "acceptance_gate": "实测条件与结果公开，未测量则明确标记；不靠延长计时填预算。"
+    },
+    {
+      "id": "A20",
+      "asset": "图集区域与引用完整性",
+      "function": "storybook_sprite._prepare_motion; story_chapter_view._atlas_prop",
+      "location": "全部 M26 图集",
+      "completion_status": "bounds_verified_visual_quality_unverified",
+      "severity": "none",
+      "remediation_priority": 0,
+      "evidence": [
+        "assets/visual-m26/*motion.json",
+        "assets/visual-m26/props-regions.json"
+      ],
+      "player_consequence": "本次坐标检查没有越界；这不证明透明边、裁切、锚点/动画对齐正确。",
+      "remediation": "保留已通过边界检查，针对动态图逐帧验证；避免把所有程序绘制判成占位。",
+      "acceptance_gate": "每种实际动作/方向/状态在运行时尺寸下无漏边、切脚、漂移。"
+    },
+    {
+      "id": "A21",
+      "asset": "持续 HUD 与角色/机关标签",
+      "function": "story_chapter_view._ready/_refresh; story_labels",
+      "location": "第二至五章",
+      "completion_status": "instruction_dominance_risk",
+      "severity": "P2",
+      "remediation_priority": 3,
+      "evidence": [
+        "game/story_chapter_view.gd:61-64,176-188",
+        "game/story_labels.gd",
+        "work/m27/labels-final-exclusive-c4-moving-05.png"
+      ],
+      "player_consequence": "上/下两面板约占画面17.6%，另加人名/物件文字，容易让画面成为操作说明图。",
+      "remediation": "保留按需提示和关键对白；操作轮廓/状态完成后收起冗余常驻说明，角色名按需要显示。",
+      "acceptance_gate": "在有对白/无对白/三角色聚集/手柄模式分别检查，不挡关键触点或预兆。"
+    },
+    {
+      "id": "A22",
+      "asset": "程序绘制的光、风、绳、预警、纸地图",
+      "function": "chapter_* draw_world; arena; waystation_flame",
+      "location": "全游戏",
+      "completion_status": "valid_technique_not_blanket_placeholder",
+      "severity": "none",
+      "remediation_priority": 0,
+      "evidence": [
+        "game/chapter_one.gd:256-280",
+        "game/chapter_three_state.gd:377-397",
+        "game/chapter_four_state.gd:377-432",
+        "game/chapter_five_state.gd:494-503"
+      ],
+      "player_consequence": "几何绘制可有效表达动态因果，不应一律替换成新图片。",
+      "remediation": "统一线宽/色相/载体/前后层；只有语义不相干或状态不清的对象才重做。",
+      "acceptance_gate": "真实输入下规则/视觉/声音一致，关键几何可读。"
+    }
+  ],
+  "media_manifest": [
+    {
+      "path": "assets/music/battle.ogg",
+      "exists": true,
+      "sha256": "118ff5fe9771606f9c5cc1b4d33f962697d663b593347e57c20136c6afc50963",
+      "size_bytes": 486160,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            8
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/boss.ogg",
+      "exists": true,
+      "sha256": "92b9899bef118eeba9ec8a170a386c0c105df4b5d6c7b65d5b5a5209a61b9bee",
+      "size_bytes": 459847,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/chime-0.wav",
+      "exists": true,
+      "sha256": "ded39db46ad79c10f9112fad6759afaea42bc684175e40d7ee06b8d563c0d5ae",
+      "size_bytes": 140844,
+      "gd_exact_references": [
+        {
+          "source": "game/chime_gate.gd",
+          "lines": [
+            13
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/chime-1.wav",
+      "exists": true,
+      "sha256": "8ba719b1504839b8063b4b828d0f8b8ebf4830e4ac72613c337f28060448f5f1",
+      "size_bytes": 140844,
+      "gd_exact_references": [
+        {
+          "source": "game/chime_gate.gd",
+          "lines": [
+            13
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/explore.ogg",
+      "exists": true,
+      "sha256": "fdfe289a814f825ebad03cf44ae2239534459b1d3c4e5e76d6b72b85908f13ca",
+      "size_bytes": 368882,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            6
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/home.ogg",
+      "exists": true,
+      "sha256": "21f6012cbc9dea103d4229f967eb01a89b5f4bcef1b7e70a090d233277b30dff",
+      "size_bytes": 379033,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            5
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/puzzle.ogg",
+      "exists": true,
+      "sha256": "17c58940ae1545ed037a0cbd3eeaefccd89355d90635c83c6be1a30277bb3418",
+      "size_bytes": 448688,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            7
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/music/rest.ogg",
+      "exists": true,
+      "sha256": "1949aa72552cf6ae4af70fbccc1b8a73af37a41dbb1d25c238bb246d6fc019fc",
+      "size_bytes": 497461,
+      "gd_exact_references": [
+        {
+          "source": "game/music_director.gd",
+          "lines": [
+            10
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings"
+    },
+    {
+      "path": "assets/story-chapter-one/props.png",
+      "exists": true,
+      "sha256": "61287dea26555ce2c95f8283f2420b1ddbd8812278a6e4753b7124289c4ca659",
+      "size_bytes": 1271686,
+      "gd_exact_references": [
+        {
+          "source": "game/chapter_one.gd",
+          "lines": [
+            10
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            13
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/story-chapter-one/waystation.png",
+      "exists": true,
+      "sha256": "edc6f154c04d2252741074ec2d5c8fca48affe85da145c017d4cdad0555b7fa5",
+      "size_bytes": 2990077,
+      "gd_exact_references": [
+        {
+          "source": "game/chapter_one.gd",
+          "lines": [
+            11
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            8
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-actions.png",
+      "exists": true,
+      "sha256": "09e3a738cd9e63ade9c6a57e62d8d9e8251699d2f3d179513f25f3f792eb77e2",
+      "size_bytes": 1594810,
+      "gd_exact_references": [
+        {
+          "source": "game/home_sprite.gd",
+          "lines": [
+            32
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-party.png",
+      "exists": true,
+      "sha256": "c17d0623a0c1715bd7dda6677ca07328e9116d5e2b64589e1a5e13fe2e53a17f",
+      "size_bytes": 1579996,
+      "gd_exact_references": [
+        {
+          "source": "game/home_sprite.gd",
+          "lines": [
+            2
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-props.png",
+      "exists": true,
+      "sha256": "a9ad115b203d78be2a6976d3d0a8118288bacc8f2de0b63bd78c0e66f598fd3b",
+      "size_bytes": 1639634,
+      "gd_exact_references": [
+        {
+          "source": "game/prologue.gd",
+          "lines": [
+            7
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-room-open.png",
+      "exists": true,
+      "sha256": "066efdd4e6f3bc1a5527aac78f452e64a754f6b346e50b016a6a5ce4ce45eea8",
+      "size_bytes": 2063971,
+      "gd_exact_references": [
+        {
+          "source": "game/prologue.gd",
+          "lines": [
+            6
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-room-play.png",
+      "exists": true,
+      "sha256": "a4b139f0618a638b29259730421b4f29b2b79e62daa06f435eb33e7197502273",
+      "size_bytes": 2010995,
+      "gd_exact_references": [
+        {
+          "source": "game/prologue.gd",
+          "lines": [
+            5
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            11
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/story-prologue/home-room.png",
+      "exists": true,
+      "sha256": "0a148b8bfde46a2784b1934c0787f10b38716e10d04aaf07ec3e5d879afb42db",
+      "size_bytes": 2314924,
+      "gd_exact_references": [],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/team.png",
+      "exists": true,
+      "sha256": "f87f6bbbfad2e6952ac4d184a2a709774cfa70142fe0d524203a2fb78bf1a3c9",
+      "size_bytes": 1346860,
+      "gd_exact_references": [
+        {
+          "source": "ui/lobby.gd",
+          "lines": [
+            17
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1695,
+        928
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m13/courtyard-painted.png",
+      "exists": true,
+      "sha256": "4814e36f7cfd0e3da01da0c2c851b8b364800e0ac45c72348b7dcd16630f14c4",
+      "size_bytes": 2792665,
+      "gd_exact_references": [
+        {
+          "source": "game/garden_view.gd",
+          "lines": [
+            2
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m13/party-atlas.png",
+      "exists": true,
+      "sha256": "b45658ca88529ce7a172d99b98aa31ba189ce31e92c537a76b6b77efddf60ce8",
+      "size_bytes": 1696802,
+      "gd_exact_references": [
+        {
+          "source": "game/storybook_sprite.gd",
+          "lines": [
+            3
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m13/props-atlas.png",
+      "exists": true,
+      "sha256": "dcc78ad81c6d5e47c902f018deeaa4222b0026194648b8e8fd13ed7dd5bd7313",
+      "size_bytes": 1806785,
+      "gd_exact_references": [
+        {
+          "source": "game/painted_prop.gd",
+          "lines": [
+            2
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m14/arena-painted.png",
+      "exists": true,
+      "sha256": "fed6ccb432cbe10655c59d8c8ede5302e2b2a5c1c1b095c3af49ae727ca4771d",
+      "size_bytes": 2520703,
+      "gd_exact_references": [
+        {
+          "source": "game/arena.gd",
+          "lines": [
+            37
+          ]
+        },
+        {
+          "source": "game/chime_gate.gd",
+          "lines": [
+            6
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            10
+          ]
+        },
+        {
+          "source": "game/rest_area.gd",
+          "lines": [
+            18
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m14/combat-atlas.png",
+      "exists": true,
+      "sha256": "2f24339b18c6774d6d734ce8b1fc1f4f47b9e73fc946ae8f1f64649740622720",
+      "size_bytes": 1625308,
+      "gd_exact_references": [
+        {
+          "source": "game/combat_sprite.gd",
+          "lines": [
+            2
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m14/enemy-atlas.png",
+      "exists": true,
+      "sha256": "c3487d51d9a808f6e9e2165ba4116295435b80320257d370821272bdb4af7d6d",
+      "size_bytes": 1683316,
+      "gd_exact_references": [
+        {
+          "source": "game/enemy_visual.gd",
+          "lines": [
+            3
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m15/props-atlas.png",
+      "exists": true,
+      "sha256": "0371278aaf1bd4cbd3f4438bdc26c3fbf3a4578cd0df121bd7cc983af9fbbd68",
+      "size_bytes": 1635639,
+      "gd_exact_references": [
+        {
+          "source": "game/storybook_prop.gd",
+          "lines": [
+            3
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m15/social-atlas.png",
+      "exists": true,
+      "sha256": "0990e58ad1f55d0d262cfddf4cf19c51d7c4a8ed49ec3f81b1a93d36c407b2c1",
+      "size_bytes": 1641854,
+      "gd_exact_references": [
+        {
+          "source": "game/social_sprite.gd",
+          "lines": [
+            2
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m15/terrain-atlas.png",
+      "exists": true,
+      "sha256": "a85a7a31896c3e4d070857320c72f19c5164e9c1fa75a508c761b4b523b826f8",
+      "size_bytes": 2514214,
+      "gd_exact_references": [
+        {
+          "source": "game/light_terrain.gd",
+          "lines": [
+            3
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            12
+          ]
+        },
+        {
+          "source": "game/light_path_view.gd",
+          "lines": [
+            4
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m22/chime-props.png",
+      "exists": true,
+      "sha256": "73410b190ad620e78f1d2f8b1f50385f4a11ce9b8fab3eccce451f68f4a8128c",
+      "size_bytes": 1391747,
+      "gd_exact_references": [
+        {
+          "source": "game/chime_gate.gd",
+          "lines": [
+            7
+          ]
+        },
+        {
+          "source": "game/chapter_one.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/chapter-five.png",
+      "exists": true,
+      "sha256": "65d831735e5e22e8c431257d5ce21a9526b86cf4e515bc13d8bf4a43714d1b0f",
+      "size_bytes": 2698251,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            14
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/chapter-four.png",
+      "exists": true,
+      "sha256": "869963c3b26ff52585eca0bf2edafbad72da7c73f5f61ad53ccacf666fe7909a",
+      "size_bytes": 3086817,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            14
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/chapter-three.png",
+      "exists": true,
+      "sha256": "d9b688327ae4af6efa3edee4936f03eb4a551d9b4b63a434ae507d75b554aa46",
+      "size_bytes": 2734580,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            14
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/chapter-two.png",
+      "exists": true,
+      "sha256": "23a23377eb058f0da64aaeff85fad475fac58785e6a79ed0e2fad57afc115571",
+      "size_bytes": 3457439,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            14
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1586,
+        992
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/duoduo-front.png",
+      "exists": true,
+      "sha256": "89862e21803745c8965403395f2e0398cc56952463e340c752cc0ae63b315695",
+      "size_bytes": 1706541,
+      "gd_exact_references": [
+        {
+          "source": "game/storybook_sprite.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [
+        "assets/visual-m26/duoduo-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1774,
+        887
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/duoduo-motion.png",
+      "exists": true,
+      "sha256": "58b983aff474c2890a9ed51cb2979146474bd87bff91a9547a2c78c173de52c5",
+      "size_bytes": 1663208,
+      "gd_exact_references": [
+        {
+          "source": "tests/m26_animation_test.gd",
+          "lines": [
+            57
+          ]
+        }
+      ],
+      "metadata_filename_references": [
+        "assets/visual-m26/duoduo-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1205,
+        1305
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/duoduo-rear.png",
+      "exists": true,
+      "sha256": "e7e16753758a1f4b64c98b789d36ef99e0b2eff5816b79ceb5fd4e404ddd4cc8",
+      "size_bytes": 1746016,
+      "gd_exact_references": [],
+      "metadata_filename_references": [
+        "assets/visual-m26/duoduo-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/floor-pieces.png",
+      "exists": true,
+      "sha256": "fdb4d3c7ff2437ae669a49b3fe84df8d0d70f98a26affee4b124b2d4472c75df",
+      "size_bytes": 1676310,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            17
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1585,
+        992
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/home-motion.png",
+      "exists": true,
+      "sha256": "b41007ebf1402b6324bf1a01fc5255995777df4965967fef40c2a1e985c00a87",
+      "size_bytes": 2199475,
+      "gd_exact_references": [
+        {
+          "source": "game/home_sprite.gd",
+          "lines": [
+            10
+          ]
+        }
+      ],
+      "metadata_filename_references": [
+        "assets/visual-m26/home-2-motion.json",
+        "assets/visual-m26/home-1-motion.json",
+        "assets/visual-m26/home-0-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        2048,
+        768
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/mechanisms.png",
+      "exists": true,
+      "sha256": "27f955c20df37911be5b4a9de86628885d9daf6f117db0ee4ddb90272388683d",
+      "size_bytes": 1989411,
+      "gd_exact_references": [
+        {
+          "source": "game/chapter_two_state.gd",
+          "lines": [
+            231
+          ]
+        },
+        {
+          "source": "game/chapter_three_state.gd",
+          "lines": [
+            294
+          ]
+        },
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            15
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/support.png",
+      "exists": true,
+      "sha256": "b2c17daf20b1b30aa576eab83b39e45021fcac62577d045d8147327c4a522f78",
+      "size_bytes": 2351141,
+      "gd_exact_references": [
+        {
+          "source": "game/story_chapter_view.gd",
+          "lines": [
+            16
+          ]
+        }
+      ],
+      "metadata_filename_references": [],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1024,
+        1536
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/tuantuan-cycle.png",
+      "exists": true,
+      "sha256": "0a39bc8bad50cd01f229ac836c51768afe77994a4741e96993be141acebaabf7",
+      "size_bytes": 1777242,
+      "gd_exact_references": [
+        {
+          "source": "game/storybook_sprite.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [
+        "assets/visual-m26/tuantuan-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/tuantuan-motion.png",
+      "exists": true,
+      "sha256": "23d2c9ccf06e0d12fdd86be99c9b2713cdb79e09fefae2c89bfcafe9340c7158",
+      "size_bytes": 1319246,
+      "gd_exact_references": [],
+      "metadata_filename_references": [
+        "assets/visual-m26/tuantuan-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 6
+    },
+    {
+      "path": "assets/visual-m26/yuanyuan-cycle.png",
+      "exists": true,
+      "sha256": "de948f1570e532f3f8cf7119a88bbb9af647809a9070c51058df07f7cf5e4090",
+      "size_bytes": 1759640,
+      "gd_exact_references": [
+        {
+          "source": "game/storybook_sprite.gd",
+          "lines": [
+            9
+          ]
+        }
+      ],
+      "metadata_filename_references": [
+        "assets/visual-m26/yuanyuan-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    },
+    {
+      "path": "assets/visual-m26/yuanyuan-motion-chroma.png",
+      "exists": true,
+      "sha256": "ce043d5feaf73c196f5d48dea50e7db92e9430b654d793b5965ce2e733e3f3d5",
+      "size_bytes": 1885614,
+      "gd_exact_references": [],
+      "metadata_filename_references": [
+        "assets/visual-m26/yuanyuan-motion.json"
+      ],
+      "assessment": "present; usage and state completion assessed by linked findings",
+      "dimensions": [
+        1254,
+        1254
+      ],
+      "png_color_type": 2
+    }
+  ],
+  "motion_metadata": [
+    {
+      "path": "assets/visual-m26/duoduo-motion.json",
+      "frame_count": 20,
+      "front": [
+        0,
+        3,
+        1,
+        2,
+        5,
+        6,
+        4,
+        7
+      ],
+      "rear": [
+        8,
+        9,
+        10,
+        11,
+        12,
+        14,
+        13,
+        15
+      ],
+      "same_front_rear": false,
+      "actions": {
+        "reach": 16,
+        "brace": 17,
+        "hold": 17,
+        "pull": 18,
+        "inspect": 19
+      },
+      "frames_in_bounds": true
+    },
+    {
+      "path": "assets/visual-m26/home-0-motion.json",
+      "frame_count": 8,
+      "front": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "rear": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "same_front_rear": true,
+      "actions": {},
+      "frames_in_bounds": true
+    },
+    {
+      "path": "assets/visual-m26/home-1-motion.json",
+      "frame_count": 8,
+      "front": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "rear": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "same_front_rear": true,
+      "actions": {},
+      "frames_in_bounds": true
+    },
+    {
+      "path": "assets/visual-m26/home-2-motion.json",
+      "frame_count": 8,
+      "front": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "rear": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "same_front_rear": true,
+      "actions": {},
+      "frames_in_bounds": true
+    },
+    {
+      "path": "assets/visual-m26/tuantuan-motion.json",
+      "frame_count": 20,
+      "front": [
+        0,
+        7,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "rear": [
+        8,
+        9,
+        10,
+        11,
+        15,
+        12,
+        13,
+        14
+      ],
+      "same_front_rear": false,
+      "actions": {
+        "reach": 16,
+        "brace": 17,
+        "hold": 17,
+        "pull": 18,
+        "inspect": 19
+      },
+      "frames_in_bounds": true
+    },
+    {
+      "path": "assets/visual-m26/yuanyuan-motion.json",
+      "frame_count": 20,
+      "front": [
+        0,
+        3,
+        1,
+        2,
+        4,
+        7,
+        5,
+        6
+      ],
+      "rear": [
+        8,
+        11,
+        9,
+        10,
+        15,
+        12,
+        13,
+        14
+      ],
+      "same_front_rear": false,
+      "actions": {
+        "reach": 16,
+        "brace": 17,
+        "hold": 17,
+        "pull": 18,
+        "inspect": 19
+      },
+      "frames_in_bounds": true
+    }
+  ],
+  "prop_region_manifest": [
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 0,
+      "rect": [
+        15,
+        102,
+        299,
+        205
+      ],
+      "identity": "wooden deck",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 1,
+      "rect": [
+        341,
+        6,
+        280,
+        273
+      ],
+      "identity": "wheel",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 2,
+      "rect": [
+        669,
+        16,
+        214,
+        297
+      ],
+      "identity": "hanging lamp",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 3,
+      "rect": [
+        1010,
+        24,
+        208,
+        290
+      ],
+      "identity": "paw latch on timber",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 4,
+      "rect": [
+        24,
+        378,
+        285,
+        227
+      ],
+      "identity": "closed toolbox",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 5,
+      "rect": [
+        379,
+        321,
+        211,
+        304
+      ],
+      "identity": "hook and rope",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 6,
+      "rect": [
+        657,
+        319,
+        253,
+        293
+      ],
+      "identity": "closed wooden door",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 7,
+      "rect": [
+        981,
+        322,
+        248,
+        293
+      ],
+      "identity": "open wooden door frame",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 8,
+      "rect": [
+        26,
+        653,
+        281,
+        256
+      ],
+      "identity": "mirror on stand",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 9,
+      "rect": [
+        339,
+        648,
+        284,
+        263
+      ],
+      "identity": "hammer saw broom rack",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 10,
+      "rect": [
+        646,
+        632,
+        270,
+        291
+      ],
+      "identity": "machine body",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 11,
+      "rect": [
+        946,
+        668,
+        294,
+        235
+      ],
+      "identity": "broken wind cover",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 12,
+      "rect": [
+        20,
+        950,
+        294,
+        243
+      ],
+      "identity": "patched wind cover",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 13,
+      "rect": [
+        347,
+        949,
+        280,
+        263
+      ],
+      "identity": "reserve crate",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 14,
+      "rect": [
+        627,
+        957,
+        304,
+        264
+      ],
+      "identity": "small sofa",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/mechanisms.png",
+      "index": 15,
+      "rect": [
+        943,
+        1008,
+        303,
+        182
+      ],
+      "identity": "bowl and cloth",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 0,
+      "rect": [
+        123,
+        72,
+        311,
+        516
+      ],
+      "identity": "Alight",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 1,
+      "rect": [
+        544,
+        58,
+        400,
+        540
+      ],
+      "identity": "merchant",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 2,
+      "rect": [
+        37,
+        657,
+        475,
+        396
+      ],
+      "identity": "lampshade",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 3,
+      "rect": [
+        512,
+        664,
+        470,
+        396
+      ],
+      "identity": "branch jammed in gears",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 4,
+      "rect": [
+        39,
+        1222,
+        501,
+        127
+      ],
+      "identity": "mechanical link",
+      "bounds_valid": true
+    },
+    {
+      "atlas": "assets/visual-m26/support.png",
+      "index": 5,
+      "rect": [
+        626,
+        1137,
+        301,
+        300
+      ],
+      "identity": "gear",
+      "bounds_valid": true
+    }
+  ],
+  "metadata_bounds_errors": [],
+  "source_snapshot": [
+    {
+      "path": "game/story_chapter_view.gd",
+      "sha256": "3ddda272e968f8626171c67c3fd54f7a79b9481fca6cbe0163009fe916378c15"
+    },
+    {
+      "path": "game/chapter_one.gd",
+      "sha256": "8c0b3bb90bf136a1039ac66086e93504253fd773b1e1d65bee81b562fc581e59"
+    },
+    {
+      "path": "game/prologue.gd",
+      "sha256": "ec6da1ce11554b3fabdf061eaa618590aaea361c024d5b3baf8a0dfa9f30d46a"
+    },
+    {
+      "path": "game/chapter_two_state.gd",
+      "sha256": "41364d550d0093e182c0dd28a47eb9eebc4aca23d126fbb87a98490c8b646bce"
+    },
+    {
+      "path": "game/chapter_three_state.gd",
+      "sha256": "c2bf868b212984e6d83009ca7ec954a29b74a7a9f078451e7c6d7a6daa13b02a"
+    },
+    {
+      "path": "game/chapter_four_state.gd",
+      "sha256": "665bb1701e15b7077abe3a9ee87b27ff700268b65779460ee56a52767e67b62d"
+    },
+    {
+      "path": "game/chapter_five_state.gd",
+      "sha256": "e37c64be2bc8c78dcd66e5dec879418af2fe917b97f18f8a2021c04c5715857a"
+    },
+    {
+      "path": "game/story_chapter_base.gd",
+      "sha256": "7dafdfa715711d7b2e4e94646e20de51f2506690017d98c41e85909b7653ff4b"
+    },
+    {
+      "path": "game/home_sprite.gd",
+      "sha256": "554452ba45d2aaca59b282edb2bce73a7c157e1458c6801db3da11e21ebcc311"
+    },
+    {
+      "path": "game/storybook_sprite.gd",
+      "sha256": "707c8f00981eab3fbb10a2dab90409cc2657cd82af8829f77cc672452a5214a1"
+    },
+    {
+      "path": "game/social_sprite.gd",
+      "sha256": "d338695ec8a05f99cbfa4ab6dd672a6604930cce9bc1c4562a18a1a6583ba5d6"
+    },
+    {
+      "path": "game/enemy_visual.gd",
+      "sha256": "44543996e64720b382ff7bce8fdaef2b979fcb99744938b289d04169343b6efc"
+    },
+    {
+      "path": "game/battle_encounter.gd",
+      "sha256": "bc02e4b213704558e1ceef66ab7002d49ccb8cde900c188e8b62b83e8412e4bc"
+    },
+    {
+      "path": "game/garden_audio.gd",
+      "sha256": "5dd1b50cf5dd74ffe84ea924702c099f8e7ce215f4d980bc88c8584dbca3b203"
+    },
+    {
+      "path": "game/music_director.gd",
+      "sha256": "05a2c3fe540a2abe823a5865ae7d1bc520a6f0cf178ed15176d6e68ef457c13b"
+    },
+    {
+      "path": "ui/lobby.gd",
+      "sha256": "552eca821085015dd803fbda49ce3f4d8b836b0956813d7cb2987b3802530c94"
+    },
+    {
+      "path": "ui/story_journal.gd",
+      "sha256": "075fd22abdd1251fe3bba6372aeecd2955209effaab2123c67956905c2aa41e9"
+    }
+  ],
+  "acceptance": {
+    "technical_state": "audit only; previously reported M27 technical success not re-proven here",
+    "professional_proxy_state": "major completion gaps open",
+    "child_proxy_state": "review hypothesis only, not real child acceptance",
+    "full_game_duration": "unmeasured",
+    "human_acceptance": false,
+    "progress_unit": "whole player experience with code + normal-input render + review evidence; no file-based percentage"
+  },
+  "m28_implementation": {
+    "date": "2026-10-11",
+    "status": "implementation_handed_off_after_render_revision_three",
+    "evidence": [
+      "work/m28/presentation-test.log",
+      "work/m28/presentation-implementation.md",
+      "work/m28/asset-prompts.md",
+      "work/m28/presentation-render-v3.log",
+      "work/m28/render-v3/",
+      "work/m28/social-render-v1.log",
+      "work/m28/story-audio-test.log"
+    ],
+    "native_menu_baseline": "work/m28/baseline-native-menu.png",
+    "updates": {
+      "A01": "Real approach plus touch/sit used in runtime motion fixtures; root reviewed care and sofa frames. Real child acceptance unmeasured.",
+      "A02": "New transparent rear atlas plus motion metadata; frame bounds tested, motion review pending.",
+      "A03": "Nine NPC state poses generated and wired; runtime scale review pending.",
+      "A04": "Flat prototype shapes rejected after first runtime render. Dedicated painted state atlas integrated and second/third renders reviewed.",
+      "A05": "Dedicated hinged hatch closed/open integrated; continuous machine render pending.",
+      "A06": "Open/empty toolbox, cat equipment rack, sword/shield/cat gear home rack integrated.",
+      "A07": "Real reversible rooms, visible doors, aligned hotspots/collision and fade integrated; static captures now wait for completed transition.",
+      "A08": "Four confirmed outcome scenes use original backgrounds; bridge recap corrected to contiguous actual mandatory bridge geometry.",
+      "A09": "Painted nonmagical wooden pendant handoff and actual home desk placement.",
+      "A10": "Same original sofa with visible approach/settle. Real original desk holds actual ball/lamp/paper memories; no icon row.",
+      "A13": "Explicit confirmed dialogue and frozen gameplay tested.",
+      "A14": "Root owns new menu; baseline screenshot preserved; root reports new render validated.",
+      "A18": "Actual collected memories displayed as distinct paper/physical items; uncollected omitted.",
+      "A19": "Root reports integrated solo/dual engine-input checks; no real child or hardware acceptance and no measured full-game duration.",
+      "A21": "Reduced HUD and contextual home-complete interactions; runtime screenshots reviewed.",
+      "A17": "Five original material PCM cues with observation dispatch, mute and pause lifecycle verified; listening quality unmeasured."
+    },
+    "does_not_close_experiential_acceptance": true,
+    "author_editing_stopped": true,
+    "final_audio_test": {
+      "checks": 25,
+      "failures": 0,
+      "errors": 0,
+      "warnings": 0,
+      "evidence": "work/m28/story-audio-test.log",
+      "scope": "PCM data, event selection, mute and lifecycle, not perceived sound quality"
+    }
+  }
+}

@@ -6,6 +6,7 @@ var panel:=PanelContainer.new()
 var lines:=Label.new()
 var scroll:=ScrollContainer.new()
 var scroll_axis:=0.0
+var saved_map:Control
 func _init(font:Font)->void:
     layer=45
     var shade:=ColorRect.new();shade.color=Color(0.05,0.10,0.08,.86);shade.size=Vector2(1280,800);add_child(shade)
@@ -14,7 +15,8 @@ func _init(font:Font)->void:
     var stack:=VBoxContainer.new();stack.add_theme_constant_override("separation",18);panel.add_child(stack)
     var heading:=Label.new();heading.text="旅途记事 · 已发生的对话与观察";heading.add_theme_font_override("font",font);heading.add_theme_font_size_override("font_size",25);heading.add_theme_color_override("font_color",Color("344d3c"));stack.add_child(heading)
     scroll.size_flags_vertical=Control.SIZE_EXPAND_FILL;scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;stack.add_child(scroll)
-    lines.custom_minimum_size.x=860;lines.size_flags_horizontal=Control.SIZE_EXPAND_FILL;lines.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;lines.add_theme_font_override("font",font);lines.add_theme_font_size_override("font_size",20);lines.add_theme_color_override("font_color",Color("344d3c"));scroll.add_child(lines)
+    lines.custom_minimum_size.x=860;lines.size_flags_horizontal=Control.SIZE_EXPAND_FILL;lines.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;lines.add_theme_font_override("font",font);lines.add_theme_font_size_override("font_size",20);lines.add_theme_color_override("font_color",Color("344d3c"));var contents:=VBoxContainer.new();contents.size_flags_horizontal=Control.SIZE_EXPAND_FILL;contents.add_theme_constant_override("separation",24);scroll.add_child(contents);contents.add_child(lines)
+    saved_map=preload("res://ui/story_memory_map.gd").new(font);contents.add_child(saved_map);saved_map.visible=false
     var help:=Label.new();help.text="上下 / 摇杆翻阅 · 翻页键 / 肩键快速翻页";help.add_theme_font_override("font",font);help.add_theme_font_size_override("font_size",16);help.add_theme_color_override("font_color",Color("344d3c"));stack.add_child(help)
     var hint:=Button.new();hint.name="ThinkHint";hint.text="想一想 · V / 手柄上面键";hint.add_theme_font_override("font",font);hint.add_theme_font_size_override("font_size",20);hint.pressed.connect(func():hint_requested.emit());stack.add_child(hint)
     var close:=Button.new();close.text="返回 · H / Esc / 手柄返回";close.add_theme_font_override("font",font);close.add_theme_font_size_override("font_size",20);close.pressed.connect(func():close_requested.emit());stack.add_child(close)
@@ -39,3 +41,5 @@ func handle_input(event:InputEvent)->void:
 func _process(dt:float)->void:
     if not active or not get_parent().session.focused:scroll_axis=0;return
     scroll.scroll_vertical+=roundi(scroll_axis*360*dt)
+
+func show_saved_map(earned:bool)->void:saved_map.visible=earned

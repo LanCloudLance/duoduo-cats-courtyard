@@ -1,0 +1,35 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+M28_MAINLINE_QA_USERDIR /Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-root
+CONNECTED GAMEPADS: []
+MAINLINE_CLICK rect=[P: (86.0, 420.0), S: (400.0, 52.0)] viewport=(64, 64) transform=[X: (0.05, 0.0), Y: (0.0, 0.05), O: (0.0, 12.0)] visible=true running=false
+MAINLINE_RECORD user://story-run-1791654523897-1093729-prologue-solo-v2.json
+M28_MAINLINE_BATTLE first mode=true retries=0 hp=[2, 3]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1076.354, 587.8378), (12.0, 410.0), (205.0, 175.0)] exit=(1080.0, 635.0)
+MAINLINE_RECORD user://story-run-1791654523897-1093729-one-solo-v2.json
+MAINLINE_RECORD user://story-run-1791654523897-1093729-later-chapter-two-solo-v2.json
+THREE_REUNION_STATE [(539.724, 437.3134), (511.724, 457.3134), (567.724, 452.3134)] joined=true message=团团把前爪搭过来。三位又在一起了。
+MAINLINE_RECORD user://story-run-1791654523897-1093729-later-chapter-three-solo-v2.json
+M28_MAINLINE_BATTLE shell mode=true retries=0 hp=[3, 3]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1063.041, 632.9333), (-8.0, 390.0), (-8.0, 585.0)] exit=(1110.0, 635.0)
+M28_MAINLINE_BATTLE reserve mode=true retries=0 hp=[1, 3]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1058.685, 586.2491), (12.0, 400.0), (12.0, 595.0)] exit=(1085.0, 625.0)
+MAINLINE_RECORD user://story-run-1791654523897-1093729-later-chapter-four-solo-v2.json
+MAINLINE_RECORD user://story-run-1791654523897-1093729-later-chapter-five-solo-v2.json
+M28_MAINLINE_COMPLETE solo=true route=["prologue", "one", "two", "three", "four", "five"] encounters=["first", "shell", "reserve"]
+MAINLINE_CLICK rect=[P: (86.0, 484.0), S: (400.0, 52.0)] viewport=(64, 64) transform=[X: (0.05, 0.0), Y: (0.0, 0.05), O: (0.0, 12.0)] visible=true running=false
+MAINLINE_RECORD user://story-run-1791654526933-4129865-prologue-dual-v2.json
+M28_MAINLINE_BATTLE first mode=false retries=0 hp=[3, 3]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1026.343, 633.4881), (1076.116, 583.6494), (205.0, 175.0)] exit=(1080.0, 635.0)
+MAINLINE_RECORD user://story-run-1791654526933-4129865-one-dual-v2.json
+MAINLINE_RECORD user://story-run-1791654526933-4129865-later-chapter-two-dual-v2.json
+THREE_REUNION_STATE [(545.3552, 441.2131), (517.3552, 461.2131), (531.0237, 459.9927)] joined=true message=团团把前爪搭过来。三位又在一起了。
+MAINLINE_RECORD user://story-run-1791654526933-4129865-later-chapter-three-dual-v2.json
+M28_MAINLINE_BATTLE shell mode=false retries=0 hp=[3, 3]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1061.962, 635.6882), (1064.574, 610.9969), (-8.0, 390.0)] exit=(1110.0, 635.0)
+M28_MAINLINE_BATTLE reserve mode=false retries=0 hp=[1, 1]
+BATTLE_EXIT_DIAGNOSTIC phase=complete wave=2 pos=[(1081.383, 579.3069), (12.0, 400.0), (1082.371, 577.3973)] exit=(1085.0, 625.0)
+MAINLINE_RECORD user://story-run-1791654526933-4129865-later-chapter-four-dual-v2.json
+MAINLINE_RECORD user://story-run-1791654526933-4129865-later-chapter-five-dual-v2.json
+M28_MAINLINE_COMPLETE solo=false route=["prologue", "one", "two", "three", "four", "five"] encounters=["first", "shell", "reserve"]
+M28_MAINLINE_PLAYTHROUGH: 667 checks, 0 failed

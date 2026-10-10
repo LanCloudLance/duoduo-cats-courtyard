@@ -1,0 +1,10 @@
+{
+  "suite": "m28_player_preferences_test",
+  "exit": 0,
+  "passed": true,
+  "checks": 16,
+  "namespace": "DuoduoCatsCourtyard-qa-m28-root",
+  "seconds": 0.26,
+  "issues": [],
+  "warnings": []
+}

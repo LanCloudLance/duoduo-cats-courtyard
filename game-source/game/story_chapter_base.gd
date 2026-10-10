@@ -24,12 +24,60 @@ var hints := 0
 var actions: Array[String] = ["","",""]
 var action_time: Array[float] = [0.0,0.0,0.0]
 var extras := {}
+var dialogue:Array[String]=[]
+var dialogue_index:=0
+var social:Dictionary={}
+var social_remaining:=0.0
+var observations:Array[Dictionary]=[]
+var journey_discoveries:Array[String]=[]
 var battle_requested := false
 var battle_waves := 2
 var battles_finished := 0
 var follow_paths := {}
 var follow_goals := {}
 var follow_retry := 0.0
+var social_goals:Dictionary={}
+var social_paths:Dictionary={}
+var social_lines:Array[String]=[]
+var social_gesture:Dictionary={}
+func social_transition_active()->bool:return not social_goals.is_empty()
+func stage_social(lines:Array,gesture:Dictionary,goals:Dictionary)->void:
+    social_goals=goals.duplicate();social_paths.clear();social_lines.assign(lines);social_gesture=gesture.duplicate()
+    social=gesture.duplicate();social["stage"]="approach";social["kind"]="walk";social_remaining=30.0
+func step_social_transition(dt:float)->void:
+    if not is_finite(dt) or dt<=0:return
+    var done:=true
+    for role in social_goals:
+        var destination:Vector2=social_goals[role]
+        var waypoint:Vector2=destination
+        if not follow_segment(role,positions[role],destination):
+            if not social_paths.has(role):social_paths[role]=permanent_route(role,positions[role],destination)
+            var path:Array=social_paths[role]
+            while not path.is_empty() and positions[role].distance_to(path[0])<2.0:path.pop_front()
+            if not path.is_empty():waypoint=path[0]
+        var offset:Vector2=positions[role].direction_to(waypoint)*minf(130.0*minf(dt,0.05),positions[role].distance_to(waypoint))
+        if offset.length()>0.01:facing[role]=offset.normalized();actions[role]="walk";move(role,offset)
+        if positions[role].distance_to(destination)>1.0:done=false
+    if done:
+        for role in social_goals:actions[role]=""
+        social_goals.clear();social_paths.clear();social_arrived();start_dialogue(social_lines,social_gesture)
+func social_arrived()->void:pass
+
+func dialogue_active()->bool:return dialogue_index<dialogue.size()
+func start_dialogue(lines:Array,gesture:Dictionary={})->void:
+    dialogue.assign(lines);dialogue_index=0;social=gesture.duplicate(true);social_remaining=float(social.get("duration",1.5))
+    if dialogue_active():say(dialogue[0])
+func advance_dialogue()->void:
+    if not dialogue_active():return
+    dialogue_index+=1
+    if dialogue_active():say(dialogue[dialogue_index])
+    else:message_time=2.0
+func observe(id:String,text:String,point:Vector2)->void:
+    observations.append({"id":id,"text":text,"point":point})
+    if observations.size()>8:observations.pop_front()
+    say(text,1)
+func presentation()->Dictionary:
+    return {"mechanisms":[],"paths":[],"observations":observations.duplicate(true),"discoveries":[],"social":social.duplicate(true),"dialogue_active":dialogue_active(),"social_transition":social_transition_active(),"chapter":chapter,"phase":phase}
 func available_roles() -> Array:
     return [0,1,2] if joined else [0,1]
 func switch_actor() -> void:
@@ -62,7 +110,11 @@ func move(role:int,offset:Vector2)->void:
             if walkable(positions[role]+part,role):positions[role]+=part
 func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
     if not enabled or not is_finite(dt) or dt<=0 or not a.is_finite() or not b.is_finite():return
+    if dialogue_active():return
+    if social_transition_active():step_social_transition(dt);return
     dt=minf(dt,0.05);clock+=dt;message_time=maxf(0,message_time-dt)
+    social_remaining=maxf(0,social_remaining-dt)
+    if social_remaining<=0:social.clear()
     if finished and not allow_epilogue:return
     for role in available_roles():
         action_time[role]=maxf(0,action_time[role]-dt)
@@ -72,6 +124,7 @@ func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
         elif role==0:motion=a
         elif role==current_cat:motion=b
         if motion.length()>0.1:
+            if not social.is_empty() and role in social.get("participants",[]):social.clear();social_remaining=0
             facing[role]=motion.normalized()
             if actions[role] in ["hold","brace","light"]:actions[role]=""
         elif action_time[role]<=0 and actions[role] not in ["hold","brace","light"]:actions[role]=""
@@ -87,7 +140,7 @@ func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
                 follow_partner(follower,goal,dt)
 func posted_role(role:int)->bool:
     if chapter==5:
-        return (role==2 and get("beam_held")==true) or (role==0 and get("shield_held")==true) or (role==1 and get("hook_held")==true)
+        return (role==2 and get("beam_held")==true) or (role==0 and (get("shield_held")==true or get("load_held")==true or get("prep_held")==true or get("pilot_waiting")==true)) or (role==1 and get("hook_held")==true)
     return actions[role] in ["hold","brace","light"]
 func travel_follow_allowed()->bool:
     # Only permanent travel sections; no AI solving or dragging posted partners.

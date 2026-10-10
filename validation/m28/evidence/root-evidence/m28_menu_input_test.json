@@ -1,0 +1,10 @@
+{
+  "suite": "m28_menu_input_test",
+  "exit": 0,
+  "passed": true,
+  "checks": 9,
+  "namespace": "DuoduoCatsCourtyard-qa-m28-root",
+  "seconds": 2.61,
+  "issues": [],
+  "warnings": []
+}

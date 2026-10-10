@@ -2,7 +2,7 @@
 
 同一 Godot 4.7.2 / GDScript 工程的 Web 单线程导出。权威游戏源码保留在工作区 outputs/duoduo-game；这里 game-source 是本次构建对应快照，修改后需同步再构建。dist 为网站部署内容。
 
-M27 当前入口提供新旅程、按人数继续旅程，以及折叠的章节回访／独立挑战。主线范围为序章、五章与回家尾声；详情见 [本轮交付与验收范围](validation/M27-game-loop.md)。浏览器用独立的 /userfs/DuoduoCatsCourtyard 安全点，IndexedDB 保存在本站当前浏览器中；不与桌面自动同步。网页顶部操作说明会暂停游戏，回画面后 Enter 或菜单键继续。
+M28 当前入口提供完整新旅程、按人数继续、设置和已解锁章节回访；旧独立开发场只在 development-menu 启用。主线为序章、五章与归家。谜题采用真实受力、光路、隔离与可恢复探索；单人战斗一位部署、手动接棒，双人两位真人、第三位候补。详见 [全篇重审和返工评审](validation/m28/final-review.md)。技术候选不代表儿童趣味、Windows实体手柄或真实首通时长已验收。浏览器用独立的 /userfs/DuoduoCatsCourtyard 安全点，IndexedDB 保存在本站当前浏览器中；不与桌面自动同步。网页顶部操作说明会暂停游戏，回画面后 Enter 或菜单键继续。
 
 构建设置环境变量 GODOT_BIN 和 GODOT_WEB_TEMPLATES，运行 python3 build_web.py。后者目录包含官方 web_nothreads_release.zip 和 web_nothreads_debug.zip。正式构建不设置 WEB_DEBUG、WEB_STORAGE_PROBE。
 

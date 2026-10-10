@@ -5,6 +5,11 @@ var motion_initialized := false
 var walk_phase := 0.0
 var walk_stride := 0.0
 var walk_facing := 1.0
+var seating_progress:=0.0
+func place_home(point:Vector2,kind:String,delta:float)->void:
+    seating_progress=move_toward(seating_progress,1.0 if kind=="sit" else 0.0,delta*2.5)
+    var seat:Vector2=preload("res://game/story_stage_art.gd").home_pose_position(point,role,"sit")
+    position=point.lerp(seat,smoothstep(0.0,1.0,seating_progress))
 func _ready() -> void:
     legacy_sheet = HOME
     motion_sheet_path = "res://assets/visual-m26/home-motion.png"

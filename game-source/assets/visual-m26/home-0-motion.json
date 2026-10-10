@@ -17,17 +17,13 @@
     7
   ],
   "rear": [
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-    6,
-    7
+    8,
+    9,
+    10,
+    11
   ],
   "idle_front": 2,
-  "idle_rear": 2,
+  "idle_rear": 8,
   "actions": {},
   "frames": [
     {
@@ -125,6 +121,62 @@
         1930.0,
         321
       ]
+    },
+    {
+      "region": [
+        0,
+        0,
+        314,
+        575
+      ],
+      "anchor": [
+        180,
+        550
+      ],
+      "source_height": 495,
+      "atlas": "../visual-m28/home-rear.png"
+    },
+    {
+      "region": [
+        314,
+        0,
+        313,
+        575
+      ],
+      "anchor": [
+        491,
+        550
+      ],
+      "source_height": 495,
+      "atlas": "../visual-m28/home-rear.png"
+    },
+    {
+      "region": [
+        627,
+        0,
+        314,
+        575
+      ],
+      "anchor": [
+        805,
+        550
+      ],
+      "source_height": 495,
+      "atlas": "../visual-m28/home-rear.png"
+    },
+    {
+      "region": [
+        941,
+        0,
+        313,
+        575
+      ],
+      "anchor": [
+        1118,
+        550
+      ],
+      "source_height": 495,
+      "atlas": "../visual-m28/home-rear.png"
     }
   ],
   "notes": "Source contains only front-three-quarter poses; upward home walking reuses those poses.",

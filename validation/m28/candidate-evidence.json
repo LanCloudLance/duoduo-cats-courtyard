@@ -1,0 +1,66 @@
+{
+  "stage": "engineering_and_presentation_candidate",
+  "whole_story": [
+    "prologue",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "home"
+  ],
+  "ordinary_input_modes": [
+    "solo",
+    "dual"
+  ],
+  "mainline": {
+    "suite": "m28_mainline_playthrough_test",
+    "exit": 0,
+    "passed": true,
+    "checks": 667,
+    "namespace": "DuoduoCatsCourtyard-qa-m28-root",
+    "seconds": 7.29,
+    "issues": [],
+    "warnings": []
+  },
+  "keepsakes": {
+    "suite": "m28_keepsake_test",
+    "exit": 0,
+    "passed": true,
+    "checks": 5,
+    "namespace": "DuoduoCatsCourtyard-qa-m28-root",
+    "seconds": 0.24,
+    "issues": [],
+    "warnings": []
+  },
+  "font": {
+    "cjk_used": 893,
+    "missing": [],
+    "missing_text": "",
+    "method": "actual sfnt cmap 4/12 nonzero glyph mapping; comments and development labels included"
+  },
+  "real_child_test": false,
+  "real_windows_gamepad_test": false,
+  "real_first_play_duration": null,
+  "fun_acceptance": false,
+  "known_issue": "ObjectDB exit warnings in six-process resume harness, source not established; successful resume is not warning-free proof",
+  "evidence_paths": [
+    "root-evidence/m28_mainline_playthrough_test.json",
+    "root-evidence/m28_mainline_playthrough_test.log",
+    "root-evidence/m28_keepsake_test.json",
+    "root-evidence/m28_keepsake_test.log",
+    "root-evidence/m28_player_preferences_test.json",
+    "root-evidence/m28_menu_input_test.json",
+    "combat-m28_combat_contract_test.log",
+    "combat-m28_combat_feedback_test.log",
+    "combat-m28_combat_review_regression_test.log",
+    "combat-m28_combat_playthrough_test.log",
+    "combat-m28_combat_strategy_test.log",
+    "portable-m28_portable_lamp_playthrough_test.log",
+    "portable-m28_puzzle_pilot_wait_test.log",
+    "story-audio-test.log",
+    "lobby-battle-resume-logs/evidence.json",
+    "mechanism-render-v2.log"
+  ],
+  "browser": "local final release export; ordinary keyboard/pause/journal/settings/exit/re-enter saved mode observed; no warn/error logs; hosted authentication full-path is separate"
+}

@@ -3,6 +3,13 @@ const StoryLabels=preload("res://game/story_labels.gd")
 var labels=StoryLabels.new()
 signal next_chapter_requested
 signal battle_requested
+const StageArt = preload("res://game/story_stage_art.gd")
+const Dialogue = preload("res://game/story_dialogue.gd")
+var dialogue_view:CanvasLayer
+var feedback_panel:Panel
+var presentation_clock:=0.0
+var social_signature:=""
+var social_elapsed:=0.0
 const Story = preload("res://game/chapter_one_state.gd")
 const Actor = preload("res://game/actor_view.gd")
 const Home = preload("res://game/home_sprite.gd")
@@ -31,7 +38,7 @@ var checkpoint_pending:=0.0
 var save_status := ""
 var record_prefix := "story-chapter-one"
 var heard := -1
-var audio := preload("res://game/garden_audio.gd").new()
+var audio := preload("res://game/story_audio.gd").new()
 var prop_views: Array[Sprite2D] = []
 
 func _init(value) -> void:session = value
@@ -41,7 +48,7 @@ func _ready() -> void:
     add_child(audio)
     for role in range(2):
         var home = Home.new();home.role = role;add_child(home);home_views.append(home)
-        var actor = Actor.new();actor.role = role;actor.font = font;actor.storybook = true;actor.caption_visible = true;add_child(actor);actors.append(actor)
+        var actor = Actor.new();actor.role = role;actor.font = font;actor.storybook = true;actor.social_visual = true;actor.caption_visible = true;add_child(actor);actors.append(actor)
     lamp = make_prop(LAMP_ART,Rect2(94,452,296,414),Vector2(98,142));add_child(lamp)
     lamp.position = Story.LAMP;lamp.z_index = int(Story.LAMP.y)
     flame_view = preload("res://game/waystation_flame.gd").new()
@@ -52,11 +59,12 @@ func _ready() -> void:
     for data in [[Rect2(80,50,500,620),Vector2(112,145)],[Rect2(800,0,380,750),Vector2(190,438)],[Rect2(120,732,400,515),Vector2(68,88)],[Rect2(648,766,600,452),Vector2(122,91)]]:
         var prop := make_prop(PROPS,data[0],data[1]);add_child(prop);prop_views.append(prop)
     hud.layer = 14;add_child(hud)
+    dialogue_view=Dialogue.new(font);add_child(dialogue_view)
     _panel(Rect2(24,18,850,53))
     title = _label("",Rect2(44,29,820,36),23)
-    _panel(Rect2(24,690,1232,90))
-    line = _label("",Rect2(44,700,1190,42),18);line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    controls = _label("",Rect2(44,751,1190,24),15)
+    feedback_panel=_panel(Rect2(24,700,1026,78))
+    line = _label("",Rect2(42,711,990,42),18);line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    controls = _label("",Rect2(42,752,990,20),13)
     complete_panel = _panel(Rect2(275,130,730,505))
     completed_text = _label("",Rect2(30,28,670,450),22,complete_panel);completed_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     complete_panel.visible = false
@@ -67,7 +75,7 @@ func reset(single: bool, resume := true) -> void:
     if resume:
         var data := read_record()
         if not data.is_empty():
-            if data.get("version")==2:state.restore_checkpoint(data)
+            if int(data.get("version",0))>=2:state.restore_checkpoint(data)
             else:state.restore(data)
             recorded=state.finished;save_status="已恢复第一章通关记录" if recorded else "已恢复第一章安全进度"
             checkpoint_signature=progress_signature()
@@ -111,12 +119,16 @@ func save_record() -> void:
 func set_active(value: bool) -> void:
     if active and not value:save_checkpoint()
     active = value;visible = value;hud.visible = value;camera.enabled = value
-    if not value:audio.silence()
+    if not value:audio.silence();dialogue_view.visible=false
 func start_battle() -> void:
     state.phase = "battle";state.battle_requested = false;battle_requested.emit()
 func finish_battle() -> void:state.enter_station()
 func handle_action(slot: int, button: int) -> void:
     if not session.running() or (state.single and slot!=0):return
+    if StageArt.social_transition_active(state):return
+    if StageArt.dialog_active(state):
+        if button==JOY_BUTTON_A:state.advance_dialogue()
+        _refresh(0);return
     if button==JOY_BUTTON_LEFT_SHOULDER:state.request_hint();return
     if button==JOY_BUTTON_RIGHT_SHOULDER:
         state.tool(state.controlled if state.single else slot);return
@@ -131,6 +143,7 @@ func handle_action(slot: int, button: int) -> void:
         else:state.interact(slot)
 func _physics_process(dt: float) -> void:
     if not active or not session.running():return
+    if StageArt.dialog_active(state):_refresh(dt);return
     var a:Vector2=session.movement(0);var b:Vector2=session.movement(1)
     if state.single:b = a if state.controlled==1 else Vector2.ZERO;a = a if state.controlled==0 else Vector2.ZERO
     state.step(dt,a,b,true)
@@ -139,9 +152,14 @@ func _physics_process(dt: float) -> void:
         if checkpoint_pending>=0.6:save_checkpoint()
     if state.battle_requested:start_battle();return
     if state.finished and not recorded and not completion_attempted:save_record()
-    if heard!=state.event_id:heard = state.event_id;audio.play(state.cue)
+    if heard!=state.event_id:heard = state.event_id;audio.play_story(state)
     _refresh(dt)
 func _refresh(dt: float) -> void:
+    presentation_clock+=dt
+    var signature:String=str(StageArt.data(state).get("social",{}))+str(state.dialogue)
+    if signature!=social_signature:social_signature=signature;social_elapsed=0.0
+    social_elapsed+=dt
+    dialogue_view.present(state,session.keyboard_mode)
     for role in range(2):
         var selected:bool=not state.single or state.controlled==role
         actors[role].visible = state.equipment
@@ -151,13 +169,14 @@ func _refresh(dt: float) -> void:
         home_views[role].show_action(state.actions[role],state.clock,direction)
         home_views[role].position = state.positions[role];home_views[role].z_index = int(state.positions[role].y)
         var kind:String=state.actions[role]
+        actors[role].social_kind="rest" if state.resting>0 else StageArt.social_kind(state,role)
+        actors[role].presentation_clock=presentation_clock
         actors[role].motion_kind={"pet":"reach","paw":"inspect","sniff":"inspect"}.get(kind,kind) if state.action_time[role]>0 or kind=="brace" else ""
         actors[role].update_pose(state.positions[role],selected,state.bracing if role==0 else false,dt)
         actors[role].caption_override = ["朵朵","团团"][role]+(" · 你控制" if state.single and selected else " · 保持中" if state.single and role==0 and state.bracing else " · 伙伴" if state.single else "")
         if state.actions[role] in ["pet","paw","sniff"]:actors[role].rotation = sin(state.action_time[role]*16)*0.04
         else:actors[role].rotation = 0
-        if state.resting>0:actors[role].scale = Vector2(1,0.85)
-        else:actors[role].scale = Vector2.ONE
+        actors[role].scale = Vector2.ONE
     var station:bool = state.phase in ["station","rest","complete"]
     var protected:Array[Rect2]=[]
     if station:
@@ -165,6 +184,7 @@ func _refresh(dt: float) -> void:
     else:
         protected.assign([Rect2(Story.SOCKET-Vector2(35,40),Vector2(70,80)),Rect2(Story.KNOT-Vector2(35,40),Vector2(70,80))])
     labels.update(actors,protected)
+    prop_views[0].visible=false
     prop_views[0].position = Story.GRANNY
     prop_views[0].z_index = int(Story.GRANNY.y)
     prop_views[1].visible = not station
@@ -187,6 +207,9 @@ func _refresh(dt: float) -> void:
     complete_panel.visible = state.finished
     if state.finished:
         completed_text.text = "点亮第一盏灯 ✓\n\n驿站重新亮起来了。圆圆留下的白毛和脚印，\n把路指向了山坡上的旧钟楼。\n\n朵朵：五分钟以后，我还是很勇敢。\n\n"+save_status+"\n\n下一章：团团，去那边等我\n运输桥、桥架内外的分工，还有钟楼的低窗。\n\n按互动键进入第二章。Esc 可选关、重玩第一章。"
+    controls.text="E 互动 · R 工具 · Tab 换角色 · H 记事 · Esc 暂停" if session.keyboard_mode else "下面键互动 · 右肩工具 · 左肩想一想"
+    feedback_panel.visible=not dialogue_view.active and not line.text.is_empty()
+    line.visible=feedback_panel.visible;controls.visible=feedback_panel.visible
     queue_redraw()
 func _panel(rect: Rect2) -> Panel:
     var p := Panel.new();p.position = rect.position;p.size = rect.size
@@ -201,6 +224,9 @@ func _text(p:Vector2,text:String,width:=150.0,size:=16)->void:
 func _draw()->void:
     draw_texture_rect(BACKDROP,Rect2(0,0,1280,800),false)
     if not active:return
+    StageArt.npc(self,2,1 if StageArt.dialog_active(state) else 2 if state.lit else 0,Story.GRANNY,145,state.clock)
+    StageArt.draw_mechanisms(self,StageArt.data(state))
+    StageArt.social_items(self,state,social_elapsed)
     var station:bool=state.phase in ["station","rest","complete"]
     if not station:
         _text(Story.TAG+Vector2(-55,-70),"归途门",110)

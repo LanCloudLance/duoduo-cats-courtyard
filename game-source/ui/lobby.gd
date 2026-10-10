@@ -13,12 +13,28 @@ const LightCorridor = preload("res://game/light_corridor.gd")
 const ChimeGate = preload("res://game/chime_gate.gd")
 const RestArea = preload("res://game/rest_area.gd")
 const StoryJourney = preload("res://game/story_journey.gd")
+const BattleJourney = preload("res://game/battle_journey.gd")
+var battle_journey=BattleJourney.new()
+var battle_save_signature:=""
+var battle_save_clock:=0.0
+var battle_save_error:=""
 const Checkpoint = preload("res://game/checkpoint.gd")
 const TEAM = preload("res://assets/team.png")
 const Music = preload("res://game/music_director.gd")
 const CREAM := Color("f6eedc")
 const MUTE := Color("a8b9ad")
 const GOLD := Color("e9c981")
+const PlayerSettings = preload("res://ui/game_settings.gd")
+const JourneyMenu = preload("res://ui/journey_menu.gd")
+var player_settings=PlayerSettings.new()
+var journey_menu:Control
+var journey_started:=false
+var development_menu:=false
+var discovery_signature:=""
+var journey_discoveries:Array[String]=[]
+var menu_solo_saved:=false
+var menu_dual_saved:=false
+var discovery_clock:=0.0
 var session = Session.new()
 var router = Router.new(session)
 var devices_text: Array[Label] = []
@@ -73,11 +89,22 @@ var journal_keyboard:=false
 
 func _ready() -> void:
     Input.ignore_joypad_on_unfocused_application = true
+    if not OS.has_feature("web"):get_tree().auto_accept_quit=false
     var theme_value := Theme.new()
     theme_value.default_font = load("res://assets/fonts/CourtyardSans.ttf")
     theme_value.default_font_size = 20
     theme = theme_value
     _build()
+    player_settings.read()
+    journey_menu=JourneyMenu.new(player_settings);journey_menu.name="JourneyMenu";add_child(journey_menu)
+    journey_menu.continue_requested.connect(continue_current)
+    journey_menu.resume_requested.connect(resume_journey)
+    journey_menu.new_requested.connect(start_journey)
+    journey_menu.controllers_requested.connect(func():router.use_gamepads();session.pause_all("手柄菜单键加入，准备后回到冒险"))
+    journey_menu.settings_changed.connect(apply_player_settings)
+    journey_menu.quit_requested.connect(exit_game)
+    journey_menu.chapter_requested.connect(visit_chapter)
+    development_menu="--development-menu" in OS.get_cmdline_user_args()
     music = Music.new()
     # Offline state suites have no mixing device. Their scene context still runs;
     # the dedicated playback suite explicitly exercises real decoder voices.
@@ -151,6 +178,8 @@ func _ready() -> void:
     )
     courtyard.next_level_requested.connect(enter_combat)
     arena.next_level_requested.connect(func():
+        collect_battle_progress()
+        if stage in ["story-combat","chapter-combat"] and arena.has_method("result") and arena.result().get("outcome")!="complete":return
         if stage == "story-combat":
             router.clear_keyboard()
             story_chapter.state.after_battle()
@@ -178,7 +207,7 @@ func _ready() -> void:
         story_chapter.cancel_inputs()
     )
     Input.joy_connection_changed.connect(_connection_changed)
-    if not OS.has_feature("web") and checkpoint.path == "user://courtyard-safe-v1.json":
+    if development_menu and not OS.has_feature("web") and checkpoint.path == "user://courtyard-safe-v1.json":
         var legacy: Array = []
         for version in ["M10","M9","M8","M7","M6"]:
             legacy.append(OS.get_data_dir().path_join("Godot/app_userdata/朵朵与猫猫 · 庭院试玩 "+version+"/courtyard-safe-v1.json"))
@@ -196,43 +225,76 @@ func _ready() -> void:
         )
         JavaScriptBridge.get_interface("window").duoduoPause = web_pause_callback
         print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())
-    var requested_chapter := 0
-    for c in range(2,6):
-        if web_story.contains("mode=chapter-"+str(c)+"-") or ("--chapter-"+str(c)) in OS.get_cmdline_user_args(): requested_chapter = c
-    if requested_chapter>0:
-        start_story_chapter(requested_chapter,web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
-    elif web_story.contains("mode=chapter-one") or "--chapter-one" in OS.get_cmdline_user_args():
-        start_chapter_one(web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
-    elif web_story.contains("mode=trial-"):
-        start_trial("combat" if web_story.contains("trial-combat") else ("gate" if web_story.contains("trial-gate") else "light"),web_story.contains("-solo"))
-    elif web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
-        start_story(web_story.contains("story-solo"))
+    if development_menu:
+        var requested_chapter := 0
+        for c in range(2,6):
+            if web_story.contains("mode=chapter-"+str(c)+"-") or ("--chapter-"+str(c)) in OS.get_cmdline_user_args(): requested_chapter = c
+        if requested_chapter>0:
+            start_story_chapter(requested_chapter,web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
+        elif web_story.contains("mode=chapter-one") or "--chapter-one" in OS.get_cmdline_user_args():
+            start_chapter_one(web_story.contains("-solo") or "--solo-journey" in OS.get_cmdline_user_args())
+        elif web_story.contains("mode=trial-"):
+            start_trial("combat" if web_story.contains("trial-combat") else ("gate" if web_story.contains("trial-gate") else "light"),web_story.contains("-solo"))
+        elif web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
+            start_story(web_story.contains("story-solo"))
+        elif web_story.contains("mode=resume-journey-"):
+            resume_story_entry(web_story.contains("resume-journey-solo"))
+        elif web_story.contains("mode=journey-") or "--story-journey" in OS.get_cmdline_user_args():
+            start_journey(web_story.contains("journey-solo") or "--solo-journey" in OS.get_cmdline_user_args())
+        elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
+            start_courtyard(true)
+        elif "--solo-combat-preview" in OS.get_cmdline_user_args():
+            start_solo_combat()
+        elif "--combat-preview" in OS.get_cmdline_user_args():
+            leave_solo()
+            preview_run = true
+            enter_combat()
+            router.start_keyboard()
+        elif "--light-preview" in OS.get_cmdline_user_args():
+            leave_solo()
+            preview_run = true
+            enter_light()
+            router.start_keyboard()
+        elif "--gate-preview" in OS.get_cmdline_user_args():
+            start_trial("gate",false)
+            router.start_keyboard()
+        elif "--rest-preview" in OS.get_cmdline_user_args():
+            leave_solo()
+            preview_run = true
+            enter_rest()
+            router.start_keyboard()
     elif web_story.contains("mode=resume-journey-"):
         resume_story_entry(web_story.contains("resume-journey-solo"))
     elif web_story.contains("mode=journey-") or "--story-journey" in OS.get_cmdline_user_args():
         start_journey(web_story.contains("journey-solo") or "--solo-journey" in OS.get_cmdline_user_args())
-    elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
-        start_courtyard(true)
-    elif "--solo-combat-preview" in OS.get_cmdline_user_args():
-        start_solo_combat()
-    elif "--combat-preview" in OS.get_cmdline_user_args():
-        leave_solo()
-        preview_run = true
-        enter_combat()
-        router.start_keyboard()
-    elif "--light-preview" in OS.get_cmdline_user_args():
-        leave_solo()
-        preview_run = true
-        enter_light()
-        router.start_keyboard()
-    elif "--gate-preview" in OS.get_cmdline_user_args():
-        start_trial("gate",false)
-        router.start_keyboard()
-    elif "--rest-preview" in OS.get_cmdline_user_args():
-        leave_solo()
-        preview_run = true
-        enter_rest()
-        router.start_keyboard()
+    apply_player_settings()
+
+func continue_current()->void:
+    if not journey_started or not session.focused:return
+    journey_menu.close_settings()
+    if session.keyboard_mode or session.devices[0]<0:router.start_keyboard()
+    else:session.pause_all("按手柄菜单键准备后继续")
+func visit_chapter(chapter:int,single:bool)->void:
+    if session.running():return
+    var record:Dictionary=story_progress.read(single)
+    if record.is_empty() or chapter>int(record.chapter):return
+    if chapter==0:start_story(single)
+    elif chapter==1:start_chapter_one(single)
+    else:start_story_chapter(chapter,single)
+
+func apply_player_settings()->void:
+    if not is_instance_valid(music):return
+    music_setting=player_settings.music_level
+    music.level=0.12 if music_setting==0 else 0.28
+    music.set_muted(music_setting==2)
+    music_button.text="♫ 音乐："+["轻声","标准","关闭"][music_setting]
+    for scene in [prologue,chapter_one,story_chapter,courtyard,arena,light_corridor,chime_gate,rest_area]:
+        if is_instance_valid(scene) and scene.get("audio")!=null:scene.audio.muted=not player_settings.effects
+    arena.shake_enabled=player_settings.camera_shake
+    if arena.get("rumble_enabled")!=null:arena.rumble_enabled=player_settings.rumble
+    if not player_settings.rumble:
+        for device in session.devices:
+            if device>=0:Input.stop_joy_vibration(device)
 
 func _panel(rect: Rect2, color: Color, line: Color, radius: int = 20) -> Panel:
     var panel := Panel.new()
@@ -409,11 +471,19 @@ func open_journal()->void:
     var source=prologue.state if stage=="prologue" else chapter_one.state if stage in ["chapter-one","chapter-combat"] else story_chapter.state
     journal_ready=session.ready_flags.duplicate();journal_devices=session.devices.duplicate();journal_keyboard=session.keyboard_mode
     router.clear_keyboard();session.pause_all("旅途记事 · 回看已经出现的对话和观察")
-    journal.open(source.history,source.message)
+    var entries:Array=source.history.duplicate()
+    var names:=discovery_names()
+    if not names.is_empty():entries.append("旅程留下的东西："+"、".join(names))
+    journal.show_saved_map("three_map" in journey_discoveries)
+    journal.open(entries,source.message)
 func journal_hint()->void:
     if not journal.active or not session.focused or stage in ["chapter-combat","story-combat"]:return
     var source=prologue.state if stage=="prologue" else chapter_one.state if stage=="chapter-one" else story_chapter.state
-    source.request_hint();journal.open(source.history,source.message)
+    source.request_hint()
+    var entries:Array=source.history.duplicate()
+    var names:=discovery_names()
+    if not names.is_empty():entries.append("旅程留下的东西："+"、".join(names))
+    journal.show_saved_map("three_map" in journey_discoveries);journal.open(entries,source.message)
 func close_journal()->void:
     journal.close();router.clear_keyboard()
     if session.focused and session.devices==journal_devices and session.keyboard_mode==journal_keyboard:session.ready_flags.assign(journal_ready)
@@ -512,6 +582,13 @@ func _save_checkpoint() -> void:
 func _refresh_checkpoint_button() -> void:
     var story_dual:Dictionary=story_progress.read(false)
     var story_solo:Dictionary=story_progress.read(true)
+    menu_solo_saved=not story_solo.is_empty();menu_dual_saved=not story_dual.is_empty()
+    if journey_menu!=null:
+        var unlocks:={"solo":[],"dual":[]}
+        for item in [["solo",story_solo],["dual",story_dual]]:
+            if not item[1].is_empty():
+                for chapter in range(int(item[1].chapter)+1):unlocks[item[0]].append(chapter)
+        journey_menu.update_chapters(unlocks)
     var data: Dictionary = checkpoint.read_checkpoint()
     resume_button.disabled = data.is_empty() and story_dual.is_empty()
     resume_button.text = "继续双人故事" if not story_dual.is_empty() else "暂无双人记录" if data.is_empty() else "继续双人庭院"
@@ -541,6 +618,8 @@ func resume_journey(single: bool) -> void:
     var value:Dictionary=story_progress.read(single)
     if value.is_empty():resume_courtyard(single);return
     story_route_active=true;story_run_id=value.run_id;apply_story_prefix()
+    journey_discoveries.assign(value.get("discoveries",[]));discovery_signature=JSON.stringify(journey_discoveries)
+    stage="menu"
     match int(value.chapter):
         0:start_story(single,true)
         1:start_chapter_one(single,true)
@@ -594,7 +673,10 @@ func _connection_changed(device: int, connected: bool) -> void:
             last_buttons[slot] = -1
 
 func _notification(what: int) -> void:
-    if what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+    if what==NOTIFICATION_WM_CLOSE_REQUEST:
+        exit_game()
+    elif what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+        collect_battle_progress();collect_story_discoveries()
         router.clear_keyboard()
         session.set_focus(false)
     elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
@@ -603,11 +685,17 @@ func _notification(what: int) -> void:
 func _process(_delta: float) -> void:
     if not is_instance_valid(top_status):
         return
+    battle_save_clock+=_delta
+    if battle_save_clock>=0.25:
+        battle_save_clock=0;collect_battle_progress()
+    discovery_clock+=_delta
+    if story_route_active and discovery_clock>=0.25:
+        discovery_clock=0;collect_story_discoveries()
     if story_route_active and not story_manifest_error.is_empty():
         story_manifest_retry+=_delta
         if story_manifest_retry>=1.0:save_story_location(story_pending_chapter)
-    story_save_notice.visible=story_route_active and not story_manifest_error.is_empty()
-    story_save_notice.text="旅程位置未保存 · 当前冒险可继续；退出后暂时只能恢复旧记录。正在重试。" if story_save_notice.visible else ""
+    story_save_notice.visible=story_route_active and (not story_manifest_error.is_empty() or not battle_save_error.is_empty())
+    story_save_notice.text=battle_save_error if not battle_save_error.is_empty() else "旅程位置未保存 · 当前冒险可继续；退出后暂时只能恢复旧记录。正在重试。" if story_save_notice.visible else ""
     if OS.has_feature("web") and OS.is_debug_build():
         web_probe_clock += _delta
         if web_probe_clock >= 0.1:
@@ -653,7 +741,10 @@ func _process(_delta: float) -> void:
     music.set_paused(not session.focused or (music_started and not playing))
     for child in get_children():
         if child is CanvasItem and child != story_chapter and child != chapter_one and child != prologue and child != courtyard and child != arena and child != light_corridor and child != chime_gate and child != rest_area:
-            child.visible = not playing
+            child.visible = not playing and (child==journey_menu or development_menu)
+    journey_menu.z_index=1000
+    journey_menu.update_state(journey_started,menu_solo_saved,menu_dual_saved,session.pause_reason,session.keyboard_mode)
+    music_button.visible=false
     if story_chapter.active != (playing and stage == "story-chapter"):
         story_chapter.set_active(playing and stage == "story-chapter")
     if chapter_one.active != (playing and stage == "chapter-one"):
@@ -678,8 +769,8 @@ func _process(_delta: float) -> void:
         footer_status.text = "按 Enter 开始键盘试玩，或接入两只手柄"
     get_node("GamepadMode").text = "切回单手柄" if session.single_player else "切回双手柄"
     for slot in range(2):
-        slot_titles[slot].text = (["玩家控制","AI 伙伴"][slot] if session.single_player else ["朵朵","猫咪伙伴"][slot])
-        slot_details[slot].text = (["一套按键切换朵朵、团团与圆圆。","协助战斗；机关解谜由玩家操作。"][slot] if session.single_player else ["认真冒险，也认真休息。","团团与圆圆，共用一个玩家位置。"][slot])
+        slot_titles[slot].text = (["玩家控制","候补伙伴"][slot] if session.single_player else ["朵朵","猫咪伙伴"][slot])
+        slot_details[slot].text = (["一套按键切换朵朵、团团与圆圆。","出战由你选择；机关解谜由你操作。"][slot] if session.single_player else ["认真冒险，也认真休息。","团团与圆圆，共用一个玩家位置。"][slot])
         var device: int = session.devices[slot]
         claim_buttons[slot].disabled = session.keyboard_mode
         claim_buttons[slot].text = "键盘模式" if session.keyboard_mode else "重新认领"
@@ -702,7 +793,7 @@ func _process(_delta: float) -> void:
             action_text[slot].text = "按下按钮，查看接收结果"
         else:
             action_text[slot].text = "已收到按钮 %d" % last_buttons[slot]
-        slot_badges[slot].text = ("AI" if stage == "combat" else "伴") if session.single_player and slot == 1 else "P%d" % (slot+1)
+        slot_badges[slot].text = ("候" if stage == "combat" else "伴") if session.single_player and slot == 1 else "P%d" % (slot+1)
     if session.single_player:
         top_status.text = ("单人战斗试玩" if preview_run else "单人完整庭院") + ""
         footer_status.text = "单人键盘 · Enter 开始 / 继续" if session.keyboard_mode else "单手柄 · 十字键选菜单 / 下确认 · 菜单键准备 / 继续"
@@ -710,21 +801,21 @@ func _process(_delta: float) -> void:
         mode_help.text = "WASD 移动 · E 互动 · Tab 换角色；战斗 F 攻击 / Q 闪避，解谜 R 工具 / Q 切回。"
         devices_text[0].text = "单人键盘 · WASD / F / Q / E / Tab" if session.keyboard_mode else devices_text[0].text
         devices_text[1].text = "无需第二只手柄"
-        slot_titles[1].text = "AI 伙伴" if stage == "combat" else "伙伴分工"
-        ready_text[1].text = "另一位角色由 AI 协助" if stage == "combat" else "解谜时由你切换三位角色"
-        action_text[1].text = "接应、掩护和安全救援" if stage == "combat" else "战斗阶段会有 AI 协助"
+        slot_titles[1].text = "候补伙伴" if stage == "combat" else "伙伴分工"
+        ready_text[1].text = "另一位角色由 手动切换" if stage == "combat" else "解谜时由你切换三位角色"
+        action_text[1].text = "在安全处等待接棒" if stage == "combat" else "战斗只控制当前出战角色"
         vector_text[1].text = "机关解谜由玩家亲自完成"
         claim_buttons[1].visible = false
         sticks[1].visible = false
     if stage in ["story-chapter","story-combat"]:
         top_status.text = story_chapter.state.title
-        slot_details[0].text = "已进入主线章节 · 单人手动解谜，战斗由 AI 协助。"
+        slot_details[0].text = "已进入主线章节 · 单人手动解谜，战斗由 手动切换。"
         slot_details[1].text = "双猫已经入队。" if story_chapter.state.joined else "圆圆尚未入队。"
-        ready_text[1].text = "另一位由 AI 协助战斗" if stage=="story-combat" else "解谜由你手动切角色" if session.single_player else ready_text[1].text
+        ready_text[1].text = "另一位由 手动切换战斗" if stage=="story-combat" else "解谜由你手动切角色" if session.single_player else ready_text[1].text
     if stage in ["chapter-one","chapter-combat"]:
         top_status.text = "第一章 · 点亮第一盏灯"
         slot_details[0].text = "朵朵与团团，一起寻找圆圆的去向。"
-        slot_details[1].text = "圆圆尚未入队；单人战斗有 AI 协助。"
+        slot_details[1].text = "圆圆尚未入队；单人战斗有 手动切换。"
         if session.single_player and stage == "chapter-one": ready_text[1].text = "解谜由你切换朵朵 / 团团"
     if stage == "prologue":
         top_status.text = "序章 · 家中的下午"
@@ -742,6 +833,7 @@ func _process(_delta: float) -> void:
 
 func start_story(single: bool, continuation:=false) -> void:
     if session.running(): return
+    collect_story_discoveries();journey_started=true
     router.clear_keyboard()
     if not continuation:detach_story_run()
     session.pause_all("序章 · 准备出发")
@@ -759,6 +851,7 @@ func start_story(single: bool, continuation:=false) -> void:
 
 func start_solo_combat() -> void:
     if session.running(): return
+    journey_started=true
     router.clear_keyboard()
     session.pause_all("单人战斗 · 一只手柄加入后准备，或按 Enter")
     session.single_player = true
@@ -801,6 +894,8 @@ func detach_story_run()->void:
         chapter_one.record_prefix="story-chapter-one"
         story_chapter.record_prefix="story"
     story_route_active=false;story_run_id=""
+    battle_save_signature="";battle_save_error=""
+    journey_discoveries.clear();discovery_signature=""
     story_manifest_error="";story_manifest_retry=0.0
 func apply_story_prefix()->void:
     prologue.record_prefix=story_run_id+"-prologue"
@@ -809,16 +904,37 @@ func apply_story_prefix()->void:
 func save_story_location(chapter:int)->void:
     if story_route_active:
         story_pending_chapter=chapter;story_manifest_retry=0.0
-        var wrote:bool=story_progress.save(session.single_player,story_run_id,chapter)
+        var wrote:bool=story_progress.save(session.single_player,story_run_id,chapter,journey_discoveries)
         var actual:Dictionary=story_progress.read(session.single_player) if wrote else {}
         if wrote and actual.get("run_id")==story_run_id and actual.get("chapter")==chapter:
             story_manifest_error=""
         else:story_manifest_error="旅程位置未保存，继续入口尚未更新。"
         _refresh_checkpoint_button()
+func collect_story_discoveries()->void:
+    if not story_route_active or story_run_id.is_empty():return
+    var source=prologue.state if stage=="prologue" else chapter_one.state if stage in ["chapter-one","chapter-combat"] else story_chapter.state if stage in ["story-chapter","story-combat"] else null
+    if source==null or not source.has_method("presentation"):return
+    var observed:Dictionary=source.presentation()
+    var changed:=false
+    for key in observed.get("discoveries",[]):
+        if key is String and key in StoryJourney.DISCOVERIES and key not in journey_discoveries:
+            journey_discoveries.append(key);changed=true
+    if source.get("journey_discoveries")!=null:source.journey_discoveries.assign(journey_discoveries)
+    if changed:
+        discovery_signature=JSON.stringify(journey_discoveries)
+        save_story_location(story_pending_chapter)
+func discovery_names()->PackedStringArray:
+    var names:={"prologue_ball":"团团拨回的小球","one_nightlight":"栗婆婆的小灯布纹","two_cart":"货运近路的旧锁","three_map":"钟楼背面的线路图","four_stall":"复工摊位的纪念","four_view":"风暴观景台的小画"}
+    var result:PackedStringArray=[]
+    for key in journey_discoveries:
+        if names.has(key):result.append(names[key])
+    return result
 func start_journey(single: bool) -> void:
     if session.running():return
+    journey_discoveries.clear();discovery_signature=""
     story_run_id="story-run-"+str(int(Time.get_unix_time_from_system()*1000))+"-"+str(Time.get_ticks_usec())
     story_route_active=true;apply_story_prefix()
+    stage="menu"
     start_story(single,true)
 func start_courtyard(single: bool) -> void:
     if session.running(): return
@@ -832,31 +948,41 @@ func start_courtyard(single: bool) -> void:
         session.pause_all("单人庭院 · 菜单键准备" if single else "双人庭院 · 两位按菜单键准备")
 
 func _menu_input(event: InputEvent) -> bool:
-    if session.running() or not session.focused or not event is InputEventJoypadButton: return false
-    if event.button_index not in [JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_DOWN,JOY_BUTTON_DPAD_LEFT,JOY_BUTTON_DPAD_RIGHT,JOY_BUTTON_A]: return false
-    if not event.pressed: return true
-    if event.button_index == JOY_BUTTON_A:
-        if menu_index < 0: menu_index = 0
-        else:
-            var chosen: Button = menu_controls[menu_index]
-            if not chosen.disabled:
-                if session.keyboard_mode: router.use_gamepads()
-                if session.slot_of(event.device) < 0: session.claim(event.device)
-                chosen.pressed.emit()
-                if session.running(): chosen.release_focus()
-                return true
-    else:
-        var offset := -1 if event.button_index in [JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_LEFT] else 1
-        if menu_index < 0: menu_index = 0
-        else:
-            for i in range(menu_controls.size()):
-                menu_index = posmod(menu_index+offset,menu_controls.size())
-                if not menu_controls[menu_index].disabled: break
-    menu_controls[menu_index].grab_focus()
+    if session.running() or not session.focused:return false
+    if development_menu:return false
+    var confirm:=false;var offset:=0
+    if event is InputEventKey:
+        var code:int=event.physical_keycode if event.physical_keycode else event.keycode
+        if code==KEY_ESCAPE and event.pressed and (journey_menu.settings_panel.visible or journey_menu.chapters_panel.visible):journey_menu.close_settings();menu_index=-1;return true
+        if code not in [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_W,KEY_A,KEY_S,KEY_D,KEY_ENTER,KEY_KP_ENTER]:return false
+        if not event.pressed or event.echo:return true
+        confirm=code in [KEY_ENTER,KEY_KP_ENTER]
+        offset=-1 if code in [KEY_UP,KEY_LEFT,KEY_W,KEY_A] else 1
+    elif event is InputEventJoypadButton:
+        if event.button_index not in [JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_DOWN,JOY_BUTTON_DPAD_LEFT,JOY_BUTTON_DPAD_RIGHT,JOY_BUTTON_A]:return false
+        if not event.pressed:return true
+        confirm=event.button_index==JOY_BUTTON_A
+        offset=-1 if event.button_index in [JOY_BUTTON_DPAD_UP,JOY_BUTTON_DPAD_LEFT] else 1
+    else:return false
+    var choices:Array[Button]=journey_menu.available_buttons()
+    if choices.is_empty():return true
+    var focused=get_viewport().gui_get_focus_owner()
+    var current:=choices.find(focused)
+    if current<0:current=clampi(menu_index,0,choices.size()-1)
+    if confirm:
+        var chosen:Button=choices[current]
+        if event is InputEventJoypadButton:
+            if session.keyboard_mode:router.use_gamepads()
+            if session.slot_of(event.device)<0:session.claim(event.device)
+        chosen.pressed.emit()
+        if session.running():chosen.release_focus()
+        menu_index=-1;return true
+    menu_index=posmod(current+offset,choices.size());choices[menu_index].grab_focus()
     return true
 
 func start_preview(target: String) -> void:
     if session.running(): return
+    journey_started=true
     leave_solo()
     preview_run = true
     detach_story_run()
@@ -882,6 +1008,7 @@ func start_preview(target: String) -> void:
     if session.keyboard_mode or session.devices == [-1,-1]: router.start_keyboard()
 
 func exit_game() -> void:
+    collect_battle_progress();collect_story_discoveries()
     if OS.has_feature("web"):
         router.clear_keyboard()
         session.pause_all("已回到网页入口")
@@ -891,6 +1018,7 @@ func exit_game() -> void:
 
 func start_chapter_one(single: bool, continuation:=false) -> void:
     if session.running(): return
+    collect_story_discoveries();journey_started=true
     router.clear_keyboard()
     if not continuation:detach_story_run()
     session.pause_all("第一章 · 准备出发")
@@ -905,41 +1033,46 @@ func start_chapter_one(single: bool, continuation:=false) -> void:
 
 func enter_chapter_combat() -> void:
     router.clear_keyboard()
-    arena.configure_solo(session.single_player)
-    arena.story_title=""
-    arena.battle.story_encounter = "first"
-    arena.battle.wave_total = 2
-    arena.battle.current_cat = 1
-    arena.battle.positions[2] = Vector2(-4000,-4000)
-    arena.battle.message = "荆棘缠住了小路。朵朵举盾开路，团团能扑断织藤花。准备好，按互动键出发。"
-    arena.allow_next_level = true
+    if not configure_story_arena({"id":"first","mode":"solo" if session.single_player else "dual","available_role_ids":[0,1],"selected_role_id":0,"current_cat":1,"story_run_id":story_run_id,"return_chapter":1,"return_phase":chapter_one.state.phase,"cleared_segments":0,"title":"林间小路 · 缠路枝条","destination":"缠路枝条散开了。回驿站看看。","allow_next_level":true}):return
+    apply_player_settings()
     stage = "chapter-combat"
     chapter_one.set_active(false)
     arena.set_active(session.running())
-    arena.actors[2].visible = false
     arena._refresh()
 
 func start_story_chapter(chapter:int,single:bool,continuation:=false)->void:
     if session.running() or chapter<2 or chapter>5:return
+    collect_story_discoveries();journey_started=true
     if not continuation:detach_story_run()
     router.clear_keyboard();session.pause_all("章节 · 准备出发")
     session.single_player=single
     if single:session.devices[1]=-1
     preview_run=false
     story_chapter.reset(chapter,single,true)
+    if story_chapter.state.get("journey_discoveries")!=null:story_chapter.state.journey_discoveries.assign(journey_discoveries)
     stage="story-chapter"
     save_story_location(chapter)
     for scene in [chapter_one,prologue,courtyard,arena,light_corridor,chime_gate,rest_area]:scene.set_active(false)
     if session.keyboard_mode or session.devices[0]<0:router.start_keyboard()
 func enter_story_combat()->void:
-    router.clear_keyboard();arena.configure_solo(session.single_player)
-    arena.battle.story_first=not story_chapter.state.joined
-    arena.battle.story_encounter="first" if not story_chapter.state.joined else "reserve" if story_chapter.state.get("reserve_retained")==true else "shell"
-    arena.battle.wave_total=story_chapter.state.battle_waves
-    arena.battle.current_cat=story_chapter.state.current_cat
-    if not story_chapter.state.joined:arena.battle.positions[2]=Vector2(-4000,-4000)
-    arena.story_title=story_chapter.state.title+" · 荆棘阻路"
-    arena.story_destination="小路清开了。按互动键，回到本章继续修复。"
-    arena.battle.message="荆棘围住了维修通路。先看预兆，再用盾挡、扑断和绕后。"
-    arena.allow_next_level=true
+    router.clear_keyboard()
+    var id:="first" if not story_chapter.state.joined else "reserve" if story_chapter.state.get("reserve_retained")==true else "shell"
+    if not configure_story_arena({"id":id,"mode":"solo" if session.single_player else "dual","available_role_ids":[0,1,2] if story_chapter.state.joined else [0,1],"selected_role_id":0,"current_cat":story_chapter.state.current_cat,"story_run_id":story_run_id,"return_chapter":story_chapter.state.chapter,"return_phase":story_chapter.state.phase,"cleared_segments":0,"title":story_chapter.state.title+" · "+("树梯入口" if id=="reserve" else "外罩支架"),"destination":"通路清开了。回到修复现场。","allow_next_level":true}):return
+    apply_player_settings()
     stage="story-combat";story_chapter.set_active(false);arena.set_active(session.running());arena._refresh()
+
+func configure_story_arena(context:Dictionary)->bool:
+    if story_route_active:
+        var durable:Dictionary=battle_journey.read(context)
+        context.merge(durable,true)
+    if not arena.configure(context):return false
+    battle_save_signature="";battle_save_error="";battle_save_clock=0
+    return true
+func collect_battle_progress()->void:
+    if not story_route_active or stage not in ["chapter-combat","story-combat"]:return
+    var result:Dictionary=arena.result()
+    if result.get("story_run_id")!=story_run_id:return
+    var signature:String=JSON.stringify([result.completed_segments,result.selected_role_id,result.current_cat])
+    if signature==battle_save_signature and battle_save_error.is_empty():return
+    if battle_journey.save(result):battle_save_signature=signature;battle_save_error=""
+    else:battle_save_error=battle_journey.last_error

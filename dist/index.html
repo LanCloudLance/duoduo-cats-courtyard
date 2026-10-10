@@ -2,21 +2,15 @@
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>朵朵与猫猫 · 把回家的路点亮</title><link rel="stylesheet" href="page.css"></head><body>
 <header><span id="home">朵朵与猫猫 <small>把回家的路点亮</small></span><nav><button id="help">操作说明</button><button id="fullscreen">全屏游玩</button></nav></header>
 <main id="welcome"><div class="intro"><p class="eyebrow">一位朵朵，两只猫咪</p><h1>一起把回家的路点亮</h1><p>从家中的一个下午开始，<br>朵朵和团团，要去接圆圆回家。</p>
-<div class="choices"><button data-mode="journey-solo" class="primary">新旅程 · 单人</button><button data-mode="journey-dual" class="primary">新旅程 · 同屏双人</button><button data-mode="resume-journey-solo">继续单人旅程</button><button data-mode="resume-journey-dual">继续双人旅程</button></div>
-<p class="note">序章 → 五章冒险 → 回家。单人解谜由你切换角色，战斗有伙伴协助；双人一起操作朵朵与猫咪。<br>途中会保存已经修好的机关和发现的线索；回来后选择原来的人数继续。</p>
-<details class="extras"><summary>回访章节与独立挑战</summary>
-<div class="chapter-picker"><label for="story-chapter">想回访哪一章？</label><select id="story-chapter"><option value="1">第一章 · 点亮第一盏灯</option><option value="2">第二章 · 团团，去那边等我</option><option value="3">第三章 · 这次一起走</option><option value="4">第四章 · 灯光躲起来了</option><option value="5">第五章 · 把回家的路点亮</option></select><div class="choices"><button data-later-mode="solo">进入所选章节 · 单人</button><button data-later-mode="dual">进入所选章节 · 双人</button></div></div>
-<div class="trial"><p>独立挑战</p><select id="trial-mode" aria-label="挑战人数"><option value="solo">单人</option><option value="dual">同屏双人</option></select><button data-trial="combat">林间战斗</button><button data-trial="light">双猫灯廊</button><button data-trial="gate">风铃寻光</button></div>
-<div class="choices"><button data-mode="story-solo">回访序章 · 单人</button><button data-mode="story-dual">回访序章 · 双人</button><button data-mode="solo">庭院挑战 · 单人</button><button data-mode="dual">庭院挑战 · 双人</button></div></details>
+<div class="choices"><button data-mode="menu" class="primary">进入游戏</button></div>
+<p class="note">从序章出发，走过五章冒险，再一起回家。<br>单人由你切换伙伴；双人同屏操作朵朵与猫咪。进入后选择旅程、继续记录或回访走过的章节。</p>
 <p class="note">电脑键盘或手柄均可。记录保存在当前浏览器，不同设备与浏览器之间不会自动同步。</p><p id="status" role="status"></p></div><img src="team.png" alt="朵朵、黑猫团团和白猫圆圆" class="team"></main>
 <section id="play" hidden><iframe id="game" title="朵朵与猫猫游戏" allow="gamepad; fullscreen; autoplay"></iframe></section>
 <dialog id="instructions"><h2>准备出发</h2>
-<p><b>单人：</b>WASD 移动，E 互动，Tab 换角色，解谜 Q 切回上一位。圆圆在第三章重逢后才可操作。R 使用当前角色的工具；G／手柄左肩按需“想一想”，逐层提示。第五章 G／左肩改为按住举盾，需要提示时打开记事本。</p>
-<p><b>同屏双人：</b>朵朵 WASD／E／T 工具；猫咪方向键／空格／R 工具，Tab 切猫。第一章只有团团。按手柄菜单键加入，十字键选菜单、下方键确认。</p>
-<p><b>战斗：</b>朵朵 F 攻击、Q 闪避、按住 G 举盾；猫咪 J 攻击、K 闪避。单人统一用 F／Q。圆圆按住攻击再松开重拍；团团扑击可以打断，留下可接力的标记。波间按互动键准备，双人要两位都确认。</p>
-<p><b>手柄：</b>左摇杆移动；面键下互动、左攻击、右闪避、上换角色；右肩工具。战斗与第五章朵朵左肩举盾，其他主线章节左肩“想一想”。</p>
-<p><b>旅途记事：</b>H／手柄返回键打开；上下键或左摇杆翻页，V／手柄上面键“想一想”；Esc／返回键关闭。记事和暂停时世界会停下来。</p>
-<p>解谜观察实际受力、光束方向和机关反应，伙伴不会替你操作机关。错误尝试可以恢复；读档保留永久修复，保持中的光、工具和盾需要重新操作。</p>
-<p>Esc 暂停、Enter 继续。切出网页会暂停，回来后先点游戏画面。全屏时第一次 Esc 可能先退出浏览器全屏。</p>
-<p>主线的阶段进度自动保存在当前浏览器；战斗中退出后从该场入口重来。庭院挑战只在休息点记录。请勿清除网站数据；无痕窗口关闭后可能无法保留记录。</p><button id="close-help" class="primary">知道了</button></dialog>
+<p><b>单人探索：</b>WASD 移动，E 互动，Tab 换伙伴，R 工具。圆圆在第三章重逢后加入。对白按 E 确认；G 主动想一想（第五章改为举盾）；H 打开旅途记事，记事中 V 请求提示。</p>
+<p><b>双人探索：</b>朵朵 WASD／E／T 工具；猫咪方向键／空格／R 工具，Tab 换猫。双人一起观察受力、光路和机关反应，错误尝试可以在附近恢复。</p>
+<p><b>战斗：</b>单人场上只出战一位，Tab 手动换人，F 普攻、Q 闪避、G 角色技。双人朵朵 F／Q／G，猫咪 J／K／U。朵朵举盾接招，团团扑击打断，圆圆按住角色技再松开重拍。换人保留当前体力和动作恢复；候补在安全处等待。</p>
+<p><b>手柄：</b>左摇杆移动；下面键互动、左面键普攻、右面键闪避、上面键换角色；探索右肩工具，战斗左肩角色技。菜单用十字键选择、下面键确认；双人各用一只手柄。</p>
+<p><b>暂停与记录：</b>Esc 暂停，Enter 继续。切出网页也会暂停，回来后点游戏画面再继续。机关的永久修复、实际发现和战斗已清完的段落会保存；保持中的光、盾和工具需重新操作，尚未清完的一段从安全处重试。</p>
+<p>记录属于当前浏览器，设备之间不会自动同步。全屏时第一次 Esc 可能先退出浏览器全屏。</p><button id="close-help" class="primary">知道了</button></dialog>
 <footer>朵朵 · 团团 · 圆圆 ｜ 都在，就好 <a href="OFL.txt">字体许可</a></footer><script src="page.js"></script></body></html>

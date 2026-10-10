@@ -44,10 +44,30 @@ var carrier := -1
 var hint_level := 0
 var exit_time := 0.0
 
+var ball_found:=false
+const SOFA_BALL:=Vector2(440,435)
+
+var dialogue:Array[String]=[]
+var dialogue_index:=0
+var social:Dictionary={}
+var social_remaining:=0.0
+var journey_discoveries:Array[String]=[]
+func dialogue_active()->bool:return dialogue_index<dialogue.size()
+func start_dialogue(lines:Array,gesture:Dictionary={})->void:
+    dialogue.assign(lines);dialogue_index=0;social=gesture.duplicate();social_remaining=float(social.get("duration",1.5))
+    if dialogue_active():say(dialogue[0])
+func advance_dialogue()->void:
+    if not dialogue_active():return
+    dialogue_index+=1
+    if dialogue_active():say(dialogue[dialogue_index])
+func step_social(dt:float)->void:
+    social_remaining=maxf(0,social_remaining-dt)
+    if social_remaining<=0:social.clear()
+
 func checkpoint() -> Dictionary:
-    return preload("res://game/prologue_checkpoint.gd").capture(self)
+    return preload("res://game/puzzle_early_checkpoint.gd").capture(self,0)
 func restore_checkpoint(data: Dictionary) -> bool:
-    return preload("res://game/prologue_checkpoint.gd").restore(self,data)
+    return preload("res://game/puzzle_early_checkpoint.gd").restore(self,data,0)
 func cancel_inputs() -> void:
     brace = false
     rug_grab = false
@@ -56,6 +76,7 @@ func cancel_inputs() -> void:
     actions[1] = ""
     action_time = [0.0,0.0,0.0]
 func tool(slot: int) -> void:
+    if dialogue_active():return
     if slot < 0 or slot > 1 or finished or phase == "leaving": return
     var item := target(slot)
     if item in ["松手","松开","门挡","放下门挡","地毯边缘"] or (phase == "jam" and item in ["门把手","门缝"]):
@@ -93,6 +114,7 @@ func rug_position() -> Vector2: return Vector2(1120,352+rug_pull)
 func near_door(slot: int) -> bool: return positions[slot].distance_to(DOOR) < 78
 func target(slot: int) -> String:
     if finished or phase == "leaving": return ""
+    if not ball_found and positions[slot].distance_to(SOFA_BALL)<42:return "沙发底的小球"
     if slot == 0 and brace: return "松手"
     if slot == 1 and rug_grab: return "松开"
     if white_visible and positions[slot].distance_to(positions[2]) < 74: return "圆圆"
@@ -113,9 +135,15 @@ func request_hint() -> void:
     hint_level = mini(hint_level+1,3)
     say(["朵朵：门每次弹回来，下面那块地毯都会跟着动。","朵朵：门压着卷边。先让门别往下压，再试试地毯。","朵朵可以撑门，或带上木门挡；团团够得到卷边。抓住后，往房间里退。"][hint_level-1])
 func interact(slot: int) -> void:
+    if dialogue_active():return
     if slot < 0 or slot > 1 or finished or phase == "leaving": return
     if action_time[slot] > 0.1: return
     var item := target(slot)
+    if item=="沙发底的小球":
+        if slot==0:say("沙发底有一颗旧小球，手伸进去，差一点点。");return
+        ball_found=true;ball=SOFA_BALL+Vector2(5,50);ball_velocity=Vector2(40,90);act(1,"paw",1.0)
+        start_dialogue(["团团趴低身子，把失踪很久的小球拨了出来。","朵朵：原来在这里。这个也带回玩具篮。"],{"role":1,"kind":"paw","target":SOFA_BALL,"duration":1.8,"participants":[0,1]})
+        return
     if item == "松手":
         brace = false
         actions[0] = ""
@@ -218,7 +246,9 @@ func _phase(value: String) -> void:
         say("地毯终于滑出来，门慢慢打开了。朵朵：团团，我们去接它。",2)
 func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
     if not enabled or not is_finite(dt) or dt <= 0 or not a.is_finite() or not b.is_finite(): return
+    if dialogue_active():return
     dt = minf(dt,0.05)
+    step_social(dt)
     clock += dt
     if finished: return
     timer += dt
@@ -296,3 +326,6 @@ func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
     elif phase == "jam": opening = 0.40 if brace or wedged else 0.035
     elif phase in ["open","leaving","complete"]: opening = 1.0
     door_open = move_toward(door_open,opening,dt*0.75)
+
+func presentation()->Dictionary:
+    return {"mechanisms":[{"id":"sofa_ball","position":SOFA_BALL,"load":false,"lit":false,"angle":0.0,"connection":"found" if ball_found else "hidden"}],"paths":[],"observations":[],"discoveries":["prologue_ball"] if ball_found else [],"social":social.duplicate(),"dialogue_active":dialogue_active(),"phase":phase}

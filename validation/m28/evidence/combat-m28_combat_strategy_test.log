@@ -1,0 +1,10 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+QA_USER_DIR /Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-combat
+STRATEGY {"blocked":3,"complete":true,"damage":2,"peak_hazards":2,"priority":"nearest","retries":0,"role":0,"seconds":16.8}
+STRATEGY {"blocked":0,"complete":true,"damage":1,"peak_hazards":1,"priority":"backline","retries":0,"role":0,"seconds":13.7}
+STRATEGY {"blocked":3,"complete":true,"damage":3,"peak_hazards":2,"priority":"nearest","retries":1,"role":1,"seconds":22.3}
+STRATEGY {"blocked":0,"complete":true,"damage":2,"peak_hazards":1,"priority":"backline","retries":0,"role":1,"seconds":17.7}
+STRATEGY {"blocked":4,"complete":true,"damage":0,"peak_hazards":2,"priority":"nearest","retries":0,"role":2,"seconds":16.0}
+STRATEGY {"blocked":0,"complete":true,"damage":2,"peak_hazards":1,"priority":"backline","retries":0,"role":2,"seconds":17.5}
+M28_COMBAT_STRATEGY: 6 full input paths and priority comparison, 0 failed

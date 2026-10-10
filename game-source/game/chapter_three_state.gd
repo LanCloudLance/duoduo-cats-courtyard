@@ -13,6 +13,8 @@ const RIG := Vector2(1030,605)
 const SEARCH_STAND := Vector2(885,530)
 const MAP := Vector2(1130,305)
 const EXIT_WALL := 1090.0
+const MAP_BACK:=Vector2(1042,390)
+var map_discovered:=false
 var wick_found := false
 var wick_ready := false
 var wick_fitted := false
@@ -121,6 +123,7 @@ func follow_allowed(role:int,p:Vector2)->bool:
 func beam_active()->bool:
     return beam_held and light_equipped and near(2,LIGHT_STAND,48) and beam_direction.dot(Vector2.RIGHT)>0.8
 func target(role:int)->String:
+    if rig_ready and near(role,MAP_BACK,35):return "map_back"
     if near(role,DUCT,50):return "duct"
     if near(role,DOOR_LAMP,52):return "door_lamp"
     if near(role,WINDOW,52):return "window"
@@ -138,20 +141,26 @@ func target(role:int)->String:
     if near(role,MAP,65):return "map"
     return ""
 func interact(role:int)->void:
-    if role not in available_roles() or finished or action_time[role]>0:return
+    if role not in available_roles() or finished or action_time[role]>0 or dialogue_active() or social_transition_active():return
     var item:=target(role)
     act(role,"inspect")
     match item:
+        "map_back":
+            if role!=1:say("旧图背面压在低矮的横梁后，边角有浅浅压痕。");return
+            if not search_beam_active() or source_level!=1 or rig_angle!=0:
+                observe("map_shadow","纸上只有凹痕，正面来的光照不出深浅。",MAP_BACK);return
+            map_discovered=true;act(1,"inspect")
+            observe("map_back_read","斜光擦过纸背：一条小灯支路与主线之间，画着能打开的小扣。团团带回了旧线路图。",MAP_BACK)
         "duct":
             if role!=1:say("朵朵：这个外墙检修槽只有团团能进去。它不通室内。");return
-            wick_found=true;say("团团叼出一支备用灯芯。把它带回外侧灯座。",1)
+            wick_found=true;say("团团从外墙槽里叼出一支备用灯芯。",1)
         "door_lamp":
             if role==1 and wick_found and not wick_ready:
                 wick_ready=true;say("团团把灯芯放在外部灯座旁，等朵朵装回去。");return
             if role!=0:say("团团望向朵朵，灯座的卡槽需要她装好。");return
             if not wick_ready:say("灯座里缺了一支灯芯。导光板现在没有光源。");return
             if not wick_fitted:
-                wick_fitted=true;say("灯芯装好了。转动门外导光板，让光束接到门锁上的铜片。");return
+                wick_fitted=true;say("灯芯装好了，导光板边缘亮起一道光。");return
             door_angle=(door_angle+1)%4
             say("门锁轻轻动了一下，室内的启动踏板仍没有压下。" if door_angle==1 else "光束偏离了门锁的铜片。")
         "window":
@@ -165,10 +174,10 @@ func interact(role:int)->void:
             if positions[0].x<480 or positions[1].x<480:say("朵朵：团团，我们先进门，再一起抱抱圆圆。");return
             if not exit_gather(REUNION):return
             if positions[1].distance_to(positions[0])>65:say("朵朵拍拍身边：团团，靠近一点，我们一起迎圆圆。");return
-            joined=true;phase="equipment";positions[2]=positions[0]+Vector2(28,15)
+            joined=true;phase="equipment"
             facing[0]=positions[0].direction_to(positions[2]);facing[2]=positions[2].direction_to(positions[0]);facing[1]=positions[1].direction_to(positions[0])
             act(0,"pet",0.7);act(2,"pet",0.9);act(1,"paw",0.7)
-            say("朵朵蹲下摸摸爪子，圆圆把脸安静地送进她手里；团团在身边举爪搭过来。朵朵：以后等我们一起，好不好？圆圆正式入队了。",2)
+            stage_social(["朵朵蹲下摸摸圆圆的爪子，圆圆把脸送进她手里。","朵朵：以后等我们一起，好不好？","团团把前爪搭过来。三位又在一起了。"],{"role":0,"kind":"pet","target":positions[2],"duration":2.0,"participants":[0,1,2]},{2:positions[0]+Vector2(28,15),1:positions[0]+Vector2(-28,20)})
         "equipment":
             if role!=0 or not joined:say("工具架上挂着小伙伴背带和定光扣。");return
             if light_equipped:say("定光扣已经稳稳装好，工具架上没有缺下的零件。");return
@@ -224,7 +233,8 @@ func release_light()->void:
     beam_held=false;actions[2]="";light_released=bridge_locked
     say("圆圆主动收回定光扣，跟上伙伴。固定好的桥仍然牢固。" if bridge_locked else "圆圆收光了。团团先回到固定台。")
 func tool(role:int)->void:
-    if role not in available_roles() or finished or action_time[role]>0:return
+    if dialogue_active() or social_transition_active():return
+    if role not in available_roles() or finished or action_time[role]>0 or dialogue_active() or social_transition_active():return
     if role==2 and joined and light_equipped:
         if beam_held or (bridge_locked and not light_released):release_light();recover_walkway()
         elif target(role) in ["light","search"]:interact(role)
@@ -240,6 +250,10 @@ func recover_walkway()->void:
     if not bridge_locked and not beam_active() and positions[1].x>=700 and positions[1].x<855:
         positions[1]=Vector2(665,440);say("照明中断，团团退回固定台。已拨开的卡扣会保留。",3)
 func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
+    if social_transition_active():
+        if enabled and is_finite(dt) and dt>0 and a.is_finite() and b.is_finite():step_social_transition(dt)
+        return
+    if dialogue_active() or social_transition_active():return
     super.step(dt,a,b,enabled)
     if not enabled or not is_finite(dt) or dt<=0 or finished:return
     if npc_called and not door_open:
@@ -456,3 +470,13 @@ func optical_ray(view:Node2D,a:Vector2,b:Vector2)->void:
 func optical_miss(view:Node2D,p:Vector2)->void:
     view.draw_arc(p,10+sin(clock*4)*2,0,TAU,18,Color("eed799"),2,true)
     view.draw_line(p+Vector2(-7,-7),p+Vector2(7,7),Color("bc8762"),2,true)
+
+func presentation()->Dictionary:
+    var data:=super.presentation()
+    var slant:=rig_ready and search_beam_active() and source_level==1 and rig_angle==0
+    data.mechanisms=[{"id":"map_back","position":MAP_BACK,"angle":-0.25,"load":false,"lit":slant,"connection":"read" if map_discovered else "impression"},
+        {"id":"source_lift","position":source_point(),"angle":0.0,"load":false,"lit":search_beam_active(),"connection":"upper" if source_level==1 else "lower"}]
+    data.paths=[{"id":"map_slant","points":[LOW_MIRROR,LOWER_BEND],"width":3.0,"state":"light" if slant else "dark","roles":[]}]
+    data.trace=transfer_trace()
+    if map_discovered:data.discoveries.append("three_map")
+    return data

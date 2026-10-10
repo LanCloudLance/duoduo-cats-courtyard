@@ -77,8 +77,8 @@ func _draw() -> void:
         draw_line(canopy+Vector2(12,0),canopy+Vector2(25,-20),Color("765332"),5,true)
         draw_circle(canopy+Vector2(25,-6),11,Color("ffe59b"))
         draw_arc(canopy+Vector2(25,-6),15,0,TAU,24,Color(1,0.83,0.42,0.4),4,true)
-    if state.get("mark_time",0.0) > 0:
-        draw_arc(Vector2(0,-37),46,0,TAU,32,Color("a4e8ea"),2,true)
+    if state.get("control_time",0.0) > 0:
+        draw_arc(Vector2(0,0),38,0,TAU,32,Color("e5cca0"),3,true)
     if kind == "armored":
         var angle: float = state.direction.angle()
         draw_arc(Vector2.ZERO,32,angle-1.4,angle+1.4,28,Color("84613d"),9,true)

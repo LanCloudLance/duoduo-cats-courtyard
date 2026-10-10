@@ -1,0 +1,25 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+QA_USER_DIR /Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-combat
+PLAY {"basic":true,"id":"first","role":0,"solo":true} success=true seconds=11.3 damage=0 retries=0 basics=15 skills=0 dodges=2 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":true,"id":"first","role":1,"solo":true} success=true seconds=13.0 damage=0 retries=0 basics=19 skills=0 dodges=3 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":true,"id":"shell","role":0,"solo":true} success=true seconds=16.8 damage=2 retries=0 basics=24 skills=0 dodges=6 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":true,"id":"shell","role":1,"solo":true} success=true seconds=22.3 damage=3 retries=1 basics=29 skills=0 dodges=12 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":true,"id":"shell","role":2,"solo":true} success=true seconds=16.0 damage=0 retries=0 basics=23 skills=0 dodges=6 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":true,"id":"reserve","role":0,"solo":true} success=true seconds=17.2 damage=2 retries=0 basics=19 skills=0 dodges=3 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":true,"id":"reserve","role":1,"solo":true} success=true seconds=17.7 damage=2 retries=0 basics=24 skills=0 dodges=4 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":true,"id":"reserve","role":2,"solo":true} success=true seconds=18.2 damage=1 retries=0 basics=23 skills=0 dodges=5 phase=complete wave=2 hp=[2, 3]
+PLAY {"basic":false,"id":"first","role":0,"solo":true} success=true seconds=11.3 damage=0 retries=0 basics=15 skills=0 dodges=2 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":false,"id":"first","role":1,"solo":true} success=true seconds=12.0 damage=0 retries=0 basics=15 skills=2 dodges=1 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":false,"id":"shell","role":0,"solo":true} success=true seconds=16.8 damage=2 retries=0 basics=24 skills=0 dodges=6 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":false,"id":"shell","role":1,"solo":true} success=true seconds=14.5 damage=0 retries=0 basics=20 skills=2 dodges=4 phase=complete wave=2 hp=[3, 3]
+PLAY {"basic":false,"id":"shell","role":2,"solo":true} success=true seconds=19.5 damage=2 retries=0 basics=6 skills=9 dodges=9 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":false,"id":"reserve","role":0,"solo":true} success=true seconds=17.2 damage=2 retries=0 basics=19 skills=0 dodges=3 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":false,"id":"reserve","role":1,"solo":true} success=true seconds=16.5 damage=2 retries=0 basics=21 skills=2 dodges=3 phase=complete wave=2 hp=[1, 3]
+PLAY {"basic":false,"id":"reserve","role":2,"solo":true} success=true seconds=22.0 damage=1 retries=0 basics=5 skills=10 dodges=5 phase=complete wave=2 hp=[2, 3]
+PLAY {"basic":false,"id":"first","role":1,"solo":false} success=true seconds=12.0 damage=4 retries=0 basics=20 skills=2 dodges=10 phase=complete wave=2 hp=[2, 2]
+PLAY {"basic":false,"id":"shell","role":1,"solo":false} success=true seconds=14.0 damage=3 retries=0 basics=24 skills=1 dodges=13 phase=complete wave=2 hp=[2, 1]
+PLAY {"basic":false,"id":"shell","role":2,"solo":false} success=true seconds=14.7 damage=2 retries=0 basics=15 skills=6 dodges=14 phase=complete wave=2 hp=[2, 2]
+PLAY {"basic":false,"id":"reserve","role":1,"solo":false} success=true seconds=13.0 damage=2 retries=0 basics=22 skills=2 dodges=4 phase=complete wave=2 hp=[2, 2]
+PLAY {"basic":false,"id":"reserve","role":2,"solo":false} success=true seconds=11.7 damage=0 retries=0 basics=13 skills=6 dodges=2 phase=complete wave=2 hp=[3, 3]
+M28_COMBAT_PLAYTHROUGH: 21 complete paths, 0 failed

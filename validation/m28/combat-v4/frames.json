@@ -1,0 +1,629 @@
+{
+  "frames": [
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(590.0, 650.0)",
+          "progress": 0.0,
+          "role": 1,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "thorn",
+          "link": true,
+          "mode": "rest",
+          "pos": "(650.0, 650.0)",
+          "timer": 99
+        },
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "rest",
+          "pos": "(1030.0, 585.0)",
+          "timer": 99
+        }
+      ],
+      "file": "res://m28-combat-shots/01-linked-front.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 585.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "claw",
+          "pos": "(590.0, 650.0)",
+          "progress": 0.192307692307692,
+          "role": 1,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "thorn",
+          "link": true,
+          "mode": "rest",
+          "pos": "(650.0, 650.0)",
+          "timer": 98.9666666666667
+        },
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "rest",
+          "pos": "(1030.0, 585.0)",
+          "timer": 98.9333333333333
+        }
+      ],
+      "file": "res://m28-combat-shots/02-link-block.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 585.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "pounce",
+          "pos": "(850.0, 630.0)",
+          "progress": 0.147058823529412,
+          "role": 1,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "cast",
+          "pos": "(980.0, 630.0)",
+          "timer": 0.65
+        }
+      ],
+      "file": "res://m28-combat-shots/03-pounce-preparation.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 585.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "pounce",
+          "pos": "(916.667, 630.0)",
+          "progress": 0.588235294117647,
+          "role": 1,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 4.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "rest",
+          "pos": "(992.0, 630.0)",
+          "timer": 0.85
+        }
+      ],
+      "file": "res://m28-combat-shots/04-pounce-contact.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 585.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "pounce",
+          "pos": "(930.0004, 630.0)",
+          "progress": 0.0,
+          "role": 1,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 4.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "rest",
+          "pos": "(992.0, 630.0)",
+          "timer": 0.641999999999999
+        }
+      ],
+      "file": "res://m28-combat-shots/05-interrupted-no-target.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 585.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "charge",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.0,
+          "role": 2,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 4.0,
+          "kind": "sprout",
+          "link": false,
+          "mode": "rest",
+          "pos": "(570.0, 630.0)",
+          "timer": 98.8333333333333
+        }
+      ],
+      "file": "res://m28-combat-shots/06-heavy-crouch.png",
+      "hint": "圆圆正在准备重拍",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 1
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "charge",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.0,
+          "role": 2,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 4.0,
+          "kind": "sprout",
+          "link": false,
+          "mode": "rest",
+          "pos": "(570.0, 630.0)",
+          "timer": 98.55
+        }
+      ],
+      "file": "res://m28-combat-shots/07-heavy-ready.png",
+      "hint": "准备好了 · 松开角色技重拍",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 1
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "heavy",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.25,
+          "role": 2,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 1.0,
+          "kind": "sprout",
+          "link": false,
+          "mode": "rest",
+          "pos": "(615.0, 630.0)",
+          "timer": 0.3
+        }
+      ],
+      "file": "res://m28-combat-shots/08-heavy-contact.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 1
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "heavy",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.741666666666666,
+          "role": 2,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 1.0,
+          "kind": "sprout",
+          "link": false,
+          "mode": "rest",
+          "pos": "(615.0, 630.0)",
+          "timer": 0.3
+        }
+      ],
+      "file": "res://m28-combat-shots/09-heavy-recovery.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -136.0), S: (86.0, 146.0)]",
+          "caption_rect": "[P: (-31.0, -165.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 0
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 1
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.0,
+          "role": 0,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "armored",
+          "link": false,
+          "mode": "windup",
+          "pos": "(620.0, 630.0)",
+          "timer": 0.1
+        }
+      ],
+      "file": "res://m28-combat-shots/10-shell-front-closed.png",
+      "hint": "准备好了再出发。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 1
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(500.0, 630.0)",
+          "progress": 0.0,
+          "role": 0,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "armored",
+          "link": false,
+          "mode": "exposed",
+          "pos": "(564.008, 630.0)",
+          "timer": 3.66666666666667
+        }
+      ],
+      "file": "res://m28-combat-shots/11-shell-parry-rear-open.png",
+      "hint": "背后的结点展开了。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 1
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(628.3328, 630.0)",
+          "progress": 0.222222222222222,
+          "role": 0,
+          "slot": 0
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 4.0,
+          "kind": "armored",
+          "link": false,
+          "mode": "exposed",
+          "pos": "(564.008, 630.0)",
+          "timer": 3.38333333333333
+        }
+      ],
+      "file": "res://m28-combat-shots/12-shell-rear-hit.png",
+      "hint": "背后的结点展开了。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 1
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(1085.0, 625.0)",
+          "progress": 0.0,
+          "role": 0,
+          "slot": 0
+        }
+      ],
+      "enemies": [],
+      "file": "res://m28-combat-shots/13-exit-confirm.png",
+      "hint": "到亮起的出口，按 E。",
+      "label_overlaps": 0,
+      "phase": "clear",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 1
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(1085.0, 625.0)",
+          "progress": 0.0,
+          "role": 0,
+          "slot": 0
+        }
+      ],
+      "enemies": [],
+      "file": "res://m28-combat-shots/14-exit-continue.png",
+      "hint": "维修道已清开。  E 继续返回。",
+      "label_overlaps": 0,
+      "phase": "complete",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 400.0)",
+          "role": 1
+        },
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(12.0, 595.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    },
+    {
+      "actors": [
+        {
+          "kind": "sword",
+          "pos": "(290.0, 465.0)",
+          "progress": 0.0,
+          "role": 0,
+          "slot": 0
+        },
+        {
+          "kind": "claw",
+          "pos": "(330.0, 565.0)",
+          "progress": 0.0,
+          "role": 1,
+          "slot": 1
+        }
+      ],
+      "enemies": [
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "thorn",
+          "link": true,
+          "mode": "approach",
+          "pos": "(751.4749, 421.4204)",
+          "timer": 0.283333333333333
+        },
+        {
+          "direction": "(-1.0, 0.0)",
+          "hp": 5.0,
+          "kind": "weaver",
+          "link": false,
+          "mode": "approach",
+          "pos": "(1040.988, 626.8531)",
+          "timer": 0.283333333333333
+        }
+      ],
+      "file": "res://m28-combat-shots/15-dual-staging.png",
+      "hint": "让维修外罩的小路重新通畅。",
+      "label_overlaps": 0,
+      "phase": "combat",
+      "reserves": [
+        {
+          "body_rect": "[P: (-43.0, -102.0), S: (86.0, 112.0)]",
+          "caption_rect": "[P: (-31.0, -160.0), S: (62.0, 26.0)]",
+          "pos": "(-8.0, 390.0)",
+          "role": 2
+        }
+      ],
+      "save_code": 0
+    }
+  ],
+  "renderer": "macOS",
+  "user_dir": "/Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m28-root"
+}

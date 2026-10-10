@@ -15,6 +15,12 @@ var positions: Array[Vector2] = [Vector2(350, 440), Vector2(440, 520), Vector2(3
 var current_cat := 1
 var solo_mode := false
 var story_first := false
+# Empty selects the original three-wave practice encounter.
+var story_encounter := "":
+    set(value):
+        story_encounter = value if value in ["first","shell","reserve"] else ""
+        story_first = story_encounter == "first"
+        wave_total = 2 if not story_encounter.is_empty() else 3
 var wave_total := 3
 func available_roles() -> Array: return [0,1] if story_first else [0,1,2]
 var hp: Array[int] = [3, 3]
@@ -33,6 +39,7 @@ var guard_age := 0.0
 var fx: Array[Dictionary] = []
 var feedback_id := 0
 var last_feedback := ""
+var action_dt: Array[float] = [0.0,0.0]
 var contact_hold: Array[float] = [0.0,0.0]
 var contact_progress: Array[float] = [0.0,0.0]
 var hurt_time: Array[float] = [0.0,0.0]
@@ -70,7 +77,8 @@ func feedback_since(cursor: int) -> Array[Dictionary]:
 func contact(enemy: Dictionary, slot: int, direction: Vector2, heavy: bool, blocked: bool) -> void:
     contact_hold[slot] = 0.032 if blocked else 0.070 if heavy else 0.042
     contact_progress[slot] = 1.0-attack_flash[slot]/attacks.durations[slot]
-    enemy.impact_pause = contact_hold[slot]
+    enemy.impact_pause = maxf(enemy.get("impact_pause",0.0),contact_hold[slot])
+    enemy.simulation_dt = 0.0
     enemy.impact_age = 0.0
     enemy.impact_direction = direction
     enemy.impact_power = 4.0 if blocked else 26.0 if heavy else 11.0
@@ -116,6 +124,7 @@ func interact(slot: int) -> void:
             message = "先整理一下；稍后两位各按互动键，再开始下一段。"
             return
         confirmed[slot] = true
+        message = "一位已准备；另一位也按互动键，再开始下一段。"
         if confirmed[0] and confirmed[1]: _start_wave(wave+1)
     elif phase == "clear" and positions[actor(slot)].distance_to(EXIT) <= 95:
         confirmed[slot] = true
@@ -123,6 +132,49 @@ func interact(slot: int) -> void:
         if confirmed[0] and confirmed[1] and positions[0].distance_to(EXIT) <= 95 and positions[current_cat].distance_to(EXIT) <= 95:
             phase = "complete"
             message = "朵朵：好，正事做完！先和猫猫歇一会儿。"
+
+# The spare cat has no combat slot or targetability. These are presentation
+# positions only: switching still puts the incoming cat at the active slot point.
+func spare_obstructs_warning(point: Vector2) -> bool:
+    var body := Rect2(point-Vector2(43,102),Vector2(86,112))
+    for enemy in enemies:
+        if enemy.hp <= 0: continue
+        var warning := Rect2()
+        if enemy.mode in ["windup","rush"]:
+            var end: Vector2 = enemy.pos+enemy.direction*(364 if enemy.kind == "roller" else 230)
+            warning = Rect2(enemy.pos.min(end),enemy.pos.max(end)-enemy.pos.min(end)).grow(44)
+        elif enemy.mode in ["cast","burst","slam_windup","slam"]:
+            var center: Vector2 = enemy.get("aim",enemy.pos) if enemy.mode in ["cast","burst"] else enemy.pos
+            var radius := 58.0 if enemy.mode in ["cast","burst"] else 112.0
+            warning = Rect2(center-Vector2.ONE*radius,Vector2.ONE*radius*2)
+        elif enemy.mode in ["melee_windup","melee"]:
+            warning = Rect2(enemy.pos-Vector2.ONE*82,Vector2.ONE*164)
+        if warning.has_area() and body.intersects(warning): return true
+    for hazard in hazards:
+        if body.intersects(Rect2(hazard.pos-Vector2.ONE*hazard.radius,Vector2.ONE*hazard.radius*2)): return true
+    return false
+
+func spare_goal() -> Vector2:
+    var origin: Vector2 = positions[current_cat]
+    var forward: Vector2 = facing[1].normalized()
+    var side := forward.orthogonal()
+    var best := positions[3-current_cat]
+    var lowest := INF
+    for offset in [Vector2(-100,112),Vector2(-100,-112),Vector2(-145,125),Vector2(-145,-125),Vector2(-90,180),Vector2(-90,-180),Vector2(-200,100),Vector2(-200,-100),Vector2(0,170),Vector2(0,-170)]:
+        var point: Vector2 = origin+forward*offset.x+side*offset.y
+        if not Space.valid(point,Space.ACTOR_RADIUS) or not Rect2(70,205,1130,570).has_point(point): continue
+        var body := Rect2(point-Vector2(43,102),Vector2(86,112))
+        var score: float = offset.length()*0.1+point.distance_to(positions[3-current_cat])*0.05
+        if spare_obstructs_warning(point): score += 10000
+        for role in [0,current_cat]:
+            var height := 136.0 if role == 0 else 102.0
+            if body.intersects(Rect2(positions[role]-Vector2(43,height),Vector2(86,height+10))): score += 5000
+        for enemy in enemies:
+            if enemy.hp > 0 and body.intersects(Rect2(enemy.pos-Vector2(53,102),Vector2(106,120))): score += 5000
+        for stump in Space.STUMPS:
+            if body.intersects(Rect2(stump-Vector2(43,78),Vector2(86,95))): score += 5000
+        if score < lowest: lowest=score;best=point
+    return best
 
 func switch_cat() -> void:
     if story_first or hp[1] <= 0 or phase == "complete":
@@ -141,7 +193,13 @@ func switch_cat() -> void:
                 feedback("assist",enemy.pos,1)
                 break
     attacks.cancel(self,1)
-    current_cat = 3 - current_cat
+    # Both cats share one combat slot: the incoming cat takes its safe ground point.
+    # The departing cat moves to the former follower point; HP/timers never reset.
+    var departure: Vector2 = positions[current_cat]
+    var incoming: int = 3-current_cat
+    positions[current_cat] = positions[incoming]
+    positions[incoming] = departure
+    current_cat = incoming
     confirmed[1] = false
     if rescuer == 1:
         _cancel_rescue()
@@ -158,7 +216,7 @@ func cancel_attacks() -> void:
 
 func hold_guard(value: bool) -> void:
     guard_held = value
-    guarding = value and hp[0] > 0 and dodge_time[0] <= 0
+    guarding = value and hp[0] > 0 and dodge_time[0] <= 0 and hurt_time[0] <= 0.14
 
 func dodge(slot: int, direction: Vector2) -> void:
     if slot < 0 or slot > 1 or hp[slot] <= 0 or dodge_cooldown[slot] > 0 or phase == "complete":
@@ -167,6 +225,7 @@ func dodge(slot: int, direction: Vector2) -> void:
         _cancel_rescue()
     attacks.cancel(self,slot)
     attack_cooldown[slot] = minf(attack_cooldown[slot],0.08)
+    hurt_time[slot] = 0
     dodge_direction[slot] = direction.normalized() if direction.length() > 0.1 else facing[slot]
     dodge_time[slot] = 0.22
     dodge_cooldown[slot] = 0.72
@@ -183,7 +242,9 @@ func hurt(slot: int, source: Vector2, blockable := true) -> bool:
         return false
     attacks.cancel(self,slot)
     feedback("hurt",positions[actor(slot)],slot)
+    attack_cooldown[slot] = 0
     hurt_time[slot] = 0.22
+    if slot == 0: guarding = false
     var away := source.direction_to(positions[actor(slot)])
     positions[actor(slot)] = Space.move(positions[actor(slot)],away*18,Space.ACTOR_RADIUS)
     hp[slot] -= 1
@@ -213,7 +274,7 @@ func _start_wave(number: int) -> void:
         _spawn("sprout" if number == 1 else "armored",Vector2(960,400),true)
         _spawn("thorn" if number == 1 else "weaver",Vector2(1200,680),true)
     else: Encounter.start(self,number)
-    message = ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会预判去路：看到预警换方向，或打断后排；硬壳要分工拆。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][number-1]
+    message = Encounter.objective(self,number)
 
 func _spawn(kind: String, point: Vector2, protect_arrival := false) -> void:
     if protect_arrival and (positions.any(func(p): return p.distance_to(point) < 220) or enemies.any(func(e): return e.pos.distance_to(point) < 100) or not Space.valid(point,Space.ENEMY_RADIUS)):
@@ -250,7 +311,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if not enabled or not is_finite(delta) or delta <= 0 or not p1.is_finite() or not p2.is_finite():
         return
     var dt := minf(delta, 0.1)
-    if guard_held: guarding = hp[0] > 0 and dodge_time[0] <= 0
+    if guard_held: guarding = hp[0] > 0 and dodge_time[0] <= 0 and hurt_time[0] <= 0.14
     for body in fallen:
         body.death_age += dt
         body.flash = maxf(0,body.flash-dt)
@@ -266,18 +327,22 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     for effect in fx: effect.life -= dt
     fx = fx.filter(func(effect): return effect.life > 0)
     for slot in range(2):
+        # Local simulation clock freezes every timer and displacement for this slot.
+        action_dt[slot] = maxf(0,dt-contact_hold[slot])
         contact_hold[slot] = maxf(0,contact_hold[slot]-dt)
-        hurt_time[slot] = maxf(0,hurt_time[slot]-dt)
-        attack_cooldown[slot] = maxf(0, attack_cooldown[slot] - dt)
-        attack_flash[slot] = maxf(0, attack_flash[slot] - dt)
-        dodge_cooldown[slot] = maxf(0, dodge_cooldown[slot] - dt)
-        invulnerable[slot] = maxf(0, invulnerable[slot] - dt)
+        var local_dt: float = action_dt[slot]
+        hurt_time[slot] = maxf(0,hurt_time[slot]-local_dt)
+        attack_cooldown[slot] = maxf(0, attack_cooldown[slot] - local_dt)
+        attack_flash[slot] = maxf(0, attack_flash[slot] - local_dt)
+        dodge_cooldown[slot] = maxf(0, dodge_cooldown[slot] - local_dt)
+        invulnerable[slot] = maxf(0, invulnerable[slot] - local_dt)
     if guarding: attacks.cancel(self,0)
     var pouncing: bool = attacks.step(self,dt)
     var inputs := [p1.limit_length(), p2.limit_length()]
     for slot in range(2):
         if hp[slot] <= 0 or phase == "complete":
             continue
+        var local_dt: float = 0.0 if contact_hold[slot] > 0 or hurt_time[slot] > 0.14 else action_dt[slot]
         var motion: Vector2 = inputs[slot] * (90.0 if slot == 0 and guarding else 215.0)
         if slot == 1 and attacks.charging: motion *= 0.4
         if slot == 1 and pouncing: motion = Vector2.ZERO
@@ -285,15 +350,15 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
             facing[slot] = inputs[slot].normalized()
         if dodge_time[slot] > 0:
             motion = dodge_direction[slot] * 550.0
-            dodge_time[slot] = maxf(0, dodge_time[slot] - dt)
+            dodge_time[slot] = maxf(0, dodge_time[slot] - local_dt)
         var before: Vector2 = positions[actor(slot)]
-        positions[actor(slot)] = Space.move(before, motion*dt, Space.ACTOR_RADIUS)
+        positions[actor(slot)] = _move_actor(before,motion*local_dt,dodge_time[slot] > 0)
         velocity[slot] = (positions[actor(slot)]-before)/dt
         if phase == "clear" and positions[actor(slot)].distance_to(EXIT) > 95:
             confirmed[slot] = false
     # The spare cat follows the active cat and is never an enemy target.
     var follower := 3 - current_cat
-    var goal := _bounded(positions[current_cat] + Vector2(-65, 55))
+    var goal := spare_goal() if story_encounter in ["shell","reserve"] else _bounded(positions[current_cat]-facing[1]*65+facing[1].orthogonal()*55)
     if not story_first: positions[follower] = Space.move(positions[follower], Space.direction(positions[follower],goal,Space.ACTOR_RADIUS)*minf(260*dt,positions[follower].distance_to(goal)), Space.ACTOR_RADIUS)
     if not plant_noticed:
         for seed in seeds:
@@ -315,7 +380,7 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
     if phase == "intermission":
         intermission -= dt
         intermission = maxf(0,intermission)
-        if intermission <= 0 and hp[0] > 0 and hp[1] > 0: _start_wave(wave+1)
+        # Time is the minimum breathing room, never the next-wave trigger.
     elif phase == "combat":
         for enemy in enemies:
             if enemy.hp > 0:
@@ -330,7 +395,24 @@ func step(delta: float, p1: Vector2, p2: Vector2, enabled: bool) -> void:
             phase = "intermission" if wave < wave_total else "clear"
             intermission = 1.25
             confirmed = [false,false]
-            message = "喘口气，下一段马上开始；伙伴坐下时先扶起来。" if wave < wave_total else "空地安全了！扶起伙伴，再到右边营火集合。"
+            message = "喘口气；准备好后按互动键开始下一段，伙伴坐下时先扶起来。" if wave < wave_total else "空地安全了！扶起伙伴，再到右边营火集合。"
+
+func _move_actor(origin: Vector2, offset: Vector2, dodging: bool) -> Vector2:
+    var end := Space.move(origin,offset,Space.ACTOR_RADIUS)
+    if dodging: return end
+    # Same contact radius as pounce; tangential input slides, retreat always works.
+    for enemy in enemies:
+        if enemy.hp <= 0: continue
+        var radial: Vector2 = enemy.pos.direction_to(origin)
+        var distance: float = origin.distance_to(enemy.pos)
+        if distance < 44.01:
+            if end.distance_to(enemy.pos) >= distance: continue
+            var slide: Vector2 = offset-radial*minf(0,offset.dot(radial))
+            end = Space.move(origin,slide,Space.ACTOR_RADIUS)
+        else:
+            var t := Space.contact(origin,end,enemy.pos,44)
+            if t != INF: end = origin.lerp(end,maxf(0,t-0.001))
+    return end
 
 func _busy(except_enemy: Dictionary) -> bool:
     var count := 0
@@ -398,6 +480,8 @@ func _rush(enemy: Dictionary, dt: float) -> void:
         enemy.mode = "rest"
         enemy.timer = 1.4 if enemy.kind == "armored" else (1.25 if enemy.kind == "thorn" else 1.65)
 func _enemy_step(enemy: Dictionary, dt: float) -> void:
+    dt = enemy.get("simulation_dt",dt)
+    if dt <= 0: return
     if enemy.get("pose_mode","") != enemy.mode:
         enemy.pose_mode = enemy.mode
         enemy.pose_duration = maxf(enemy.timer,0.001)
@@ -414,9 +498,6 @@ func _enemy_step(enemy: Dictionary, dt: float) -> void:
 func _enemy_ai(enemy: Dictionary, dt: float) -> void:
     enemy.flash = maxf(0,enemy.flash-dt)
     enemy.bounce = maxf(0,enemy.bounce-dt)
-    if enemy.get("impact_pause",0.0) > 0:
-        enemy.impact_pause = maxf(0,enemy.impact_pause-dt)
-        return
     if enemy.get("control_time",0.0) > 0: return
     enemy.timer -= dt
     if Encounter.step(self,enemy,dt): return

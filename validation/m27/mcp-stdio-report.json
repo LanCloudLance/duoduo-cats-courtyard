@@ -1,0 +1,125 @@
+{
+  "protocol": "stdio MCP",
+  "qa_project": "mcp-qa",
+  "scope": "tool capability smoke; not current M27 playthrough",
+  "native_codex_connector_registered": false,
+  "completed": true,
+  "tools": [
+    "ping_game",
+    "get_runtime_errors",
+    "get_console_output",
+    "collector_status",
+    "get_scene_tree",
+    "inspect_node",
+    "set_node_property",
+    "call_node_method",
+    "screenshot",
+    "list_assets",
+    "get_image_png",
+    "slice_sprite_sheet",
+    "describe_sprite",
+    "refresh_filesystem",
+    "reload_scene",
+    "reload_resource",
+    "reload_plugin",
+    "find_references",
+    "describe_audio",
+    "get_audio_pcm",
+    "eval",
+    "await_condition",
+    "simulate_input",
+    "clean_temp",
+    "play_scene",
+    "stop_scene",
+    "get_play_status",
+    "get_diagnostics",
+    "set_breakpoint",
+    "remove_breakpoint",
+    "clear_breakpoints",
+    "wait_for_breakpoint",
+    "get_stack_dump",
+    "get_stack_frame_vars",
+    "continue_execution",
+    "step_into",
+    "step_over",
+    "step_out",
+    "evaluate_debug",
+    "break_execution",
+    "list_tools"
+  ],
+  "server": {
+    "name": "godot-mcp",
+    "version": "1.0.0"
+  },
+  "first_lobby_id": 60280538581,
+  "ready": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"met\":true,\"value\":true}"
+      }
+    ],
+    "structuredContent": {
+      "met": true,
+      "value": true
+    }
+  },
+  "before": "[\"bridge\", false, Vector2(400, 600)]",
+  "before_image": [
+    "/Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/m27/evidence/mcp-before.jpg"
+  ],
+  "started": "[\"bridge\", true, Vector2(400, 600)]",
+  "after": "[\"bridge\", true, Vector2(476.9998, 600)]",
+  "after_image": [
+    "/Users/wangyuanlong/Documents/Codex/2026-09-05/ya/work/m27/evidence/mcp-after.jpg"
+  ],
+  "runtime_errors": {
+    "content": [
+      {
+        "type": "text",
+        "text": "No new runtime errors."
+      }
+    ],
+    "structuredContent": {
+      "errors": [],
+      "count": 0
+    }
+  },
+  "expected_probe_error": "{'content': [{'type': 'text', 'text': \"execute error: Invalid named index 'definitely_missing_probe_property' for base type Object\"}], 'isError': True}",
+  "captured_probe_error": {
+    "content": [
+      {
+        "type": "text",
+        "text": "1 runtime error(s):\n[ERROR] Invalid named index 'definitely_missing_probe_property' for base type Object at core/math/expression.cpp:1504\n  in execute()\n  backtrace (most recent first):\n    _do_eval (res://addons/godot-mcp/mcp_runtime.gd:210)\n    _capture (res://addons/godot-mcp/mcp_runtime.gd:63)"
+      }
+    ],
+    "structuredContent": {
+      "errors": [
+        {
+          "level": "error",
+          "message": "Invalid named index 'definitely_missing_probe_property' for base type Object",
+          "file": "core/math/expression.cpp",
+          "line": 1504,
+          "function": "execute",
+          "condition": "Condition \"p_show_error\" is true. Returning: Variant()",
+          "backtrace": [
+            {
+              "file": "res://addons/godot-mcp/mcp_runtime.gd",
+              "function": "_do_eval",
+              "line": 210
+            },
+            {
+              "file": "res://addons/godot-mcp/mcp_runtime.gd",
+              "function": "_capture",
+              "line": 63
+            }
+          ]
+        }
+      ],
+      "count": 1
+    }
+  },
+  "second_lobby_id": 60280538581,
+  "scene_tree_refetched": true,
+  "ids_changed": false
+}

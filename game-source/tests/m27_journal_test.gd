@@ -1,0 +1,48 @@
+extends "res://tests/keyboard_scene_test.gd"
+func run()->void:
+    lobby=load("res://main.tscn").instantiate();root.add_child(lobby);await frames(3);lobby.session.set_focus(true)
+    lobby.story_chapter.record_prefix="qa-m27-journal-"+str(Time.get_ticks_usec());lobby.start_story_chapter(2,true);await frames(3)
+    var state=lobby.story_chapter.state
+    state.say("主线观察：桥锁已接住重量，旧撑扣变松了。")
+    state.say("团团：喵。")
+    tap_key(KEY_H);await frames(3)
+    check(lobby.journal.active and not lobby.session.running(),"H opens readable history and pauses puzzle")
+    check(lobby.journal.lines.text.contains("旧撑扣变松"),"later small feedback does not erase critical observation")
+    var points:Array=state.positions.duplicate();var clock:float=state.clock
+    axes(9,Vector2.RIGHT);await frames(10)
+    check(points==state.positions and clock==state.clock,"journal reading cannot move actors or progress machinery")
+    tap_key(KEY_H);await frames(3)
+    check(not lobby.journal.active and lobby.session.running(),"same key resumes prior keyboard session")
+    check(lobby.session.movement(0)==Vector2.ZERO,"held movement in journal does not leak on resume")
+    for i in range(48):state.say("记录 "+str(i))
+    check(state.history.size()==32 and state.history.back()=="记录 47","history bounded while preserving newest observations")
+    var value:Dictionary=state.checkpoint();var restored=state.get_script().new()
+    check(restored.restore_checkpoint(JSON.parse_string(JSON.stringify(value))) and "记录 47" in restored.history,"history survives JSON checkpoint with facts")
+    value.history=["bad".repeat(400)]
+    check(not state.get_script().new().restore_checkpoint(value),"oversized history rejected before restoring facts")
+    for i in range(32):state.say("长记录 %d："%i+"旧桥锁接住重量，撑扣可以复用。".repeat(12))
+    tap_key(KEY_H);await frames(4)
+    var bottom:int=lobby.journal.scroll.scroll_vertical
+    tap_key(KEY_PAGEUP);await frames(2)
+    check(bottom>0 and lobby.journal.scroll.scroll_vertical<bottom,"PageUp retrieves earlier long observations")
+    var event:=InputEventJoypadButton.new();event.device=7;event.button_index=JOY_BUTTON_DPAD_UP;event.pressed=true
+    var before:int=lobby.journal.scroll.scroll_vertical;Input.parse_input_event(event);Input.flush_buffered_events();await frames(2)
+    check(lobby.journal.scroll.scroll_vertical<before,"controller dpad scrolls journal without moving party")
+    var motion:=InputEventJoypadMotion.new();motion.device=7;motion.axis=JOY_AXIS_LEFT_Y;motion.axis_value=-1
+    Input.parse_input_event(motion);Input.flush_buffered_events();await frames(8)
+    var axis_stop:int=lobby.journal.scroll.scroll_vertical;motion.axis_value=0;Input.parse_input_event(motion);Input.flush_buffered_events();await frames(4)
+    check(lobby.journal.scroll.scroll_vertical==axis_stop,"neutral stick stops journal scrolling")
+    var hint_count:int=state.hints;var phase:String=state.phase;points=state.positions.duplicate()
+    tap_key(KEY_V);await frames(3)
+    check(state.hints==hint_count+1 and state.phase==phase and state.positions==points and not lobby.session.running(),"journal keyboard hint is accessible without executing puzzle")
+    event.button_index=JOY_BUTTON_Y;Input.parse_input_event(event);Input.flush_buffered_events();await frames(3)
+    check(state.hints==hint_count+2,"journal controller hint shares the real hint path")
+    motion.axis_value=-1;Input.parse_input_event(motion);Input.flush_buffered_events();await frames(2)
+    lobby.session.set_focus(false);await frames(2);motion.axis_value=0;Input.parse_input_event(motion);Input.flush_buffered_events();axis_stop=lobby.journal.scroll.scroll_vertical;lobby.session.set_focus(true);await frames(5)
+    check(lobby.journal.scroll.scroll_vertical==axis_stop and lobby.journal.scroll_axis==0,"focus return cannot resurrect a stick released while unfocused")
+    lobby.session.set_focus(false);tap_key(KEY_H);await frames(2)
+    check(lobby.journal.active and not lobby.session.running(),"unfocused input cannot dismiss journal or resume game")
+    lobby.session.set_focus(true);tap_key(KEY_H);await frames(3)
+    check(lobby.session.movement(0)==Vector2.ZERO,"focus restoration leaves motion clear")
+    lobby.queue_free();await frames(3)
+    print("M27_JOURNAL: %d checks, %d failed"%[checks,failed]);quit(1 if failed else 0)

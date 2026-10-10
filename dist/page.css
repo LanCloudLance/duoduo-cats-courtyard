@@ -3,3 +3,5 @@
 .trial{border:1px solid #678474;border-radius:14px;padding:14px;margin:22px 0}.trial p{margin:0 0 10px;color:#efcd82;font-size:14px}.trial button{padding:10px 14px;margin:4px}.trial select{font:inherit;color:#f6eedc;background:#284c3e;border:1px solid #668274;border-radius:8px;padding:10px;margin:4px}
 
 .chapter-picker{border:1px solid #678474;border-radius:14px;padding:14px}.chapter-picker label{display:block;color:#efcd82;margin-bottom:8px}.chapter-picker select{font:inherit;max-width:100%;color:#f6eedc;background:#284c3e;border:1px solid #668274;border-radius:8px;padding:10px}.chapter-picker .choices{margin:12px 0 0}.choices{margin:18px 0}
+
+.extras{margin:24px 0;border-top:1px solid #496456;padding-top:18px}.extras summary{cursor:pointer;color:#dfc58f;padding:8px 0}.extras[open] summary{margin-bottom:10px}.extras .chapter-picker,.extras .trial{background:#18382c}dialog{max-height:85dvh;overflow:auto}

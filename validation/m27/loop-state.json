@@ -1,0 +1,25 @@
+{
+  "objective": "complete-existing-five-chapter-game",
+  "status": "active",
+  "baseline_sha": "76dbfde30197201c1d9e1875f15fb913a92b2408",
+  "stable_site_version": 17,
+  "iteration": 2,
+  "stage": "validated-release-ready",
+  "scope": "prologue-five-chapters-home; existing story; PC controllers and Web",
+  "target_duration_minutes": [
+    175,
+    230
+  ],
+  "duration_status": "design budget, unmeasured",
+  "modules": {
+    "tools": "pinned skills applied; local stdio MCP proven, not native registered",
+    "control_checkpoint": "journey, strict durable saves, journal, direct continue and failure recovery verified",
+    "combat": "role-specific attacks, relay, guard, recovery and space rules verified",
+    "chapter_rules": "prologue-five-chapter rules and whole mainline verified in both modes",
+    "presentation": "native 61s and actual release Web 300-frame sample; human feel pending",
+    "whole_game_review": "8 major issues independently closed; no open P0/P1 in tested scope"
+  },
+  "release_ready": true,
+  "human_acceptance": false,
+  "last_progress": "Frozen candidate 100 suites/3558 checks, continuous writer 641 and new-process reader 52, partial restart 13, export PCK 36 passed; native and actual Web samples verified; publication next."
+}

@@ -27,6 +27,7 @@ var cue := 0
 var event_id := 0
 var message := "朵朵：今天的正事做完了。接下来，什么都不干也可以。"
 var message_time := 6.0
+var history:Array[String]=[]
 var door_open := 0.0
 var brace := false
 var wedged := false
@@ -43,6 +44,25 @@ var carrier := -1
 var hint_level := 0
 var exit_time := 0.0
 
+func checkpoint() -> Dictionary:
+    return preload("res://game/prologue_checkpoint.gd").capture(self)
+func restore_checkpoint(data: Dictionary) -> bool:
+    return preload("res://game/prologue_checkpoint.gd").restore(self,data)
+func cancel_inputs() -> void:
+    brace = false
+    rug_grab = false
+    resting = false
+    actions[0] = ""
+    actions[1] = ""
+    action_time = [0.0,0.0,0.0]
+func tool(slot: int) -> void:
+    if slot < 0 or slot > 1 or finished or phase == "leaving": return
+    var item := target(slot)
+    if item in ["松手","松开","门挡","放下门挡","地毯边缘"] or (phase == "jam" and item in ["门把手","门缝"]):
+        interact(slot)
+    else:
+        say("朵朵：我的手空着，可以拿门挡，或在门边撑住门。" if slot == 0 else "团团伸了伸爪：靠近物件，才能叼门挡或抓住卷边。")
+
 func valid(p: Vector2) -> bool: return FLOOR.has_point(p) or HALL.has_point(p)
 func move(p: Vector2, offset: Vector2) -> Vector2:
     var result := p
@@ -57,6 +77,9 @@ func say(text: String, sound := 0) -> void:
     message_time = 5.0
     cue = sound
     event_id += 1
+    if history.is_empty() or history.back()!=text:
+        history.append(text.left(280))
+        if history.size()>32:history.pop_front()
 func act(slot: int, kind: String, duration := 0.6) -> void:
     actions[slot] = kind
     action_time[slot] = duration

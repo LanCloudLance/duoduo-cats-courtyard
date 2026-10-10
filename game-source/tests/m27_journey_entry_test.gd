@@ -1,0 +1,32 @@
+extends "res://tests/keyboard_scene_test.gd"
+const Journey=preload("res://game/story_journey.gd")
+func run()->void:
+    lobby=load("res://main.tscn").instantiate();root.add_child(lobby);await frames(3);lobby.session.set_focus(true)
+    lobby.story_progress.prefix="qa-m27-journey-entry-"+str(Time.get_ticks_usec())
+    lobby.start_journey(true);await frames(3)
+    check(lobby.stage=="prologue" and lobby.prologue.visible and lobby.session.single_player,"from-head entry starts the complete solo story")
+    var first:String=lobby.story_run_id;var value:Dictionary=lobby.story_progress.read(true)
+    check(value.get("chapter")==0 and value.get("run_id")==first,"actual journey pointer records the opening")
+    check(lobby.chapter_one.record_prefix.begins_with(first) and lobby.story_chapter.record_prefix.begins_with(first),"all chapter files belong to the same journey")
+    lobby.session.pause_all();lobby.start_chapter_one(true,true);await frames(3)
+    check(lobby.story_progress.read(true).get("chapter")==1 and lobby.story_run_id==first,"normal continuation advances the pointer without changing run")
+    lobby.session.pause_all();lobby.resume_journey(true);await frames(3)
+    check(lobby.stage=="chapter-one" and lobby.story_run_id==first,"continue opens latest story chapter rather than courtyard rest")
+    check(lobby.story_progress.read(false).is_empty(),"solo journey pointer cannot leak into co-op")
+    lobby.session.pause_all();lobby.start_journey(true);await frames(3)
+    check(lobby.story_run_id!=first and lobby.stage=="prologue" and not lobby.prologue.state.finished,"starting over uses a fresh run without old chapter completion")
+    var invalid:={"version":1,"mode":"solo","chapter":5,"run_id":"story-run-../../outside"}
+    check(not Journey.new().valid(invalid,true),"journey pointer cannot inject a save path")
+    invalid.run_id="story-run-123-456";invalid.chapter=1.5
+    check(not Journey.new().valid(invalid,true),"fractional chapter pointer rejected")
+    invalid.chapter=1;invalid.mode="dual";check(not Journey.new().valid(invalid,true),"malformed mode rejected before reading a chapter")
+    lobby.session.pause_all();lobby.start_courtyard(false);await frames(3)
+    check(lobby.stage=="bridge" and not lobby.story_route_active and not lobby.session.single_player,"courtyard prototype has a separate explicit entry")
+    lobby.session.pause_all();lobby.resume_story_entry(true);await frames(3)
+    check(lobby.stage=="prologue" and lobby.story_route_active and lobby.session.single_player,"web story continue directly resumes its mode without prototype menu")
+    var saved_solo:String=lobby.story_run_id
+    lobby.session.pause_all();lobby.resume_story_entry(false);await frames(3)
+    check(lobby.stage=="prologue" and not lobby.session.single_player and lobby.story_run_id!=saved_solo,"missing co-op story starts its own opening without reading solo data")
+    check(lobby.prologue.state.message.contains("还没有旅程记录"),"missing story explicitly explains the new opening")
+    lobby.queue_free();await frames(4)
+    print("M27_JOURNEY_ENTRY: %d checks, %d failed"%[checks,failed]);quit(1 if failed else 0)

@@ -1,6 +1,7 @@
 extends RefCounted
 ## Shared input/save rules only; each chapter owns its puzzle and world.
 const FLOOR := Rect2(90,180,1100,490)
+const Checkpoint = preload("res://game/story_checkpoint.gd")
 var chapter := 2
 var title := "第二章"
 var chapter_key := "chapter-two"
@@ -15,6 +16,7 @@ var finished := false
 var allow_epilogue := false
 var clock := 0.0
 var message := ""
+var history:Array[String]=[]
 var message_time := 0.0
 var event_id := 0
 var cue := 0
@@ -38,6 +40,9 @@ func switch_cat() -> void:
 func actor_for_slot(slot:int)->int:return controlled if single else (0 if slot==0 else current_cat)
 func say(text:String,sound:=0)->void:
     message=text;message_time=8;event_id+=1;cue=clampi(sound,0,3)
+    if history.is_empty() or history.back()!=text:
+        history.append(text.left(280))
+        if history.size()>32:history.pop_front()
 func act(role:int,kind:String,seconds:=0.55)->void:
     actions[role]=kind;action_time[role]=seconds
 func near(role:int,p:Vector2,reach:=65.0)->bool:return positions[role].distance_to(p)<reach
@@ -71,13 +76,27 @@ func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
             if actions[role] in ["hold","brace","light"]:actions[role]=""
         elif action_time[role]<=0 and actions[role] not in ["hold","brace","light"]:actions[role]=""
         move(role,motion.limit_length()*200*dt)
-    if not single and joined:
+    if (single and travel_follow_allowed()) or (not single and joined):
         follow_retry=maxf(0,follow_retry-dt)
-        var follower:=3-current_cat
-        var goal:=positions[current_cat]+Vector2(-32,26)
-        if not follow_allowed(follower,goal):goal=positions[current_cat]
-        if actions[follower] not in ["hold","brace","light"] and positions[follower].distance_to(goal)>22:
-            follow_partner(follower,goal,dt)
+        var leader:=controlled if single else current_cat
+        for follower in available_roles():
+            if follower==leader or (not single and follower==0):continue
+            var goal:=positions[leader]+Vector2(-32-follower*12,26+follower*16)
+            if not follow_allowed(follower,goal):goal=positions[leader]
+            if not posted_role(follower) and positions[follower].distance_to(goal)>(50 if single else 22):
+                follow_partner(follower,goal,dt)
+func posted_role(role:int)->bool:
+    if chapter==5:
+        return (role==2 and get("beam_held")==true) or (role==0 and get("shield_held")==true) or (role==1 and get("hook_held")==true)
+    return actions[role] in ["hold","brace","light"]
+func travel_follow_allowed()->bool:
+    # Only permanent travel sections; no AI solving or dragging posted partners.
+    match chapter:
+        2:return get("locked_b")==true
+        3:return (get("door_open")==true and not joined) or get("bridge_locked")==true
+        4:return get("cloth")==true and phase not in ["investigate","test","exterior"]
+        5:return phase in ["test","release","network","farewell","home","complete"] or (phase=="approach" and get("bridge_locked")==true)
+    return false
 func follow_segment(role:int,a:Vector2,b:Vector2)->bool:
     var count:=maxi(1,ceili(a.distance_to(b)/5.0))
     for i in range(1,count+1):
@@ -97,7 +116,8 @@ func follow_partner(role:int,goal:Vector2,dt:float)->void:
         if not follow_segment(role,positions[role],waypoint):follow_paths.erase(role);return
     else:follow_paths.erase(role)
     var offset:=positions[role].direction_to(waypoint)*minf(170*dt,positions[role].distance_to(waypoint))
-    if follow_segment(role,positions[role],positions[role]+offset):move(role,offset)
+    if follow_segment(role,positions[role],positions[role]+offset):
+        facing[role]=offset.normalized();move(role,offset)
 # Route only on chapter-approved permanent floor. It cannot actuate any puzzle.
 func permanent_route(role:int,start:Vector2,goal:Vector2)->Array:
     var origin:=Vector2(110,200)
@@ -141,6 +161,8 @@ func after_battle()->void:
     battles_finished+=1;battle_requested=false
 func draw_world(_view:Node2D)->void:pass
 func completion_text()->String:return title+" ✓\n伙伴们一起走过了这段路。"
+func checkpoint()->Dictionary:return Checkpoint.capture(self)
+func restore_checkpoint(value:Dictionary)->bool:return Checkpoint.restore(self,value)
 func record()->Dictionary:
     if not finished:return {}
     return {"version":1,"chapter":chapter_key,"completed":true,"extras":extras.duplicate()}

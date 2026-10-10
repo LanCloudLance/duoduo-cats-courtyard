@@ -1,6 +1,7 @@
 extends RefCounted
 ## Two-person story scene. Puzzle actors stay where the player leaves them.
 const FLOOR := Rect2(90,210,1100,450)
+const Checkpoint = preload("res://game/chapter_one_checkpoint.gd")
 const TRUNK := Rect2(600,210,65,450)
 const TAG := Vector2(155,400)
 const GRANNY := Vector2(330,350)
@@ -45,14 +46,19 @@ var finished := false
 var extras := {}
 var message := "朵朵：门里还是我们的家……可是，手碰不到。团团，先找圆圆。"
 var message_time := 8.0
+var history:Array[String]=[]
 var event_id := 0
 var cue := 0
+var hint_context := ""
 var hint_level := 0
 var actions: Array[String] = ["",""]
 var action_time: Array[float] = [0.0,0.0]
 
 func say(text: String, sound := 0) -> void:
     message = text;message_time = 6.5;cue = sound;event_id += 1
+    if history.is_empty() or history.back()!=text:
+        history.append(text.left(280))
+        if history.size()>32:history.pop_front()
 func act(slot: int, kind: String, seconds := 0.55) -> void:
     actions[slot] = kind;action_time[slot] = seconds
 func switch_actor() -> void:
@@ -99,7 +105,16 @@ func objective() -> String:
     if phase == "station": return "让驿站重新亮起来"
     if phase == "rest": return "圆圆来过这里。一起歇一会儿"
     return "第一章完成 · 下一站，山坡钟楼"
+func tool(role:int)->void:
+    if role not in [0,1] or finished or battle_requested:return
+    var item:=target(role)
+    if item in ["枝架抬手","放下枝架","木撑","安放木撑","放下木撑","受力绳扣","矮柜底","灯座","遮风罩","进气片"]:
+        interact(role);return
+    act(role,"inspect")
+    say("朵朵把木盾收在手边，看看附近有没有需要撑稳、装好或调整的物件。" if role==0 else "团团伸爪试了试。靠近低处的柜缝、木撑或小绳扣，才能用上它的灵巧。")
 func request_hint() -> void:
+    var context:=str([phase,supported,branch_clear,core_found,core_ready,core_installed,lit,clue_seen])
+    if context!=hint_context:hint_context=context;hint_level=0
     hint_level = mini(3,hint_level+1)
     if phase == "road":
         say(["朵朵：绳扣连着枝架，下面却留着一条很矮的缝。","朵朵：抬起一端，绳子就不那么紧了。木撑可以替我承重。","朵朵抬枝架，木撑放在南边的凹槽；团团从低缝过去，松开另一侧绳扣。"][hint_level-1])
@@ -199,6 +214,13 @@ func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
         if action_time[role]<=0:
             if not (role==0 and bracing):actions[role] = ""
             move(role,direction*(140 if carrier==role else 205)*dt)
+    if single and (branch_clear or phase in ["station","rest"]) and resting<=0:
+        var follower:=1-controlled
+        var goal:=positions[controlled]+Vector2(-42,34)
+        if not walkable(goal,follower):goal=positions[controlled]
+        if not (follower==0 and bracing) and action_time[follower]<=0 and positions[follower].distance_to(goal)>50:
+            var offset:=positions[follower].direction_to(goal)*minf(175*dt,positions[follower].distance_to(goal))
+            facing[follower]=offset.normalized();move(follower,offset)
     if bracing: actions[0] = "brace"
     if not raised() and TRUNK.grow(18).has_point(positions[1]):
         positions[1] = Vector2(560,580)
@@ -219,6 +241,8 @@ func step(dt: float, a: Vector2, b: Vector2, enabled: bool) -> void:
 func record() -> Dictionary:
     if not finished:return {}
     return {"version":1,"chapter":"chapter-one","completed":true,"extras":extras.duplicate()}
+func checkpoint()->Dictionary:return Checkpoint.capture(self)
+func restore_checkpoint(value:Dictionary)->bool:return Checkpoint.restore(self,value)
 func restore(value: Dictionary) -> void:
     if value.get("version")!=1 or value.get("chapter")!="chapter-one" or value.get("completed")!=true or not value.get("extras",{}) is Dictionary:return
     extras = value.get("extras",{}).duplicate();enter_station();lit = true;light_reveal = 1;finished = true;phase = "complete";clue_seen = true

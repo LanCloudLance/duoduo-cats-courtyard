@@ -2,7 +2,13 @@ from pathlib import Path
 import os,shutil,subprocess,gzip,re,json
 site=Path(__file__).resolve().parent
 stage=site/'.build/godot';stage.parent.mkdir(exist_ok=True)
-shutil.copytree(site/'game-source',stage,dirs_exist_ok=True,ignore=shutil.ignore_patterns('.godot','override.cfg'))
+# Reuse imported resources, but never retain removed product files from an old build.
+if stage.exists():
+ for item in stage.iterdir():
+  if item.name=='.godot':continue
+  if item.is_dir():shutil.rmtree(item)
+  else:item.unlink()
+shutil.copytree(site/'game-source',stage,dirs_exist_ok=True,ignore=shutil.ignore_patterns('.godot','override.cfg','addons'))
 if os.environ.get('WEB_STORAGE_PROBE'):
  p=stage/'ui/lobby.gd';text=p.read_text();marker='        print("WEB_READY solo=",web_solo," persistent=",OS.is_userfs_persistent()," userdir=",OS.get_user_data_dir())'
  text=text.replace(marker,marker+'\n'+Path(os.environ['WEB_STORAGE_PROBE']).read_text());p.write_text(text)

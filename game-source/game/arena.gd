@@ -7,6 +7,10 @@ var solo = Solo.new()
 var allow_next_level := true
 const Battle = preload("res://game/battle_state.gd")
 const Actor = preload("res://game/actor_view.gd")
+const StoryLabels = preload("res://game/story_labels.gd")
+var labels = StoryLabels.new()
+var label_metrics:Dictionary={}
+var enemy_label_layout:Array[Dictionary]=[]
 var battle = Battle.new()
 var session
 var active := false
@@ -113,6 +117,9 @@ func set_active(value: bool) -> void:
 func cancel_inputs() -> void:
     audio.silence()
     battle.hold_guard(false)
+    if battle.phase in ["briefing","intermission"]:
+        battle.confirmed[0] = false
+        battle.confirmed[1] = false
     battle._cancel_rescue()
     battle.cancel_attacks()
     heard_feedback = battle.feedback_id
@@ -201,6 +208,10 @@ func _physics_process(delta: float) -> void:
             actors[i].caption_override = ["朵朵","团团","圆圆"][i]+(" · 你控制" if selected and slot == solo.human_slot else " · AI")
         actors[i].scale = Vector2(1, 0.65) if selected and battle.hp[slot] <= 0 else Vector2.ONE
         actors[i].modulate = Color(0.7, 0.75, 0.7) if selected and battle.hp[slot] <= 0 else Color.WHITE
+        # During a crossing, retain the spare silhouette while exposing warnings
+        # underneath; active cats and damage/target rules are untouched.
+        if not selected and battle.story_encounter in ["shell","reserve"] and battle.spare_obstructs_warning(battle.positions[i]):
+            actors[i].modulate.a = 0.48
         if selected and battle.invulnerable[slot] > 0:
             actors[i].modulate.a = 0.45 if fmod(battle.invulnerable[slot], 0.2) < 0.1 else 1.0
         actors[i].combat_active = selected and battle.attack_flash[slot] > 0
@@ -244,10 +255,11 @@ func _refresh() -> void:
         add_child(view)
         fallen_views.append(view)
     for i in range(fallen_views.size()): fallen_views[i].sync(battle.fallen[i])
+    _layout_labels()
     title_label.text = "林间空地"
     girl_label.text = "P1 朵朵   " + _health(0)
     cat_label.text = "P2 " + ("团团" if battle.current_cat == 1 else "圆圆") + "   " + _health(1) + "  · 双猫共用"
-    status_label.text = "协作  %d / 3  · Esc 暂停" % battle.wave
+    status_label.text = "协作  %d / %d  · Esc 暂停" % [battle.wave,battle.wave_total]
     for help in [girl_help,cat_help]:
         help.visible = battle.phase == "briefing"
         if help.visible:
@@ -267,7 +279,7 @@ func _refresh() -> void:
     match battle.phase:
         "briefing": objective_label.text = "准备好再出发：%s确认   %s / %s" % [interaction, "朵朵已准备" if battle.confirmed[0] else "朵朵待准备", "猫咪已准备" if battle.confirmed[1] else "猫咪待准备"]
         "combat": objective_label.text = ["旋叶空地 · 它们盯上了猫咪的灯芯。","荆棘围猎 · 两边都有动静。","灯芯守卫 · 找机会取回灯芯。"][battle.wave-1]
-        "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
+        "intermission": objective_label.text = ("喘口气 · 稍后由双方各按互动键准备。" if battle.intermission > 0 else "下一段等你们准备：%s · %s / %s" % [interaction,"朵朵已准备" if battle.confirmed[0] else "朵朵待准备","猫咪已准备" if battle.confirmed[1] else "猫咪待准备"])
         "clear": objective_label.text = "到右边营火集合，%s确认休息。" % interaction
         "complete": objective_label.text = "林间空地完成 ✓ 再按互动键，前往双猫灯廊。"
     if battle.hp[0] == 0 and battle.hp[1] == 0:
@@ -290,11 +302,13 @@ func _refresh() -> void:
         if battle.phase == "combat": objective_label.text = ["打散枝团，让通往驿站的小路露出来。","风里有织藤花 · 留意落点，团团能扑断它。"][battle.wave-1]
         elif battle.phase == "complete": objective_label.text = "路通了。按互动键，一起去修驿站的灯。"
         if battle.phase in ["briefing","clear"]: hint_label.text = "圆圆还在山坡方向；朵朵与团团一起前进。"
+    if not battle.story_encounter.is_empty() and battle.phase == "combat":
+        objective_label.text = battle.Encounter.objective(battle,battle.wave)
     if not story_title.is_empty():
         title_label.text=story_title
         status_label.text=("单人" if battle.solo_mode else "协作")+" %d / %d · Esc 暂停"%[battle.wave,battle.wave_total]
         if battle.phase=="complete":objective_label.text=story_destination
-        elif battle.phase=="combat":objective_label.text="留意冲锋与落点；团团打断施法，朵朵从破绽侧追击。"
+        elif battle.phase=="combat":objective_label.text=battle.Encounter.objective(battle,battle.wave)
         if battle.phase in ["briefing","clear"]:hint_label.text="准备好再确认；清路后仍需要伙伴一起到出口。"
     queue_redraw()
 
@@ -306,7 +320,7 @@ func _solo_hud() -> void:
     var who: String = ["朵朵","团团","圆圆"][actor]
     girl_label.text = "朵朵 · "+("你控制" if solo.human_slot == 0 else "AI")+"  "+_health(0)
     cat_label.text = ("团团" if battle.current_cat == 1 else "圆圆")+" · "+("你控制" if solo.human_slot == 1 else "AI")+"  "+_health(1)
-    status_label.text = "单人  %d / 3  · Esc 暂停" % battle.wave
+    status_label.text = "单人  %d / %d  · Esc 暂停" % [battle.wave,battle.wave_total]
     girl_help.text = "WASD 移动 · F 攻击 · Q 闪避\nE 互动 / 救援 · G 朵朵举盾" if session.keyboard_mode else "左摇杆 · 面键左攻击 / 右闪避\n面键下互动 · 左肩朵朵举盾"
     if actor > 0:
         girl_help.text = ("WASD · F "+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\nE 互动 / 救援 · Q 闪避") if session.keyboard_mode else ("面键左："+("短扑快抓" if actor == 1 else "轻拍 / 蓄力松开重拍")+"\n左摇杆移动 · 右闪避 · 下互动")
@@ -314,7 +328,7 @@ func _solo_hud() -> void:
     var key := "E" if session.keyboard_mode else "面键下"
     match battle.phase:
         "briefing": objective_label.text = ("试试朵朵与团团的动作 · 按 %s 开始，AI 伙伴会协助战斗。" if battle.story_first else "先试试三位动作 · 按 %s 开始，AI 伙伴会协助战斗。") % key
-        "intermission": objective_label.text = "喘口气 · 下一段即将开始，先扶起坐下的伙伴。"
+        "intermission": objective_label.text = "喘口气 · 稍后按 %s，准备好再开始下一段。" % key if battle.intermission > 0 else "准备好再按 %s 开始下一段；可以先调整位置。" % key
         "clear": objective_label.text = "带伙伴到右边营火，按 %s 完成本次单人战斗。" % key
         "complete": objective_label.text = ("林间空地完成 ✓ 再按 %s，前往双猫灯廊。" % key) if allow_next_level else "单人战斗试玩完成 ✓ Esc / 菜单键可以重玩或选择其他关卡。"
     if battle.hp[solo.human_slot] <= 0 and battle.hp[1-solo.human_slot] > 0:
@@ -421,7 +435,7 @@ func _draw() -> void:
         elif enemy.mode in ["melee_windup","melee"]:
             var angle: float = enemy.direction.angle()
             draw_arc(enemy.pos,82,angle-1.3,angle+1.3,24,Color("efb072"),5,true)
-        _draw_enemy(enemy)
+        _draw_enemy(enemy,battle.enemies.find(enemy))
     for effect in battle.fx:
         _draw_impact(effect)
     for slot in range(2):
@@ -487,31 +501,67 @@ func _text(point: Vector2, value: String, width: float, size: int) -> void:
         draw_string_outline(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, 4, Color("f4e9cf"))
         draw_string(font, point, value, HORIZONTAL_ALIGNMENT_CENTER, width, size, Color("394b36"))
 
-func _draw_enemy(enemy: Dictionary) -> void:
+func _draw_enemy(enemy: Dictionary,index:int) -> void:
     var p: Vector2 = enemy.pos
     if enemy.kind == "armored" and enemy.mode == "exposed":
         var angle: float = enemy.direction.angle()
         draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("527b47"),9,true)
         draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("d7f5a9"),4,true)
-    var label: String = {"armored":"硬壳荆棘团","thorn":"荆棘团","roller":"枝球","sprout":"嫩芽怪","weaver":"织藤花","elder":"灯芯树怪"}.get(enemy.kind,"树怪")
-    if enemy.mode in ["windup","cast","slam_windup","melee_windup"]:
-        label += " · 蓄力！"
-    elif enemy.mode == "rest":
-        label += " · 休息"
-    elif enemy.mode == "exposed":
-        label = "露出破绽 · 追击！" if enemy.kind == "elder" else "背后结点展开 · 绕后！"
-    var top := -150.0 if enemy.kind == "elder" else -108.0
-    var label_point: Vector2 = p+Vector2(-115,top)
-    for offset in [Vector2(-115,top),Vector2(0,top),Vector2(-115,75)]:
-        var candidate: Vector2 = p+offset
-        var rect := Rect2(candidate-Vector2(0,18),Vector2(230,22))
-        if candidate.x < 100 or candidate.x+230 > 1180 or candidate.y < 230 or candidate.y > 625: continue
-        if battle.positions.all(func(point): return not rect.intersects(Rect2(point-Vector2(68,169),Vector2(136,184)))):
-            label_point = candidate
-            break
-    _text(label_point, label, 230, 17)
-    draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50, 5)), Color("424e3e"))
-    draw_rect(Rect2(p + Vector2(-25, top-15), Vector2(50.0 * enemy.hp / enemy.max_hp, 5)), Color("efc08b"))
+    if index>=enemy_label_layout.size():return
+    var badge:Dictionary=enemy_label_layout[index]
+    var rect:Rect2=badge.rect
+    var marked: bool = not battle.story_first and enemy.get("mark_time",0.0)>0
+    var icon_space := 27.0 if marked else 0.0
+    _text(rect.position+Vector2(icon_space,18),badge.text,rect.size.x-icon_space,17)
+    if marked:
+        # White paw points to Yuanyuan; the ring drains with the actual mark timer.
+        # It lives inside the safe badge, never over a foot-level attack warning.
+        var paw := rect.position+Vector2(13,12)
+        draw_circle(paw+Vector2(0,3),5,Color("fff7da"))
+        for toe in [Vector2(-6,-3),Vector2(0,-6),Vector2(6,-3)]:draw_circle(paw+toe,2.8,Color("fff7da"))
+        draw_arc(paw,12,-PI/2,-PI/2+TAU*clampf(enemy.mark_time/1.8,0,1),24,Color("83e4e2"),2,true)
+    var bar:=Rect2(rect.position+Vector2((rect.size.x-50)/2,25),Vector2(50,5))
+    draw_rect(bar,Color("424e3e"))
+    draw_rect(Rect2(bar.position,Vector2(50.0*enemy.hp/enemy.max_hp,5)),Color("efc08b"))
+
+func _layout_labels()->void:
+    var protected:Array[Rect2]=[]
+    for enemy in battle.enemies:
+        var size:=Vector2(142,154) if enemy.kind=="elder" else Vector2(106,120)
+        protected.append(Rect2(enemy.pos-Vector2(size.x/2,size.y-18),size))
+        if enemy.mode=="windup":
+            var reach:=364.0 if enemy.kind=="roller" else 230.0
+            var end:Vector2=enemy.pos+enemy.direction*reach
+            protected.append(Rect2(enemy.pos.min(end),enemy.pos.max(end)-enemy.pos.min(end)).grow(42))
+        elif enemy.mode in ["cast","burst","slam_windup","slam"]:
+            var center:Vector2=enemy.get("aim",enemy.pos) if enemy.mode in ["cast","burst"] else enemy.pos
+            var radius:=58.0 if enemy.mode in ["cast","burst"] else 112.0
+            protected.append(Rect2(center-Vector2.ONE*radius,Vector2.ONE*radius*2))
+        elif enemy.mode in ["melee_windup","melee"]:
+            protected.append(Rect2(enemy.pos-Vector2(83,83),Vector2(166,166)))
+    for stump in Battle.Space.STUMPS:protected.append(Rect2(stump-Vector2(43,78),Vector2(86,95)))
+    for hazard in battle.hazards:protected.append(Rect2(hazard.pos-Vector2.ONE*hazard.radius,Vector2.ONE*hazard.radius*2))
+    var area:=Rect2(-130,110,1540,735)
+    label_metrics=labels.update(actors,protected,area)
+    for actor in actors:
+        if actor.visible:protected.append(StoryLabels.world_rect(actor,actor.body_rect()))
+    for rect in label_metrics.rects:protected.append(rect.grow(3))
+    enemy_label_layout.clear()
+    for index in range(battle.enemies.size()):
+        var enemy:Dictionary=battle.enemies[index]
+        var text:String={"armored":"硬壳","thorn":"荆棘","roller":"枝球","sprout":"嫩芽","weaver":"织藤花","elder":"树怪"}.get(enemy.kind,"树怪")
+        var cue:String={"windup":"将冲锋","cast":"将落藤","slam_windup":"将重拍","melee_windup":"将挥扫"}.get(enemy.mode,"")
+        if enemy.mode=="exposed":cue="追击" if enemy.kind=="elder" else "绕背"
+        var marked: bool = not battle.story_first and enemy.get("mark_time",0.0)>0
+        if cue.is_empty() and marked:cue="圆圆可接"
+        if not cue.is_empty():text+=" · "+cue
+        var width:float=maxf(62,font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,17).x+12)+(27 if marked else 0)
+        var base:=Rect2(enemy.pos+Vector2(-width/2,-166 if enemy.kind=="elder" else -127),Vector2(width,32))
+        var rect:Rect2=labels.place("enemy-"+str(index),base,protected,area)
+        enemy_label_layout.append({"rect":rect,"text":text})
+        for avoid in protected:
+            if rect.grow(3).intersects(avoid):label_metrics.overlaps+=1
+        protected.append(rect.grow(3))
 
 func _draw_impact(effect: Dictionary) -> void:
     if effect.kind in ["swing","charge","ready","danger"]: return

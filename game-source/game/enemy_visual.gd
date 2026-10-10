@@ -47,8 +47,8 @@ func sync(enemy: Dictionary) -> void:
     var impact: Vector2 = enemy.get("impact_direction",Vector2.ZERO)
     var power: float = enemy.get("impact_power",0.0)
     var recoil: float = clampf(1-(age-0.04)/0.16,0,1)
-    body.position.x -= impact.x*power*recoil
-    body.position.y -= impact.y*power*recoil
+    body.position.x += impact.x*power*recoil
+    body.position.y += impact.y*power*recoil
     body.rotation += -impact.x*recoil*0.14
     var factor: float = (132.0 if kind == "elder" else 65.0 if kind == "sprout" else 80.0 if kind == "weaver" else 94.0)/REGIONS[0 if kind in ["thorn","sprout"] else 1 if kind in ["armored","elder"] else 2].size.x
     body.scale = action_pose.stretch*Vector2(factor*(1.0+recoil*0.11),factor*(1.0-recoil*0.10))

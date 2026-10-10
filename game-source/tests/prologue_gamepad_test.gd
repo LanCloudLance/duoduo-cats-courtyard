@@ -1,0 +1,46 @@
+extends "res://tests/bridge_scene_test.gd"
+func run() -> void:
+    lobby = load("res://main.tscn").instantiate()
+    root.add_child(lobby)
+    await frames(2)
+    lobby.session.set_focus(true)
+    lobby.prologue.record_prefix = "qa-prologue-pad-"+str(Time.get_ticks_usec())
+    # Join by the ordinary controller events, then select the chapter.
+    button(9,JOY_BUTTON_START)
+    button(18,JOY_BUTTON_START)
+    lobby.session.pause_all()
+    lobby.start_story(false)
+    button(9,JOY_BUTTON_START)
+    button(18,JOY_BUTTON_START)
+    await frames(2)
+    var s = lobby.prologue.state
+    check(lobby.session.running() and not lobby.session.keyboard_mode,"two controller slots can enter story")
+    var origin: Vector2 = s.positions[1]
+    axes(18,Vector2.RIGHT)
+    await frames(10)
+    axes(18,Vector2.ZERO)
+    check(s.positions[1].x > origin.x and s.positions[0] == Vector2(380,495),"second stick moves only Tuantuan")
+    s.phase = "jam"
+    s.white_visible = false
+    s.positions[0] = s.DOOR+Vector2(-40,28)
+    button(9,JOY_BUTTON_RIGHT_SHOULDER)
+    check(s.brace,"first controller holds door")
+    s.positions[1] = s.rug_position()+Vector2(0,18)
+    button(18,JOY_BUTTON_RIGHT_SHOULDER)
+    check(s.rug_grab,"second controller grabs carpet")
+    button(9,JOY_BUTTON_START)
+    await frames(2)
+    check(not lobby.session.running(),"controller menu pauses story")
+    lobby.start_story(true)
+    button(9,JOY_BUTTON_START)
+    await frames(2)
+    s = lobby.prologue.state
+    check(lobby.session.running(),"one controller can start solo story")
+    button(9,JOY_BUTTON_Y)
+    check(s.controlled == 1,"solo controller switches to black cat")
+    button(9,JOY_BUTTON_Y)
+    check(s.controlled == 0,"solo controller switches back without unlocking white cat")
+    print("PROLOGUE_GAMEPAD: %d checks, %d failed" % [checks,failed])
+    lobby.queue_free()
+    await frames(2)
+    quit(1 if failed else 0)

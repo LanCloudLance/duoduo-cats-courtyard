@@ -1,4 +1,6 @@
 extends Node2D
+const StoryLabels=preload("res://game/story_labels.gd")
+var labels=StoryLabels.new()
 signal next_chapter_requested
 signal battle_requested
 const Story = preload("res://game/chapter_one_state.gd")
@@ -23,6 +25,9 @@ var controls: Label
 var complete_panel: Panel
 var completed_text: Label
 var recorded := false
+var completion_attempted:=false
+var checkpoint_signature:=""
+var checkpoint_pending:=0.0
 var save_status := ""
 var record_prefix := "story-chapter-one"
 var heard := -1
@@ -58,19 +63,43 @@ func _ready() -> void:
     set_active(false)
 
 func reset(single: bool, resume := true) -> void:
-    state = Story.new();state.single = single;recorded = false;save_status = "";heard = -1
+    state = Story.new();state.single = single;recorded = false;completion_attempted=false;save_status = "";heard = -1;checkpoint_signature="";checkpoint_pending=0
     if resume:
         var data := read_record()
-        if not data.is_empty():state.restore(data);recorded = true;save_status = "已恢复第一章通关记录"
+        if not data.is_empty():
+            if data.get("version")==2:state.restore_checkpoint(data)
+            else:state.restore(data)
+            recorded=state.finished;save_status="已恢复第一章通关记录" if recorded else "已恢复第一章安全进度"
+            checkpoint_signature=progress_signature()
 func record_path() -> String:return "user://"+record_prefix+("-solo-v1.json" if state.single else "-dual-v1.json")
-func read_record() -> Dictionary:
-    if not FileAccess.file_exists(record_path()):return {}
-    var file := FileAccess.open(record_path(),FileAccess.READ)
+func checkpoint_path()->String:return "user://"+record_prefix+("-solo-v2.json" if state.single else "-dual-v2.json")
+func progress_signature()->String:
+    var value:Dictionary=state.checkpoint();value.erase("positions");value.erase("controlled")
+    return JSON.stringify(value)
+func read_json(path:String)->Dictionary:
+    if not FileAccess.file_exists(path):return {}
+    var file:=FileAccess.open(path,FileAccess.READ)
     if not file or file.get_length()>65536:return {}
-    var value = JSON.parse_string(file.get_as_text());file.close()
+    var value=JSON.parse_string(file.get_as_text());file.close()
+    return value if value is Dictionary else {}
+func read_record() -> Dictionary:
+    var value:=read_json(checkpoint_path());var probe=Story.new();probe.single=state.single
+    if probe.restore_checkpoint(value):return value
+    value=read_json(record_path())
     if not value is Dictionary or value.get("version")!=1 or value.get("chapter")!="chapter-one" or typeof(value.get("completed"))!=TYPE_BOOL or value.get("completed")!=true or not value.get("extras",{}) is Dictionary:return {}
     return value
+func save_checkpoint()->bool:
+    var value:Dictionary=state.checkpoint();var probe=Story.new();probe.single=state.single
+    if not probe.restore_checkpoint(value):return false
+    var path:=checkpoint_path();var file:=FileAccess.open(path+".tmp",FileAccess.WRITE)
+    if not file:return false
+    file.store_string(JSON.stringify(value));file.flush();var error:=file.get_error();file.close()
+    if error!=OK or DirAccess.rename_absolute(ProjectSettings.globalize_path(path+".tmp"),ProjectSettings.globalize_path(path))!=OK:return false
+    checkpoint_signature=progress_signature();checkpoint_pending=0
+    if not state.finished:save_status="安全进度已记录"
+    return true
 func save_record() -> void:
+    completion_attempted=true
     var temporary := record_path()+".tmp"
     var file := FileAccess.open(temporary,FileAccess.WRITE)
     if not file:save_status = "通关完成，记录暂未写入 · 按互动键重试";return
@@ -80,17 +109,20 @@ func save_record() -> void:
         recorded = true;save_status = "第一章通关已记录"
     else:save_status = "通关完成，记录暂未写入 · 按互动键重试"
 func set_active(value: bool) -> void:
+    if active and not value:save_checkpoint()
     active = value;visible = value;hud.visible = value;camera.enabled = value
     if not value:audio.silence()
 func start_battle() -> void:
     state.phase = "battle";state.battle_requested = false;battle_requested.emit()
 func finish_battle() -> void:state.enter_station()
 func handle_action(slot: int, button: int) -> void:
-    if not session.running():return
-    if button in [JOY_BUTTON_RIGHT_SHOULDER,JOY_BUTTON_LEFT_SHOULDER]:state.request_hint();return
+    if not session.running() or (state.single and slot!=0):return
+    if button==JOY_BUTTON_LEFT_SHOULDER:state.request_hint();return
+    if button==JOY_BUTTON_RIGHT_SHOULDER:
+        state.tool(state.controlled if state.single else slot);return
     if state.single:
         if slot!=0:return
-        if button in [JOY_BUTTON_Y,JOY_BUTTON_B]:get_parent().router.clear_keyboard();state.switch_actor();return
+        if button in [JOY_BUTTON_Y,JOY_BUTTON_B]:state.switch_actor();return
         slot = state.controlled
     if button==JOY_BUTTON_A:
         if state.finished:
@@ -102,8 +134,11 @@ func _physics_process(dt: float) -> void:
     var a:Vector2=session.movement(0);var b:Vector2=session.movement(1)
     if state.single:b = a if state.controlled==1 else Vector2.ZERO;a = a if state.controlled==0 else Vector2.ZERO
     state.step(dt,a,b,true)
+    if progress_signature()!=checkpoint_signature:
+        checkpoint_pending+=dt
+        if checkpoint_pending>=0.6:save_checkpoint()
     if state.battle_requested:start_battle();return
-    if state.finished and not recorded and save_status.is_empty():save_record()
+    if state.finished and not recorded and not completion_attempted:save_record()
     if heard!=state.event_id:heard = state.event_id;audio.play(state.cue)
     _refresh(dt)
 func _refresh(dt: float) -> void:
@@ -112,16 +147,24 @@ func _refresh(dt: float) -> void:
         actors[role].visible = state.equipment
         home_views[role].visible = not state.equipment
         var direction:float=1.0 if state.facing[role].x>=0 else -1.0
-        home_views[role].pose(state.clock*3,(state.positions[role]-home_views[role].position).length()/8, direction,0)
+        home_views[role].update_motion(state.positions[role],dt)
         home_views[role].show_action(state.actions[role],state.clock,direction)
         home_views[role].position = state.positions[role];home_views[role].z_index = int(state.positions[role].y)
+        var kind:String=state.actions[role]
+        actors[role].motion_kind={"pet":"reach","paw":"inspect","sniff":"inspect"}.get(kind,kind) if state.action_time[role]>0 or kind=="brace" else ""
         actors[role].update_pose(state.positions[role],selected,state.bracing if role==0 else false,dt)
-        actors[role].caption_override = ["朵朵","团团"][role]+(" · 你控制" if state.single and selected else " · 等你" if state.single else "")
+        actors[role].caption_override = ["朵朵","团团"][role]+(" · 你控制" if state.single and selected else " · 保持中" if state.single and role==0 and state.bracing else " · 伙伴" if state.single else "")
         if state.actions[role] in ["pet","paw","sniff"]:actors[role].rotation = sin(state.action_time[role]*16)*0.04
         else:actors[role].rotation = 0
         if state.resting>0:actors[role].scale = Vector2(1,0.85)
         else:actors[role].scale = Vector2.ONE
     var station:bool = state.phase in ["station","rest","complete"]
+    var protected:Array[Rect2]=[]
+    if station:
+        protected.assign([Rect2(Story.HOOD-Vector2(38,43),Vector2(76,66)),Rect2(Story.VENT-Vector2(40,30),Vector2(80,60)),Rect2(Story.LAMP-Vector2(40,130),Vector2(80,135))])
+    else:
+        protected.assign([Rect2(Story.SOCKET-Vector2(35,40),Vector2(70,80)),Rect2(Story.KNOT-Vector2(35,40),Vector2(70,80))])
+    labels.update(actors,protected)
     prop_views[0].position = Story.GRANNY
     prop_views[0].z_index = int(Story.GRANNY.y)
     prop_views[1].visible = not station
@@ -137,7 +180,7 @@ func _refresh(dt: float) -> void:
     lamp.modulate = Color.WHITE if state.lit else Color(0.65,0.68,0.65)
     title.text = state.objective()
     line.text = state.message if state.message_time>0 or state.finished else ""
-    controls.text = ("WASD 移动 · E 互动 · Tab 换朵朵 / 团团" if state.single else "朵朵 WASD / E · 团团 方向键 / 空格")+" · R / G 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换角色" if state.single else " · 两位分别操作")+" · 肩键想一想 · 菜单暂停"
+    controls.text = ("WASD · E 互动 · Tab 换角色 · R 工具" if state.single else "朵朵 WASD / E / T · 团团 方向键 / 空格 / R")+" · G 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换角色" if state.single else " · 两位分别操作")+" · 右肩工具 / 左肩想一想 · 菜单暂停"
     if state.single: controls.text += " · 当前："+["朵朵","团团"][state.controlled]
     lamp.visible = state.phase in ["station","rest","complete"]
     flame_view.state = state;flame_view.visible = lamp.visible;flame_view.queue_redraw()

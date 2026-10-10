@@ -12,6 +12,8 @@ var pose_initialized := false
 var font: Font
 var caption_visible: bool = true
 var caption_override := ""
+var caption_offset := Vector2.ZERO
+var caption_compact := false
 var combat_kind := ""
 var combat_progress := 0.0
 var combat_direction := Vector2.RIGHT
@@ -124,14 +126,33 @@ func _draw() -> void:
         _cat(foot)
     draw_set_transform(Vector2.ZERO)
     if font and caption_visible:
-        var caption: String = ["P1 朵朵", "团团", "圆圆"][role]
-        if role > 0:
-            caption = ("P2 " if controlled else "") + caption + (" · 驻守" if held else "")
-        if not caption_override.is_empty(): caption = caption_override
-        var height := (-146.0 if role == 0 else -105.0) if storybook else (-99.0 if role == 0 else -77.0)
-        if storybook:
-            draw_style_box(caption_plaque,Rect2(-66,height-19,132,26))
-        draw_string(font, Vector2(-65, height), caption, HORIZONTAL_ALIGNMENT_CENTER, 130, 17, Color("fff3d4"))
+        var rect:=caption_rect()
+        # Body squash (for a downed actor) must not squash the readable name.
+        draw_set_transform(rect.position,0,Vector2.ONE/scale)
+        if storybook:draw_style_box(caption_plaque,Rect2(Vector2.ZERO,rect.size*scale))
+        draw_string(font,Vector2(0,19),caption_text(),HORIZONTAL_ALIGNMENT_CENTER,rect.size.x*scale.x,17,Color("fff3d4"))
+        draw_set_transform(Vector2.ZERO)
+
+func caption_text()->String:
+    var caption:String=["P1 朵朵","团团","圆圆"][role]
+    if role>0:caption=("P2 " if controlled else "")+caption+(" · 驻守" if held else "")
+    if not caption_override.is_empty():caption=caption_override
+    if caption_compact:
+        caption=["朵朵","团团","圆圆"][role]
+        if caption_override.contains("稳光"):caption+=" · 稳光"
+        elif held or caption_override.contains("保持"):caption+=" · 保持"
+    return caption
+
+func caption_rect()->Rect2:
+    var height:float=(-146.0 if role==0 else -105.0) if storybook else (-99.0 if role==0 else -77.0)
+    var width:=132.0
+    if caption_compact:
+        width=clampf((font.get_string_size(caption_text(),HORIZONTAL_ALIGNMENT_LEFT,-1,17).x if font else caption_text().length()*17.0)+20,62,176)
+    return Rect2(Vector2(-width/(2*scale.x),height-19)+caption_offset,Vector2(width,26)/scale)
+
+func body_rect()->Rect2:
+    # Conservative visible silhouette, independent of gameplay collision radius.
+    return Rect2(-43,-136,86,146) if role==0 and storybook else Rect2(-43,-102,86,112) if storybook else Rect2(-35,-95,70,105)
 
 func _girl(foot: float) -> void:
     var ink := Color("263b34")

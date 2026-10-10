@@ -1,6 +1,7 @@
 extends Control
 
 const Session = preload("res://input/session_state.gd")
+const Journal = preload("res://ui/story_journal.gd")
 const Router = preload("res://input/event_router.gd")
 const Stick = preload("res://ui/stick_indicator.gd")
 const StoryChapter = preload("res://game/story_chapter_view.gd")
@@ -11,6 +12,7 @@ const Arena = preload("res://game/arena.gd")
 const LightCorridor = preload("res://game/light_corridor.gd")
 const ChimeGate = preload("res://game/chime_gate.gd")
 const RestArea = preload("res://game/rest_area.gd")
+const StoryJourney = preload("res://game/story_journey.gd")
 const Checkpoint = preload("res://game/checkpoint.gd")
 const TEAM = preload("res://assets/team.png")
 const Music = preload("res://game/music_director.gd")
@@ -42,6 +44,13 @@ var solo_resume_button: Button
 var resume_button: Button
 var stage := "bridge"
 var preview_run := false
+var story_progress=StoryJourney.new()
+var story_run_id:=""
+var story_route_active:=false
+var story_manifest_error:=""
+var story_pending_chapter:=0
+var story_manifest_retry:=0.0
+var story_save_notice:Label
 var web_pause_callback: JavaScriptObject
 var web_probe_clock := 0.0
 var menu_index := -1
@@ -56,11 +65,14 @@ var music_started := false
 var music_setting := 1
 var music_button: Button
 var music_feedback_cursor := 0
+var journal:CanvasLayer
+var journal_button:Button
+var journal_ready:Array=[]
+var journal_devices:Array=[]
+var journal_keyboard:=false
 
 func _ready() -> void:
     Input.ignore_joypad_on_unfocused_application = true
-    var system_font := SystemFont.new()
-    system_font.font_names = PackedStringArray(["Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC"])
     var theme_value := Theme.new()
     theme_value.default_font = load("res://assets/fonts/CourtyardSans.ttf")
     theme_value.default_font_size = 20
@@ -83,7 +95,15 @@ func _ready() -> void:
     music_button.text = "♫ 音乐：标准"
     music_button.tooltip_text = "轻声 / 标准 / 关闭；音效另行控制"
     music_hud.add_child(music_button)
+    story_save_notice=Label.new();story_save_notice.name="JourneySaveNotice"
+    story_save_notice.position=Vector2(28,78);story_save_notice.size=Vector2(1150,44)
+    story_save_notice.add_theme_font_override("font",theme.default_font);story_save_notice.add_theme_font_size_override("font_size",17)
+    story_save_notice.add_theme_color_override("font_color",Color("ffe3a1"));story_save_notice.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    var notice_style:=StyleBoxFlat.new();notice_style.bg_color=Color("243c32");notice_style.set_corner_radius_all(8);notice_style.content_margin_left=12;notice_style.content_margin_top=6
+    story_save_notice.add_theme_stylebox_override("normal",notice_style);story_save_notice.visible=false;music_hud.add_child(story_save_notice)
     menu_controls.append(music_button)
+    journal=Journal.new(theme.default_font);add_child(journal);journal.close_requested.connect(close_journal);journal.hint_requested.connect(journal_hint)
+    journal_button=Button.new();journal_button.position=Vector2(174,774);journal_button.size=Vector2(180,24);journal_button.text="旅途记事 · H / 返回键";journal_button.add_theme_font_override("font",theme.default_font);journal_button.add_theme_font_size_override("font_size",14);music_hud.add_child(journal_button);journal_button.pressed.connect(open_journal)
     music_button.pressed.connect(func():
         music_setting = (music_setting+1)%3
         music.level = 0.12 if music_setting == 0 else 0.28
@@ -96,7 +116,7 @@ func _ready() -> void:
     story_chapter.battle_requested.connect(enter_story_combat)
     story_chapter.next_chapter_requested.connect(func(chapter):
         session.pause_all("下一章")
-        start_story_chapter(chapter,session.single_player)
+        start_story_chapter(chapter,session.single_player,true)
     )
     chapter_one = ChapterOne.new(session)
     chapter_one.name = "ChapterOne"
@@ -104,7 +124,7 @@ func _ready() -> void:
     chapter_one.battle_requested.connect(enter_chapter_combat)
     chapter_one.next_chapter_requested.connect(func():
         session.pause_all("进入第二章")
-        start_story_chapter(2,session.single_player)
+        start_story_chapter(2,session.single_player,true)
     )
     prologue = Prologue.new(session)
     prologue.name = "Prologue"
@@ -127,7 +147,7 @@ func _ready() -> void:
     prologue.next_chapter_requested.connect(func():
         router.clear_keyboard()
         session.pause_all("进入第一章")
-        start_chapter_one(session.single_player)
+        start_chapter_one(session.single_player,true)
     )
     courtyard.next_level_requested.connect(enter_combat)
     arena.next_level_requested.connect(func():
@@ -187,8 +207,12 @@ func _ready() -> void:
         start_trial("combat" if web_story.contains("trial-combat") else ("gate" if web_story.contains("trial-gate") else "light"),web_story.contains("-solo"))
     elif web_story.contains("mode=story-") or "--story-prologue" in OS.get_cmdline_user_args():
         start_story(web_story.contains("story-solo"))
+    elif web_story.contains("mode=resume-journey-"):
+        resume_story_entry(web_story.contains("resume-journey-solo"))
+    elif web_story.contains("mode=journey-") or "--story-journey" in OS.get_cmdline_user_args():
+        start_journey(web_story.contains("journey-solo") or "--solo-journey" in OS.get_cmdline_user_args())
     elif web_solo or "--solo-journey" in OS.get_cmdline_user_args():
-        start_journey(true)
+        start_courtyard(true)
     elif "--solo-combat-preview" in OS.get_cmdline_user_args():
         start_solo_combat()
     elif "--combat-preview" in OS.get_cmdline_user_args():
@@ -361,6 +385,16 @@ func _build_slot(slot: int, y: float, title: String, detail: String, tint: Color
     ))
 
 func _input(event: InputEvent) -> void:
+    if journal!=null:
+        var toggle:bool=event is InputEventKey and event.pressed and not event.echo and (event.physical_keycode if event.physical_keycode else event.keycode) in ([KEY_H,KEY_ESCAPE,KEY_ENTER] if journal.active else [KEY_H])
+        toggle=toggle or (event is InputEventJoypadButton and event.pressed and event.button_index==JOY_BUTTON_BACK)
+        if toggle and session.focused and (journal.active or journal_button.visible):
+            if journal.active:close_journal()
+            else:open_journal()
+            get_viewport().set_input_as_handled();return
+        if journal.active:
+            if session.focused:journal.handle_input(event)
+            get_viewport().set_input_as_handled();return
     if _menu_input(event):
         get_viewport().set_input_as_handled()
         return
@@ -369,6 +403,20 @@ func _input(event: InputEvent) -> void:
         arena.cancel_inputs()
     if event is InputEventKey and session.keyboard_mode:
         get_viewport().set_input_as_handled()
+
+func open_journal()->void:
+    if journal.active or stage not in ["prologue","chapter-one","chapter-combat","story-chapter","story-combat"]:return
+    var source=prologue.state if stage=="prologue" else chapter_one.state if stage in ["chapter-one","chapter-combat"] else story_chapter.state
+    journal_ready=session.ready_flags.duplicate();journal_devices=session.devices.duplicate();journal_keyboard=session.keyboard_mode
+    router.clear_keyboard();session.pause_all("旅途记事 · 回看已经出现的对话和观察")
+    journal.open(source.history,source.message)
+func journal_hint()->void:
+    if not journal.active or not session.focused or stage in ["chapter-combat","story-combat"]:return
+    var source=prologue.state if stage=="prologue" else chapter_one.state if stage=="chapter-one" else story_chapter.state
+    source.request_hint();journal.open(source.history,source.message)
+func close_journal()->void:
+    journal.close();router.clear_keyboard()
+    if session.focused and session.devices==journal_devices and session.keyboard_mode==journal_keyboard:session.ready_flags.assign(journal_ready)
 
 func _action(slot: int, button: int) -> void:
     last_buttons[slot] = button
@@ -462,19 +510,43 @@ func _save_checkpoint() -> void:
     _refresh_checkpoint_button()
 
 func _refresh_checkpoint_button() -> void:
+    var story_dual:Dictionary=story_progress.read(false)
+    var story_solo:Dictionary=story_progress.read(true)
     var data: Dictionary = checkpoint.read_checkpoint()
-    resume_button.disabled = data.is_empty()
-    resume_button.text = "暂无双人记录" if data.is_empty() else "继续双人"
+    resume_button.disabled = data.is_empty() and story_dual.is_empty()
+    resume_button.text = "继续双人故事" if not story_dual.is_empty() else "暂无双人记录" if data.is_empty() else "继续双人庭院"
     var solo_data: Dictionary = solo_checkpoint.read_checkpoint()
-    solo_resume_button.disabled = solo_data.is_empty()
-    solo_resume_button.text = "暂无单人记录" if solo_data.is_empty() else "继续单人"
+    solo_resume_button.disabled = solo_data.is_empty() and story_solo.is_empty()
+    solo_resume_button.text = "继续单人故事" if not story_solo.is_empty() else "暂无单人记录" if solo_data.is_empty() else "继续单人庭院"
     solo_resume_button.tooltip_text = solo_checkpoint.last_error
     resume_button.tooltip_text = checkpoint.last_error
+    if story_route_active and not story_manifest_error.is_empty():
+        var affected:Button=solo_resume_button if session.single_player else resume_button
+        affected.disabled=true;affected.tooltip_text=story_manifest_error+" 当前冒险可按 Enter 继续，位置写入后这里恢复可用。"
 
 func resume_checkpoint() -> void:
     resume_journey(false)
 
+func resume_story_entry(single:bool)->void:
+    if story_progress.read(single).is_empty():
+        start_journey(single)
+        prologue.state.say("这一人数还没有旅程记录。我们从家中的下午开始吧。")
+    else:resume_journey(single)
+
 func resume_journey(single: bool) -> void:
+    if session.running():return
+    if story_route_active and session.single_player==single and not story_manifest_error.is_empty():
+        save_story_location(story_pending_chapter)
+        if not story_manifest_error.is_empty():return
+    var value:Dictionary=story_progress.read(single)
+    if value.is_empty():resume_courtyard(single);return
+    story_route_active=true;story_run_id=value.run_id;apply_story_prefix()
+    match int(value.chapter):
+        0:start_story(single,true)
+        1:start_chapter_one(single,true)
+        _:start_story_chapter(int(value.chapter),single,true)
+func resume_courtyard(single: bool) -> void:
+    detach_story_run()
     var store = solo_checkpoint if single else checkpoint
     var data: Dictionary = store.read_checkpoint()
     if data.is_empty():
@@ -531,6 +603,11 @@ func _notification(what: int) -> void:
 func _process(_delta: float) -> void:
     if not is_instance_valid(top_status):
         return
+    if story_route_active and not story_manifest_error.is_empty():
+        story_manifest_retry+=_delta
+        if story_manifest_retry>=1.0:save_story_location(story_pending_chapter)
+    story_save_notice.visible=story_route_active and not story_manifest_error.is_empty()
+    story_save_notice.text="旅程位置未保存 · 当前冒险可继续；退出后暂时只能恢复旧记录。正在重试。" if story_save_notice.visible else ""
     if OS.has_feature("web") and OS.is_debug_build():
         web_probe_clock += _delta
         if web_probe_clock >= 0.1:
@@ -539,7 +616,14 @@ func _process(_delta: float) -> void:
             var points: Array = []
             for point in current.positions: points.append([point.x,point.y])
             var report := {"stage":stage,"running":session.running(),"solo":session.single_player,"positions":points,"cat":1 if stage in ["prologue","chapter-one"] else current.current_cat,"bridge_locks":courtyard.bridge.unlocked,"bridge_done":courtyard.bridge.finished,"phase":arena.battle.phase,"wave":arena.battle.wave,"hp":arena.battle.hp,"persistent":OS.is_userfs_persistent(),"rested":rest_area.state.rested,"finished":rest_area.state.finished,"can_save":rest_area.can_save,"solo_saved":not solo_checkpoint.read_checkpoint().is_empty(),"dual_saved":not checkpoint.read_checkpoint().is_empty()}
-            if stage == "combat":
+            report["focused"]=session.focused;report["journal_open"]=journal.active
+            report["story_run_id"]=story_run_id;report["story_route_active"]=story_route_active
+            if stage in ["prologue","chapter-one","story-chapter"]:
+                var view=prologue if stage=="prologue" else chapter_one if stage=="chapter-one" else story_chapter
+                report["story_checkpoint"]=current.checkpoint()
+                report["objective"]=current.objective();report["message"]=current.message
+                report["save_status"]=view.save_status;report["recorded"]=view.recorded
+            if stage in ["combat","chapter-combat","story-combat"]:
                 report["human"] = arena.solo.human_slot
                 report["enemies"] = arena.battle.enemies
             if stage == "light":
@@ -554,6 +638,7 @@ func _process(_delta: float) -> void:
                 report["gate_open"] = chime_gate.puzzle.finished
             JavaScriptBridge.eval("window.duoduoStatus = " + JSON.stringify(report),true)
     var playing: bool = session.running()
+    journal_button.visible=stage in ["prologue","chapter-one","chapter-combat","story-chapter","story-combat"]
     if playing: music_started = true
     if not music_started: music.set_context("home")
     elif playing:
@@ -655,15 +740,17 @@ func _process(_delta: float) -> void:
             action_text[1].text = "摸猫、玩球、观察和尝试。"
 
 
-func start_story(single: bool) -> void:
+func start_story(single: bool, continuation:=false) -> void:
     if session.running(): return
     router.clear_keyboard()
+    if not continuation:detach_story_run()
     session.pause_all("序章 · 准备出发")
     session.single_player = single
     if single: session.devices[1] = -1
     preview_run = false
     prologue.reset(single,true)
     stage = "prologue"
+    save_story_location(0)
     courtyard.set_active(false)
     arena.set_active(false)
     light_corridor.set_active(false)
@@ -708,10 +795,36 @@ func leave_solo() -> void:
     session.pause_all("已回到双人模式 · Enter 或双方准备")
     arena.configure_solo(false)
 
+func detach_story_run()->void:
+    if story_route_active:
+        prologue.record_prefix="story-prologue-v2"
+        chapter_one.record_prefix="story-chapter-one"
+        story_chapter.record_prefix="story"
+    story_route_active=false;story_run_id=""
+    story_manifest_error="";story_manifest_retry=0.0
+func apply_story_prefix()->void:
+    prologue.record_prefix=story_run_id+"-prologue"
+    chapter_one.record_prefix=story_run_id+"-one"
+    story_chapter.record_prefix=story_run_id+"-later"
+func save_story_location(chapter:int)->void:
+    if story_route_active:
+        story_pending_chapter=chapter;story_manifest_retry=0.0
+        var wrote:bool=story_progress.save(session.single_player,story_run_id,chapter)
+        var actual:Dictionary=story_progress.read(session.single_player) if wrote else {}
+        if wrote and actual.get("run_id")==story_run_id and actual.get("chapter")==chapter:
+            story_manifest_error=""
+        else:story_manifest_error="旅程位置未保存，继续入口尚未更新。"
+        _refresh_checkpoint_button()
 func start_journey(single: bool) -> void:
+    if session.running():return
+    story_run_id="story-run-"+str(int(Time.get_unix_time_from_system()*1000))+"-"+str(Time.get_ticks_usec())
+    story_route_active=true;apply_story_prefix()
+    start_story(single,true)
+func start_courtyard(single: bool) -> void:
     if session.running(): return
     session.single_player = single
     if single: session.devices[1] = -1
+    detach_story_run()
     restart_journey()
     if session.keyboard_mode or session.devices[0] < 0:
         router.start_keyboard()
@@ -746,6 +859,7 @@ func start_preview(target: String) -> void:
     if session.running(): return
     leave_solo()
     preview_run = true
+    detach_story_run()
     match target:
         "gate":
             chime_gate.restart()
@@ -775,15 +889,17 @@ func exit_game() -> void:
     else:
         get_tree().quit()
 
-func start_chapter_one(single: bool) -> void:
+func start_chapter_one(single: bool, continuation:=false) -> void:
     if session.running(): return
     router.clear_keyboard()
+    if not continuation:detach_story_run()
     session.pause_all("第一章 · 准备出发")
     session.single_player = single
     if single: session.devices[1] = -1
     preview_run = false
     chapter_one.reset(single,true)
     stage = "chapter-one"
+    save_story_location(1)
     for scene in [prologue,courtyard,arena,light_corridor,chime_gate,rest_area]: scene.set_active(false)
     if session.keyboard_mode or session.devices[0] < 0: router.start_keyboard()
 
@@ -791,7 +907,7 @@ func enter_chapter_combat() -> void:
     router.clear_keyboard()
     arena.configure_solo(session.single_player)
     arena.story_title=""
-    arena.battle.story_first = true
+    arena.battle.story_encounter = "first"
     arena.battle.wave_total = 2
     arena.battle.current_cat = 1
     arena.battle.positions[2] = Vector2(-4000,-4000)
@@ -803,19 +919,22 @@ func enter_chapter_combat() -> void:
     arena.actors[2].visible = false
     arena._refresh()
 
-func start_story_chapter(chapter:int,single:bool)->void:
+func start_story_chapter(chapter:int,single:bool,continuation:=false)->void:
     if session.running() or chapter<2 or chapter>5:return
+    if not continuation:detach_story_run()
     router.clear_keyboard();session.pause_all("章节 · 准备出发")
     session.single_player=single
     if single:session.devices[1]=-1
     preview_run=false
     story_chapter.reset(chapter,single,true)
     stage="story-chapter"
+    save_story_location(chapter)
     for scene in [chapter_one,prologue,courtyard,arena,light_corridor,chime_gate,rest_area]:scene.set_active(false)
     if session.keyboard_mode or session.devices[0]<0:router.start_keyboard()
 func enter_story_combat()->void:
     router.clear_keyboard();arena.configure_solo(session.single_player)
     arena.battle.story_first=not story_chapter.state.joined
+    arena.battle.story_encounter="first" if not story_chapter.state.joined else "reserve" if story_chapter.state.get("reserve_retained")==true else "shell"
     arena.battle.wave_total=story_chapter.state.battle_waves
     arena.battle.current_cat=story_chapter.state.current_cat
     if not story_chapter.state.joined:arena.battle.positions[2]=Vector2(-4000,-4000)

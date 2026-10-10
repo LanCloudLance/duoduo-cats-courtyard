@@ -30,6 +30,28 @@ var shell_fixed := false
 var inward_verified := false
 var lantern_offered := false
 var reserve_retained := false
+# Only the witnessed facts are checkpoint-worthy. A pulse and its display charge
+# belong to the current experiment and are cleared when restoring a safe point.
+var route_split := false
+var bypass_isolated := false
+var main_return_seen := false
+var connected_split_seen := false
+var hint_level := 0
+var hint_context := ""
+var shell_leak_seen := false
+var reserve_hold_seen := false
+var trial_count := 0
+var pulse_active := false
+var pulse_elapsed := 0.0
+var return_charge := 0.0
+var leak_charge := 0.0
+var reserve_charge := 0.0
+var return_flash_time := 0.0
+const TRIAL_SECONDS := 1.2
+const SPLITTER := Vector2(778,340)
+const RESERVE := Vector2(855,295)
+const SHELL_TEST := Vector2(994,314)
+
 
 func _init() -> void:
     chapter=4;chapter_key="chapter-four";title="第四章 · 灯光躲起来了";joined=true;phase="market"
@@ -52,6 +74,8 @@ func step(dt:float,a:Vector2,b:Vector2,enabled:bool)->void:
     if not enabled or not is_finite(dt) or dt<=0 or not a.is_finite() or not b.is_finite():return
     super.step(dt,a,b,enabled)
     if not enabled or finished:return
+    dt=minf(dt,0.05)
+    step_trial(dt)
     market_beam=actions[2]=="light" and aimed(2,MARKET_LIGHT,COVER)
     patch_braced=actions[0]=="brace" and near(0,PATCH)
     # Extinguishing a temporary path safely returns the carrier to its bank.
@@ -70,7 +94,7 @@ func target(role:int)->String:
     if phase in ["meet","investigate","test","offer"]:
         if near(role,ALIGHT):return "阿灯"
         if near(role,DUCT_LIGHT,60):return "暗槽照灯架"
-        if near(role,BRANCH,60):return "回位扣"
+        if near(role,BRANCH,60):return "旁路隔离扣"
         if near(role,ARROWS,60):return "收送试光柄"
     if phase=="exterior":
         if near(role,SEAM_LIGHT,60):return "外罩照灯架"
@@ -84,6 +108,8 @@ func interact(role:int)->void:
     if role not in available_roles() or finished or battle_requested or action_time[role]>0:return
     var item:=target(role)
     if item=="":return
+    if item=="暗槽照灯架" and role==2 and actions[2]=="light":
+        release_trial_light();return
     act(role,"touch")
     match item:
         "灯罩拉环":
@@ -106,38 +132,49 @@ func interact(role:int)->void:
             if role!=0:say("阿灯蹲下摸摸猫猫：我一直守着送光台，没有带走圆圆。");return
             if phase=="meet":
                 phase="investigate"
-                say("阿灯：我怕昨夜的风吹散光，就收了回来。现在送出去又回来了，停止杆也卡住了。旧路曾被回收光误亮，那就是你们看见的小门。我只打开一小段线路给你们看。")
+                say("阿灯：昨夜怕风，我把光收回来，停止杆却卡住了。\n旧路被回收光误亮，才出现那扇小门。我们在试光台看看。")
+            elif phase=="investigate":
+                if not main_return_seen or not connected_split_seen or not reserve_hold_seen or not shell_leak_seen:
+                    say("阿灯看着两条试光槽：还有线路没有留下实测结果。看看小灯与主机之间的连接，换一种连接再送光比较。");return
+                arrows_seen=true;phase="battle_one";battle_requested=true;battle_waves=2
+                clear_trial();actions[2]=""
+                say("阿灯：三枚印记都留下了，收光果然没有停。\n朵朵：漏光和回流是两回事。先护住试光台！",1)
             elif phase=="offer" and inward_verified:
                 lantern_offered=true;phase="home_offer"
-                say("阿灯拿出封好的应急归途灯匣：它绕开主线，接通你家的门一次，足够你们三个一起回去。门里，熟悉的沙发和猫垫亮了起来。",2)
+                say("阿灯：备用灯匣不接主线，够你们三个一起回家。\n门里的沙发和猫垫亮了。主线还没修好。",2)
             else:say("阿灯：小备用灯和主线分开存着光，所以集市能歇脚。可回家的路还接在主线上。")
         "暗槽照灯架":
-            if phase!="investigate":return
+            if phase not in ["investigate","test"]:return
             if role!=2:say("这里的架子能固定圆圆的光，照进上方的暗槽。");return
             if not aimed(2,DUCT_LIGHT,DUCT):say("光落在槽外。圆圆要面向上方的暗槽，再固定定光扣。");return
-            act(2,"light");duct_seen=true;say("暗槽亮了：细光正朝灯树里面流。外缘的回位扣后面压着一截折枝。",1)
-        "回位扣":
-            if phase!="investigate":return
-            if role!=1:say("窄窄的外缘适合团团探看，先别硬拉机构。");return
-            if not duct_seen:say("扣后太暗了，团团看不清是什么卡住了它。");return
-            branch_seen=true;say("团团沿外缘找到缠进回位扣的折枝，向朵朵叫了一声。折枝还压在主机里，现在不能强拔。",1)
+            act(2,"light");duct_seen=true
+            say("圆圆稳住试光源。试光柄旁有两条槽：一条接主机，一条接小灯。再互动或用工具可以撤光。",1)
+        "旁路隔离扣":
+            if phase not in ["investigate","test"]:return
+            if role!=1:say("窄槽里的小隔离扣适合团团的爪钩。它只控制旁路。");return
+            if not trial_lit():say("扣后太暗了，团团看不清，先把试光源稳住。");return
+            if pulse_active:cancel_trial()
+            branch_seen=true;bypass_isolated=not bypass_isolated
+            if not bypass_isolated and reserve_charge>0:
+                reserve_charge=0;return_charge=1;return_flash_time=1.2
+                say("团团合回旁路，刚留住的光沿连接槽被主机吸走。折枝仍卡在主机里，没有被拔动。",1)
+            else:
+                say("团团打开旁路隔离扣，小灯和主机断开了。扣后能看见折枝，主机里的枝条不能强拔。" if bypass_isolated else "团团合回隔离扣，小灯重新连上主机。",1)
         "收送试光柄":
-            if role!=0:say("箭头旁写着收、送，朵朵可以把它们和光流方向对照。");return
-            if phase=="investigate":
-                if not duct_seen or not branch_seen:say("朵朵：先看清光经过哪里，和哪个部件卡住了。");return
-                arrows_seen=true;phase="battle_one";battle_requested=true;battle_waves=2
-                say("朵朵：箭头停在收！光是被拉回来的。余风又穿过破罩，灯匣晃动，外面的荆棘也卷了过来。")
-            elif phase=="test" and shell_fixed:
-                inward_verified=true;phase="offer"
-                say("防风罩稳稳不动。朵朵拨向送，一缕光却仍被卷回收光机。朵朵：外壳修好了，里面的折枝和收光机构还要处理。",1)
+            if role!=0:say("试光柄有些重，让朵朵切换主线和分光，再用工具送一缕测试光。");return
+            if phase not in ["investigate","test"]:return
+            if pulse_active:cancel_trial()
+            route_split=not route_split
+            say("朵朵把镜片转向分光槽。工具键送出一缕测试光。" if route_split else "朵朵把镜片转回主线。工具键送出一缕测试光。",1)
         "破防风罩":
             if role!=0:say("补片需要朵朵撑稳，才能够到外侧的固定扣。");return
             if not cloth or not arrows_seen:return
             if not latch_fixed:
                 act(0,"brace");patch_braced=true;say("朵朵把修补布撑在破口。她不动时，团团就能拉来外侧固定扣。",1)
             elif seam_seen:
-                shell_fixed=true;patch_braced=false;actions[0]="";actions[2]="";phase="battle_two";battle_requested=true;battle_waves=2
-                say("朵朵沿照出的最后一道扣槽压牢补片。罩内的风停了，树梯旁还有一团荆棘挡路。",2)
+                shell_fixed=true;patch_braced=false;actions[0]="";actions[2]="";phase="test"
+                route_split=false;clear_trial()
+                say("朵朵压牢最后一道扣槽，罩内的风停了。回试光台送一缕光，看看修补改变了什么。",2)
             else:say("扣子已经固定住补片，阴影里还有一道没有压紧的边。")
         "外罩固定扣":
             if role!=1:say("外侧固定扣离平台有一小段距离，团团的爪钩能把它拉来。");return
@@ -151,8 +188,8 @@ func interact(role:int)->void:
         "应急归途灯匣":
             if role!=0:say("团团靠在朵朵脚边，圆圆望着门里的旧垫子。");return
             if not exit_gather(HOME):return
-            reserve_retained=true;phase="rest"
-            say("朵朵：我很想回去。但我们已经找到坏在哪里了，再一起试一次吧。阿灯把灯匣重新封好留在身边，后备归途仍在。它拿起工具：这次一起把光送出去。",2)
+            reserve_retained=true;phase="battle_two";battle_requested=true;battle_waves=2
+            say("朵朵：门能回家。我决定留下，帮你修好主机。\n阿灯封好备用灯匣：归途替你们留着。一起走！",2)
         "树心前的休息桌":
             if role!=0 or not exit_gather(REST):return
             if not reserve_retained:return
@@ -167,33 +204,106 @@ func after_battle()->void:
         phase="exterior";positions=[Vector2(850,495),Vector2(895,530),Vector2(805,545)]
         say("荆棘退开。宽树梯与扶绳通向外罩；带来的修补布正好能盖住破口。")
     elif phase=="battle_two":
-        phase="test";positions=[Vector2(780,485),Vector2(730,535),Vector2(680,555)]
-        say("回到试光柄旁。罩内已经没有风，再试一缕光，看看主路是否恢复。")
+        phase="rest";positions=[Vector2(780,485),Vector2(730,535),Vector2(680,555)]
+        say("树梯旁的荆棘退开了。归途灯匣仍封好留着，一起到备用灯旁歇歇。")
 
 func objective()->String:
     match phase:
         "market":return "摊主的灯罩落在阴影里的踏板尽头。"
-        "meet":return "带上修补布，去见守着送光台的阿灯。"
+        "meet":return "修补布已经拿到，阿灯守着的送光台却仍然暗着。"
         "investigate":return "阿灯开了一小段测试线路。光到底流去了哪里？"
         "exterior":return "余风从破罩里穿过，补片边缘不停翻动。"
-        "test":return "外罩安静下来，试光柄还停在收的位置。"
+        "test":return "外罩安静下来了。同一缕测试光会有什么变化？"
         "offer":return "阿灯看着牢固的外罩，从身后拿出一只灯匣。"
-        "home_offer":return "一扇真实的家门亮了起来，三位都能通过。"
+        "home_offer":return "备用归途安全亮着；朵朵准备回应阿灯。"
         "rest":return "备用灯仍亮着，树心前有一张休息桌。"
     return title
 
+func trial_lit()->bool:
+    return actions[2]=="light" and aimed(2,DUCT_LIGHT,DUCT)
+
+func clear_trial()->void:
+    pulse_active=false;pulse_elapsed=0.0
+    return_charge=0.0;leak_charge=0.0;reserve_charge=0.0;return_flash_time=0.0
+
+func cancel_trial()->void:
+    clear_trial()
+    say("试光中断，光点散回灯架。这一回没有留下结论，可以重新送光。")
+
+func release_trial_light()->void:
+    actions[2]="";action_time[2]=0
+    if pulse_active:cancel_trial()
+    else:say("圆圆撤下光源。已经看见的结果记住了，试光台可以随时再开。")
+
+func step_trial(dt:float)->void:
+    return_flash_time=maxf(0,return_flash_time-dt)
+    if not pulse_active:return
+    if phase not in ["investigate","test"] or not trial_lit():cancel_trial();return
+    pulse_elapsed+=dt
+    if pulse_elapsed<TRIAL_SECONDS:return
+    pulse_active=false;trial_count+=1
+    leak_charge=0.0 if shell_fixed else 0.35
+    return_charge=0.65 if not shell_fixed else 1.0
+    if not route_split:main_return_seen=true
+    elif not bypass_isolated:connected_split_seen=true
+    if leak_charge>0:shell_leak_seen=true
+    if route_split and bypass_isolated:
+        reserve_charge=0.5;reserve_hold_seen=true
+        say("分出去的小灯亮住了；主线那一半仍绕回收光机。隔离扣把两条路分开了。",1)
+    else:
+        reserve_charge=0.0
+        say("光沿槽倒流，回到卡住的收光机。"+("破罩边还有一股光被风吹散。" if not shell_fixed else "补好的罩边没有漏出光。"),1)
+    if phase=="test" and shell_fixed and not route_split:
+        inward_verified=true;phase="offer";actions[2]=""
+        say("朵朵：罩边不漏了，主线却还是回流。\n阿灯：外罩修好还不够，里面的收光机没有停。",1)
+
 func tool(role:int)->void:
+    if role not in available_roles() or finished or battle_requested or action_time[role]>0:return
+    if role==2 and actions[2]=="light":
+        release_trial_light();return
+    if role==0 and phase in ["investigate","test"] and near(0,ARROWS,60):
+        if pulse_active:say("这缕光还在路上，先看看它去了哪里。");return
+        if not trial_lit():say("试光源暗着。圆圆可以在灯架上稳住朝向暗槽的光。");return
+        clear_trial();pulse_active=true;act(0,"touch")
+        say("一缕测试光沿"+("分光槽" if route_split else "主线")+"出发了。",1)
+        return
     interact(role)
 
 func request_hint()->void:
     hints+=1
-    if phase=="market":say("朵朵：爪钩能够到拉环。光得朝着旧踏板，团团回来时我在宽岸接。")
-    elif phase=="investigate":say("阿灯：上面的暗槽连着回位扣，旁边是收、送箭头。照明和看清卡住的东西，比硬拉更有用。")
-    elif phase=="exterior":say("朵朵：我撑住布，扣子就能拉过来。挂稳后，再找阴影里没有压紧的边。")
-    else:say(objective())
+    var context:=str([phase,cover_hooked,cover_carried,market_beam,cloth,duct_seen,trial_lit(),route_split,bypass_isolated,patch_braced,main_return_seen,connected_split_seen,reserve_hold_seen,shell_leak_seen,latch_fixed,seam_seen,shell_fixed,inward_verified])
+    if hint_context!=context:hint_context=context;hint_level=0
+    hint_level=mini(hint_level+1,3)
+    var lines:Array[String]=[]
+    match phase:
+        "market":
+            if not cover_hooked:lines=["灯罩下方的铁环垂在低处。","爪钩能拉动物件，朵朵够不到这个低环。","让团团到灯罩拉环旁试试爪钩。"]
+            elif not cover_carried and market_beam:lines=["亮起的踏板通到了灯罩脚下。","团团能走这段窄路，圆圆需要继续稳光。","让团团沿亮着的踏板取灯罩，再原路返回宽岸。"]
+            elif not cover_carried:lines=["灯罩到了踏板尽头，踏板还在阴影中。","稳定的光能照出供团团返回的路。","让圆圆在集市灯架朝左上稳光，团团沿亮起的踏板取灯罩。"]
+            else:lines=["团团叼着灯罩，宽岸有人可以接应。","灯罩要在安全的宽岸交接。","让团团沿踏板回接物宽岸，朵朵靠近接住。"]
+        "meet":lines=["阿灯一直守着暗下来的送光台。","带来的修补布让它知道你们愿意帮忙。","让朵朵走近阿灯，聊聊昨夜的灯光。"]
+        "investigate":
+            if not trial_lit():lines=["上方暗槽连着两条试光线路。","试光柄需要稳定光源才能送出样本。","圆圆在暗槽灯架面向上方，互动稳光。"]
+            elif not main_return_seen:lines=["主线接着那台没有停下的机器。","送出的测试光会沿所选路线流动，收光会中断这次观察。","朵朵在试光柄选择主线，用工具送一缕光，看完去向。"]
+            elif not connected_split_seen:lines=["旁边的小灯也有一条槽通回主机，它接通时会怎样？","分出一条路未必能摆脱同一台收光机，需要实际比较连通的旁路。","团团把旁路扣合回连通，朵朵选择分光，再用工具送光。"]
+            elif not reserve_hold_seen:lines=["小灯到主机之间有一个能打开的小扣。","隔离扣只断开旁路，主机里的折枝仍不能强拔。","团团打开隔离扣，朵朵沿分光槽再送一缕光。"]
+            else:lines=["主线、小灯与破罩留下了不同结果。","对照连接改变前后的结果，才能分清漏光和回收。","到阿灯身边，说说三次试光看见的去向。"]
+        "exterior":
+            if not latch_fixed and patch_braced:lines=["朵朵已经撑稳补片，外侧固定扣不再来回晃。","撑布时保持站位，爪钩才能把远处的扣拉来。","让团团到外罩固定扣旁拉住它。"]
+            elif not latch_fixed:lines=["补片边沿翻动，外侧有一只固定扣。","布撑稳后，爪钩才能拉住远处的扣。","朵朵撑住破罩上的布，团团拉外侧固定扣。"]
+            elif not seam_seen:lines=["补片挂住了，阴影里还有一道翘边。","斜照的光能显出未压紧的扣槽。","圆圆在外罩灯架朝右上照向补片。"]
+            else:lines=["光照出了补片最后一道扣槽。","挂住补片之后，还要压牢边缘。","朵朵沿破罩的亮边压紧最后一道扣槽。"]
+        "test":lines=["罩边的风停了，主机却还在动。","重复同一路线的测试，才能看出修补改变了什么。","圆圆朝暗槽稳光，朵朵选择主线，用工具重送一缕光。"]
+        "offer":lines=["阿灯拿出了独立封存的小灯匣。","那里面的备用光没有接回主机。","到阿灯旁听听灯匣能做什么。"]
+        "home_offer":lines=["门里熟悉的沙发和猫垫亮起来了。","这盏备用光够三位一起回去，是否留下由朵朵决定。","三位靠近归途灯匣，让朵朵回应阿灯。"]
+        "rest":lines=["休息桌旁的备用灯还亮着。","同伴到齐才能一起准备去树心。","三位到休息桌旁，让朵朵招呼大家歇歇。"]
+        _:lines=[objective(),"先处理眼前的荆棘，守住大家。","和伙伴一起完成当前遭遇。"]
+    var labels:=["观察","规则","局部做法"]
+    say("提示 %d / 3 · %s：%s"%[hint_level,labels[hint_level-1],lines[hint_level-1]])
 
 func restore_complete()->void:
     finished=true;phase="complete";cloth=true;cover_hooked=true;duct_seen=true;branch_seen=true;arrows_seen=true
+    main_return_seen=true;connected_split_seen=true;shell_leak_seen=true;reserve_hold_seen=true;clear_trial()
     latch_fixed=true;seam_seen=true;shell_fixed=true;inward_verified=true;lantern_offered=true;reserve_retained=true;battles_finished=2
     positions=[Vector2(815,570),Vector2(875,605),Vector2(780,615)]
 
@@ -227,16 +337,13 @@ func draw_world(v:Node2D)->void:
     v.prop(4,Rect2(505,290,93,52))
     v.prop(11,Rect2(601,217,155,126))
     v.draw_line(Vector2(635,258),Vector2(728,258),teal if duct_seen else Color("526662"),9)
-    # Moving beads always flow inward until chapter five fixes the machine.
-    for i in range(4):
-        var x:=635+fposmod(clock*32+i*23,90)
-        v.draw_circle(Vector2(x,258),4,gold if duct_seen else Color("778275"))
+    # The test rack only carries moving samples while the player sends a pulse.
     v.gear(BRANCH,clock*0.06 if not branch_seen else 0.0,24)
     v.support_prop(3,Rect2(BRANCH-Vector2(31,43),Vector2(62,52)))
     v.prop(8,Rect2(ARROWS-Vector2(36,45),Vector2(72,66)))
     v.arrow(ARROWS-Vector2(17,15),Vector2.LEFT,gold);v.arrow(ARROWS+Vector2(17,-15),Vector2.RIGHT,teal)
-    v.ink(ARROWS+Vector2(-31,-55),"收    送",90,16)
-    v.prop(3,Rect2(ARROWS-Vector2(12,26),Vector2(24,32)),-0.6)
+    v.ink(ARROWS+Vector2(30,6),"分光" if route_split else "主线",90,16)
+    v.prop(3,Rect2(ARROWS-Vector2(12,26),Vector2(24,32)),0.6 if route_split else -0.6)
     v.prop(11,Rect2(969,238,178,143))
     if not shell_fixed:
         for i in range(4):
@@ -248,7 +355,13 @@ func draw_world(v:Node2D)->void:
     v.rope(Vector2(940,376),Vector2(1150,376))
     v.prop(3,Rect2(LATCH-Vector2(16,27),Vector2(32,39)),0.0,Color.WHITE if latch_fixed else Color("9aa49a"))
     if seam_seen:v.draw_line(Vector2(1006,266),Vector2(1091,266),gold,3)
+    draw_trial(v)
+    draw_trial_records(v)
     if lantern_offered:
+        v.ink(HOME+Vector2(-116,-124),"备用归途 · 安全封存" if reserve_retained else "备用归途 · 已接通",232,17)
+        v.draw_circle(HOME+Vector2(-54,-18),5,Color("8fe2d0"))
+        v.draw_line(HOME+Vector2(-54,-18),HOME+Vector2(-54,-62),Color("8fe2d0"),3,true)
+        v.ink(HOME+Vector2(-122,54),"已决定留下 · 灯匣保留" if reserve_retained else "主线仍暗 · 到灯匣旁回应",244,16)
         if not reserve_retained:
             v.draw_texture_rect_region(v.HOME,Rect2(HOME-Vector2(33,82),Vector2(66,92)),Rect2(190,100,560,600))
             v.prop(7,Rect2(HOME-Vector2(51,110),Vector2(102,132)))
@@ -258,3 +371,109 @@ func draw_world(v:Node2D)->void:
     v.prop(14,Rect2(REST-Vector2(58,29),Vector2(116,58)))
     v.lamp(REST+Vector2(0,-30),true)
     if phase in ["meet","investigate","offer"] and near(0,ALIGHT,130):v.ink(ALIGHT+Vector2(-18,27),"阿灯",90,18)
+
+# The same route used for the result is drawn in world space; result lamps stay
+# visible until the next sample. No HUD counter is needed to read the comparison.
+func trial_bead(v:Node2D,path:PackedVector2Array,t:float,color:Color)->void:
+    var total:=0.0
+    for i in range(1,path.size()):total+=path[i-1].distance_to(path[i])
+    var distance:=clampf(t,0,1)*total
+    for i in range(1,path.size()):
+        var length:=path[i-1].distance_to(path[i])
+        if distance<=length or i==path.size()-1:
+            var point:=path[i-1].lerp(path[i],clampf(distance/maxf(length,0.01),0,1))
+            v.draw_circle(point,11,Color(color,0.15));v.draw_circle(point,5,color);return
+        distance-=length
+
+func draw_trial(v:Node2D)->void:
+    if phase=="market":return
+    var gold:=Color("ffe59a");var teal:=Color("8fe2d0");var dark:=Color("536c68")
+    var out:=PackedVector2Array([ARROWS+Vector2(0,-20),SPLITTER,Vector2(941,340),SHELL_TEST])
+    var back:=PackedVector2Array([SHELL_TEST,Vector2(953,230),Vector2(625,230),DUCT,BRANCH])
+    var split:=PackedVector2Array([SPLITTER,Vector2(820,340),RESERVE])
+    for path in [out,back,split]:
+        v.draw_polyline(path,Color("665f48"),8,true)
+        v.draw_polyline(path,dark,4,true)
+    # A visible gap in the return link is the reversible isolation control.
+    var join:=RESERVE+Vector2(-36,0)
+    v.draw_line(BRANCH,join,dark,5,true)
+    v.draw_line(join,RESERVE+Vector2(-12,-17 if bypass_isolated else 0),teal if bypass_isolated else gold,5,true)
+    v.draw_circle(join,5,Color("a88350"))
+    v.lamp(RESERVE+Vector2(0,42),reserve_charge>0)
+    v.ink(RESERVE+Vector2(-48,65),"旁路小灯",100,15)
+    v.ink(BRANCH+Vector2(-65,43),"隔开" if bypass_isolated else "相连",110,15)
+    v.ink(ARROWS+Vector2(-74,77),"工具 · 送光",150,15)
+    if trial_lit():v.draw_circle(ARROWS+Vector2(0,-20),7,gold)
+    if pulse_active:
+        var progress:=pulse_elapsed/TRIAL_SECONDS
+        if progress<0.5:
+            trial_bead(v,out,progress*2,gold)
+            if route_split:trial_bead(v,split,progress*2,teal)
+        else:
+            trial_bead(v,back,(progress-0.5)*2,gold)
+            if route_split:
+                if bypass_isolated:v.draw_circle(RESERVE,8,teal)
+                else:trial_bead(v,PackedVector2Array([RESERVE,BRANCH]),(progress-0.5)*2,teal)
+            if not shell_fixed:
+                for i in range(3):
+                    trial_bead(v,PackedVector2Array([SHELL_TEST,SHELL_TEST+Vector2(75+i*15,-32+i*22)]),(progress-0.5)*2,gold)
+    if return_charge>0:
+        v.draw_arc(BRANCH,30,0,TAU,24,Color(gold,0.65),3,true)
+        for i in range(3):v.draw_circle(BRANCH+Vector2.from_angle(clock*1.5+i*TAU/3)*21,3,gold)
+        v.ink(Vector2(610,150),"光被收回",120,15)
+    if leak_charge>0:
+        for i in range(4):
+            v.draw_circle(SHELL_TEST+Vector2(30+fposmod(clock*22+i*14,65),-10-i*9),3,Color(gold,0.6))
+        v.ink(SHELL_TEST+Vector2(5,-40),"漏光",85,15)
+    elif shell_fixed and return_charge>0:v.ink(SHELL_TEST+Vector2(5,-40),"罩边不漏了",115,15)
+    if return_flash_time>0:trial_bead(v,PackedVector2Array([RESERVE,BRANCH]),1-return_flash_time/1.2,teal)
+
+# The plaques are memories of witnessed samples, never a source of new facts.
+# Unseen routes have geometry only; current charge and permanent memory differ.
+func trial_records()->Array:
+    return [
+        {"label":"主线","seen":main_return_seen,"result":"回流" if main_return_seen else "","split":false,"isolated":false},
+        {"label":"连通旁路","seen":connected_split_seen,"result":"回流" if connected_split_seen else "","split":true,"isolated":false},
+        {"label":"隔离旁路","seen":reserve_hold_seen,"result":"留光" if reserve_hold_seen else "","split":true,"isolated":true}]
+
+func draw_trial_records(v:Node2D)->void:
+    if phase=="market":return
+    var records:=trial_records()
+    var bronze:=Color("8b795c");var dark:=Color("4b5750");var gold:=Color("e9c883");var mint:=Color("87cdb8")
+    v.ink(Vector2(876,474),"试光留下的印记",276,17)
+    for index in range(3):
+        var record:Dictionary=records[index]
+        var center:=Vector2(920+index*94,522)
+        v.draw_rect(Rect2(center-Vector2(43,40),Vector2(86,86)),Color("d2bf91"),true)
+        v.draw_rect(Rect2(center-Vector2(43,40),Vector2(86,86)),bronze,false,2)
+        v.ink(center+Vector2(-43,-20),record.label,86,14)
+        var start:=center+Vector2(-28,0);var end:=center+Vector2(28,0)
+        v.draw_line(start,end,dark,3,true)
+        v.draw_circle(start,4,bronze)
+        v.draw_circle(end,7,dark,false,2,true)
+        if record.split:
+            var lamp:=center+Vector2(0,-10)
+            v.draw_line(start,lamp,dark,2,true)
+            v.draw_circle(lamp,5,dark,false,2,true)
+            if record.isolated:
+                v.draw_line(lamp+Vector2(6,0),lamp+Vector2(13,0),dark,2,true)
+                v.draw_line(lamp+Vector2(21,0),end,dark,2,true)
+            else:v.draw_line(lamp,end,dark,2,true)
+        if record.seen:
+            var color:Color=mint if record.isolated else gold
+            if record.isolated:v.draw_circle(center+Vector2(0,-10),3,color)
+            else:
+                v.draw_polyline(PackedVector2Array([end+Vector2(0,3),end+Vector2(0,12),start+Vector2(0,12)]),color,3,true)
+                v.arrow(start+Vector2(0,12),Vector2.LEFT,color)
+            v.ink(center+Vector2(-43,35),record.result,86,17)
+        # Late arriving sample etches this route's plaque; interruption never
+        # sets its seen flag, so it cannot leave a fabricated result behind.
+        var sample_index:=0 if not route_split else (2 if bypass_isolated else 1)
+        if pulse_active and index==sample_index and pulse_elapsed/TRIAL_SECONDS>0.82:
+            var origin:Vector2=RESERVE if index==2 else BRANCH
+            trial_bead(v,PackedVector2Array([origin,center]),(pulse_elapsed/TRIAL_SECONDS-0.82)/0.18,mint if index==2 else gold)
+    v.ink(Vector2(878,587),"铜牌记录观测 · 并非正在供光",278,14)
+    if shell_leak_seen:
+        v.ink(Vector2(946,174),"先前罩边：漏光",224,15)
+    if shell_fixed:
+        v.ink(Vector2(946,195),"复测：不漏光 / 仍回流" if inward_verified else "补片封稳 · 尚未复测",224,15)

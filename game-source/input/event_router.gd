@@ -24,9 +24,6 @@ func handle(event: InputEvent) -> void:
             var slot: int = session.slot_of(event.device)
             if slot >= 0:
                 if event.pressed:
-                    if session.single_player and event.button_index == JOY_BUTTON_Y:
-                        session.axes[0] = Vector2.ZERO
-                        actions_cancelled.emit()
                     action_pressed.emit(slot, event.button_index)
                 else:
                     action_released.emit(slot, event.button_index)
@@ -83,7 +80,7 @@ func _key(event: InputEventKey) -> void:
         return
     if session.single_player and code in [KEY_UP,KEY_DOWN,KEY_LEFT,KEY_RIGHT,KEY_J,KEY_K,KEY_SPACE]: return
     if session.single_player and code == KEY_TAB:
-        clear_keyboard()
+        pressed_keys[code] = true
         action_pressed.emit(0,JOY_BUTTON_Y)
         return
     pressed_keys[code] = true

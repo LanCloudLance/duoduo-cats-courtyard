@@ -1,0 +1,108 @@
+{
+  "milestone": "M27-existing-five-chapter-candidate",
+  "status": "validated-release-ready",
+  "scope": "prologue-five-chapters-home",
+  "regression": {
+    "suites": 100,
+    "checks": 3558,
+    "failed": 0,
+    "run_id": "20261010-230805-961000",
+    "source_changed_after_snapshot": false,
+    "exit_warning_suites": 24
+  },
+  "mainline": {
+    "writer_checks": 641,
+    "reader_checks": 52,
+    "failed": 0,
+    "modes": [
+      "solo",
+      "dual"
+    ],
+    "chapter_records": 12,
+    "known_solution": true,
+    "real_inputs": "Godot InputEvent, not OS or hardware controller"
+  },
+  "partial_save_restart": {
+    "writer_checks": 7,
+    "reader_checks": 6,
+    "failed": 0,
+    "separate_processes": true
+  },
+  "export_pack": {
+    "checks": 36,
+    "failed": 0,
+    "pack_bytes": 15702920,
+    "namespace": "qa-m27-pack"
+  },
+  "independent_review": {
+    "major_issues_closed": 8,
+    "open_P0_P1_in_tested_scope": 0,
+    "entry_followup_checks": 22,
+    "professional_and_child_perspectives": "adult proxy reviews"
+  },
+  "web": {
+    "input": "CUA native keys; no position, phase, health or unlock injections",
+    "observed": [
+      "move",
+      "switch role",
+      "journal",
+      "natural exit",
+      "brace door",
+      "actual rug drag",
+      "refresh and restore same partial run",
+      "complete prologue",
+      "natural C1 entry",
+      "direct continue C1",
+      "isolated missing dual continue",
+      "help close canvas focus",
+      "release battle warnings, damage, downed rescue"
+    ],
+    "release_debug_probe": "undefined",
+    "console_errors": [],
+    "presentation_frame_sample": {
+      "scene": "release-combat-after-live-input",
+      "viewport": "1280x900",
+      "frames": 300,
+      "median": 16.69999999999709,
+      "p95": 17.5,
+      "p99": 17.60000000000582,
+      "max": 17.69999999999709,
+      "over33": 0
+    },
+    "sample_limits": "5 seconds on this macOS IAB at 1280x900; not all chapters, simulation performance or Windows acceptance",
+    "sampling_retry": "first CDP request timed out at default 3 seconds; explicit 10-second command completed"
+  },
+  "source_snapshot_files": 472,
+  "build_artifacts": {
+    "dist/game/index.pck": {
+      "bytes": 15702920,
+      "sha256": "54dcad96d695f66f27c2cf412fb4a4212d2945c8fb4a1347bd18e8cd61cb93f7"
+    },
+    "dist/game/engine.bin": {
+      "bytes": 10054758,
+      "sha256": "2862a06f11ad1579c4ceb764f724013c1e62f8916d5d8d237fe5ee209c76f56e"
+    },
+    "dist/game/index.html": {
+      "bytes": 5785,
+      "sha256": "131e9fdecce5ed68484766e57a732832ec16da3589b4df673b61778875183140"
+    },
+    "dist/page.js": {
+      "bytes": 1864,
+      "sha256": "6c8034f23b6c9eb6150efa0a48d523a671a6a41a35549cad61affa6fb93aa146"
+    },
+    "dist/index.html": {
+      "bytes": 4825,
+      "sha256": "123254af7a48117fe0a55f452babaca7af0f2560677c4322c697d1909e61fe33"
+    }
+  },
+  "publishing": "exact commit/deployment receipt is written after publishing outside the committed tree",
+  "human_acceptance": false,
+  "measured_blind_play_duration_minutes": null,
+  "limits": [
+    "24 headless suites report ObjectDB exit warnings; not a zero-leak claim",
+    "unknown-solution first play, real child usability, subjective feel and music need human acceptance",
+    "Windows physical controllers and consoles untested",
+    "175-230 minutes remains an unmeasured design budget",
+    "full free equipment and commercial multi-platform release outside current milestone"
+  ]
+}

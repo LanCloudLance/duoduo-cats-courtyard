@@ -3,6 +3,7 @@ signal battle_requested
 signal next_chapter_requested(chapter:int)
 const Base = preload("res://game/story_chapter_base.gd")
 const Actor = preload("res://game/actor_view.gd")
+const StoryLabels = preload("res://game/story_labels.gd")
 const Home = preload("res://game/home_sprite.gd")
 const FOREST = preload("res://assets/story-chapter-one/waystation.png")
 const RIVER = preload("res://assets/visual-m13/courtyard-painted.png")
@@ -24,6 +25,7 @@ var camera := Camera2D.new()
 var hud := CanvasLayer.new()
 var font:Font
 var actors:Array[Node2D]=[]
+var labels=StoryLabels.new()
 var homes:Array[Node2D]=[]
 var title:Label
 var line:Label
@@ -31,10 +33,14 @@ var controls:Label
 var completion:Panel
 var completed_text:Label
 var recorded:=false
+var completion_attempted:=false
 var record_prefix:="story"
 var save_status:=""
+var checkpoint_signature:=""
+var checkpoint_pending:=0.0
 var heard:=-1
 var last_role:=0
+var guard_owners:Array[int]=[-1,-1]
 var audio:=preload("res://game/garden_audio.gd").new()
 var white_npc:Node2D
 var npc_at:=Vector2(-5000,-5000)
@@ -58,19 +64,48 @@ func _ready()->void:
 func reset(chapter:int,single:bool,resume:=true)->void:
     var names:={2:"two",3:"three",4:"four",5:"five"}
     state=load("res://game/chapter_"+names[chapter]+"_state.gd").new();state.single=single
-    heard=-1;last_role=0;recorded=false;save_status=""
+    heard=-1;last_role=0;guard_owners.assign([-1,-1]);recorded=false;completion_attempted=false;save_status=""
+    checkpoint_signature="";checkpoint_pending=0.0
     if resume:
         var data:=read_record()
-        if not data.is_empty():state.restore(data);recorded=true;save_status="已恢复本章通关记录"
+        if not data.is_empty():
+            if data.get("version")==2:state.restore_checkpoint(data)
+            else:state.restore(data)
+            recorded=state.finished;save_status="已恢复本章通关记录" if recorded else "已恢复本章安全进度"
+            checkpoint_signature=progress_signature()
 func record_path()->String:return "user://"+record_prefix+"-"+state.chapter_key+("-solo-v1.json" if state.single else "-dual-v1.json")
-func read_record()->Dictionary:
-    if not FileAccess.file_exists(record_path()):return {}
-    var f:=FileAccess.open(record_path(),FileAccess.READ)
+func checkpoint_path()->String:return "user://"+record_prefix+"-"+state.chapter_key+("-solo-v2.json" if state.single else "-dual-v2.json")
+func progress_signature()->String:
+    var value:Dictionary=state.checkpoint()
+    value.erase("positions");value.erase("controlled");value.erase("current_cat")
+    return JSON.stringify(value)
+func read_json(path:String)->Dictionary:
+    if not FileAccess.file_exists(path):return {}
+    var f:=FileAccess.open(path,FileAccess.READ)
     if not f or f.get_length()>65536:return {}
     var value=JSON.parse_string(f.get_as_text());f.close()
+    return value if value is Dictionary else {}
+func read_record()->Dictionary:
+    var value:=read_json(checkpoint_path())
+    if not value.is_empty():
+        var probe=state.get_script().new();probe.single=state.single
+        if probe.restore_checkpoint(value):return value
+    value=read_json(record_path())
     if not value is Dictionary or value.get("version")!=1 or value.get("chapter")!=state.chapter_key or typeof(value.get("completed"))!=TYPE_BOOL or not value.completed or not value.get("extras",{}) is Dictionary:return {}
     return value
+func save_checkpoint()->bool:
+    var value:Dictionary=state.checkpoint()
+    var probe=state.get_script().new();probe.single=state.single
+    if value.is_empty() or not probe.restore_checkpoint(value):return false
+    var path:=checkpoint_path();var f:=FileAccess.open(path+".tmp",FileAccess.WRITE)
+    if not f:return false
+    f.store_string(JSON.stringify(value));f.flush();var error:=f.get_error();f.close()
+    if error!=OK or DirAccess.rename_absolute(ProjectSettings.globalize_path(path+".tmp"),ProjectSettings.globalize_path(path))!=OK:return false
+    checkpoint_signature=progress_signature();checkpoint_pending=0.0
+    if not state.finished:save_status="安全进度已记录"
+    return true
 func save_record()->void:
+    completion_attempted=true
     var path:=record_path();var f:=FileAccess.open(path+".tmp",FileAccess.WRITE)
     if not f:save_status="通关已完成，记录未写入 · 按互动键重试";return
     f.store_string(JSON.stringify(state.record()));f.flush();var error:=f.get_error();f.close()
@@ -78,17 +113,18 @@ func save_record()->void:
         recorded=true;save_status="本章通关已记录"
     else:save_status="通关已完成，记录未写入 · 按互动键重试"
 func set_active(value:bool)->void:
+    if active and not value:save_checkpoint()
     active=value;visible=value;hud.visible=value;camera.enabled=value
-    if not value:audio.silence();state.guard(0,false)
+    if not value:audio.silence();cancel_inputs()
 func handle_action(slot:int,button:int)->void:
     if not session.running() or (state.single and slot!=0):return
     var role:int=state.actor_for_slot(slot)
     if button==JOY_BUTTON_Y:
-        if state.single:last_role=state.controlled;get_parent().router.clear_keyboard();state.switch_actor()
-        elif slot==1:get_parent().router.clear_keyboard();state.switch_cat()
+        if state.single:last_role=state.controlled;state.switch_actor()
+        elif slot==1:state.switch_cat()
         return
     if button==JOY_BUTTON_B and state.single:
-        var old:int=state.controlled;get_parent().router.clear_keyboard();state.controlled=last_role if last_role in state.available_roles() else 0;last_role=old;return
+        var old:int=state.controlled;state.controlled=last_role if last_role in state.available_roles() else 0;last_role=old;return
     if state.finished:
         if button==JOY_BUTTON_A:
             if not recorded:save_record()
@@ -99,17 +135,24 @@ func handle_action(slot:int,button:int)->void:
         JOY_BUTTON_A:state.interact(role)
         JOY_BUTTON_RIGHT_SHOULDER:state.tool(role)
         JOY_BUTTON_LEFT_SHOULDER:
-            if state.chapter==5:state.guard(role,true)
+            if state.chapter==5:
+                guard_owners[slot]=role if role==0 else -1
+                state.guard(role,true)
             else:state.request_hint()
         JOY_BUTTON_X:state.attack(role)
 func release_action(slot:int,button:int)->void:
-    if button==JOY_BUTTON_LEFT_SHOULDER:state.guard(state.actor_for_slot(slot),false)
-func cancel_inputs()->void:state.guard(0,false)
+    if button==JOY_BUTTON_LEFT_SHOULDER and guard_owners[slot]>=0:
+        state.guard(guard_owners[slot],false);guard_owners[slot]=-1
+func cancel_inputs()->void:
+    state.guard(0,false);guard_owners.assign([-1,-1])
 func _physics_process(dt:float)->void:
     if not active or not session.running():return
     state.step(dt,session.movement(0),session.movement(1),true)
+    if progress_signature()!=checkpoint_signature:
+        checkpoint_pending+=dt
+        if checkpoint_pending>=0.6:save_checkpoint()
     if state.battle_requested:battle_requested.emit();return
-    if state.finished and not recorded and save_status.is_empty():save_record()
+    if state.finished and not recorded and not completion_attempted:save_record()
     if heard!=state.event_id:heard=state.event_id;audio.play(state.cue)
     _refresh(dt)
 func _refresh(dt:float)->void:
@@ -119,8 +162,9 @@ func _refresh(dt:float)->void:
         var present:bool=role in state.available_roles()
         var selected:bool=state.controlled==role if state.single else role==0 or role==state.current_cat
         actors[role].visible=present and not home;homes[role].visible=present and home
-        actors[role].caption_override=["朵朵","团团","圆圆"][role]+(" · 你控制" if state.single and selected else " · 等你" if state.single else "")
         var kind:String=state.actions[role]
+        var activity:String="稳光中" if kind=="light" else "保持中" if kind in ["hold","brace"] else "你控制" if selected else "伙伴"
+        actors[role].caption_override=["朵朵","团团","圆圆"][role]+(" · "+activity if state.single else "")
         var pose_kind:String={"light":"reach","touch":"reach","hook":"pull","paw":"inspect","pet":"reach","sniff":"inspect"}.get(kind,kind)
         if kind=="hold" and ((state.chapter==5 and role==1 and state.hook_held) or (state.chapter==2 and role==0)):pose_kind="pull"
         actors[role].motion_kind=pose_kind if state.action_time[role]>0 or kind in ["hold","brace","light"] else ""
@@ -129,19 +173,29 @@ func _refresh(dt:float)->void:
         var direction:float=1 if state.facing[role].x>=0 else -1
         homes[role].update_motion(state.positions[role],dt)
         homes[role].show_action(state.actions[role],state.clock,direction);homes[role].position=state.positions[role];homes[role].z_index=int(state.positions[role].y)
+    labels.update(actors,_label_obstacles())
     title.text=state.objective()
     line.text=state.message if state.message_time>0 else ""
     var party:="朵朵 / 团团 / 圆圆" if state.joined else "朵朵 / 团团"
     controls.text=("WASD · E 互动 · Tab 换角色 · Q 切回 · R 工具" if state.single else "朵朵 WASD / E / T · 猫咪 方向键 / 空格 / R · Tab 切猫") if session.keyboard_mode else "左摇杆 · 下互动 · 右肩工具 · 上换角色"
     controls.text+=" · G 举盾" if state.chapter==5 and session.keyboard_mode else " · G 想一想" if session.keyboard_mode else " · 左肩举盾" if state.chapter==5 else " · 左肩想一想"
     controls.text+=" · 当前："+["朵朵","团团","圆圆"][state.controlled] if state.single else " · "+party
-    controls.text+=" · Esc 暂停"
+    controls.text+=" · 记事中可想一想 · Esc 暂停"
     completion.visible=state.finished and state.chapter<5
     if state.finished and state.chapter==5:
         title.text="故事试玩完成 · 都在就好"
         line.text=state.message if state.message_time>0 else save_status+" · 可在家中继续摸猫，Esc 回访章节。"
     if state.finished:completed_text.text=state.completion_text()+"\n\n"+save_status+("\n\n按互动键继续下一章 · Esc 可重玩 / 选关。" if state.chapter<5 else "\n\n故事试玩完成 · Esc 可回访任意章节。")
     npc_at=Vector2(-5000,-5000);queue_redraw();foreground.queue_redraw()
+func _label_obstacles()->Array[Rect2]:
+    var rects:Array[Rect2]=[]
+    if state.chapter==2 and state.locked_a and not state.locked_b:
+        rects.assign([Rect2(562,435,68,72),Rect2(609,424,40,55),Rect2(625,358,83,78)])
+    if state.chapter==3 and state.bridge_locked:
+        rects.assign([Rect2(901,337,34,106),Rect2(state.LOW_MIRROR-Vector2(19,19),Vector2(38,38)),Rect2(state.HIGH_MIRROR-Vector2(19,19),Vector2(38,38)),Rect2(state.HIGH_RING-Vector2(14,-11),Vector2(28,23)),Rect2(state.LOW_RECEIVER-Vector2(17,18),Vector2(34,36)),Rect2(state.HIGH_RECEIVER-Vector2(17,18),Vector2(34,36)),Rect2(state.EXIT_WALL-4,272,22,69)])
+    if state.chapter==4 and state.phase in ["meet","investigate","test","offer"]:
+        rects.assign([Rect2(state.BRANCH-Vector2(38,48),Vector2(76,96)),Rect2(state.ARROWS-Vector2(35,40),Vector2(70,80)),Rect2(state.DUCT_LIGHT-Vector2(32,45),Vector2(64,90)),Rect2(state.RESERVE-Vector2(25,25),Vector2(50,50)),Rect2(state.ALIGHT-Vector2(35,100),Vector2(70,110))])
+    return rects
 func _panel(rect:Rect2)->Panel:
     var p:=Panel.new();p.position=rect.position;p.size=rect.size
     var s:=StyleBoxFlat.new();s.bg_color=Color("f5ead0");s.border_color=Color("a78b64");s.set_border_width_all(2);s.set_corner_radius_all(15);p.add_theme_stylebox_override("panel",s);hud.add_child(p);return p
@@ -234,4 +288,4 @@ func granny(p:Vector2)->void:
     draw_texture_rect_region(PROPS,Rect2(p-Vector2(52,142),Vector2(104,142)),Rect2(80,50,500,620))
 
 func display_name(item:String)->String:
-    return {"winch_a":"近岸绞盘","winch_b":"后段绞盘","lamp_a":"近岸导向灯","lamp_b":"中段导向灯","latch_a":"前桥扣","latch_b":"后桥扣","box":"检修箱","loop":"试用拉环","shortcut":"短桥拉环","window":"低窗","duct":"外墙检修槽","door_lamp":"门外灯座","reunion":"圆圆","equipment":"工具架","light":"定光灯座","board":"导光板","lock":"桥锁","narrow":"窄道拉环","rig":"灯架","search":"寻路灯座","map":"路线图"}.get(item,item)
+    return {"winch_a":"近岸绞盘","winch_b":"后段绞盘","brace_b":"后桥受力柄","lamp_a":"近岸导向灯","lamp_b":"中段导向灯","latch_a":"前桥扣","latch_b":"后桥扣","box":"检修箱","loop":"试用拉环","shortcut":"短桥拉环","window":"低窗","duct":"外墙检修槽","door_lamp":"门外灯座","reunion":"圆圆","equipment":"工具架","light":"定光灯座","board":"导光板","lock":"桥锁","narrow":"窄道拉环","rig":"低镜调整柄","high_mirror":"高镜拉环","search":"升降灯座","map":"路线图"}.get(item,item)

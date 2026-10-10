@@ -24,6 +24,10 @@ var audio := preload("res://game/garden_audio.gd").new()
 var heard := -1
 var recorded := false
 var save_status := ""
+var completion_attempted := false
+var saved_signature := ""
+var observed_signature := ""
+var save_delay := 0.0
 var record_prefix := "story-prologue-v2"
 
 func _init(value) -> void: session = value
@@ -75,39 +79,82 @@ func reset(single: bool, resume := false) -> void:
     state = Story.new()
     state.single = single
     recorded = false
+    completion_attempted = false
     save_status = ""
     heard = -1
     if resume:
-        var record := read_record()
-        if record.get("completed",false):
-            state.phase = "complete"
-            state.finished = true
-            state.extras = record.get("extras",{})
-            state.door_open = 1
-            state.rug_pull = 115
-            state.white_visible = false
-            recorded = true
-            save_status = "已恢复序章通关记录"
+        var data := read_record()
+        if not data.is_empty():
+            var restored: bool = state.restore_checkpoint(data) if data.get("version") == 2 else preload("res://game/prologue_checkpoint.gd").restore_legacy(state,data)
+            if restored:
+                recorded = state.finished
+                completion_attempted = recorded
+                save_status = "已恢复序章通关记录" if recorded else "已恢复序章途中进度"
+    saved_signature = ""
+    observed_signature = ""
+    save_delay = 0
     if complete_panel: complete_panel.visible = state.finished
 
 func record_path() -> String:
     return "user://"+record_prefix+("-solo-v1.json" if state.single else "-dual-v1.json")
+func checkpoint_path() -> String:
+    return "user://"+record_prefix+("-solo-v2.json" if state.single else "-dual-v2.json")
+func _read_json(path: String) -> Dictionary:
+    if not FileAccess.file_exists(path): return {}
+    var file := FileAccess.open(path,FileAccess.READ)
+    if not file or file.get_length() > 65536: return {}
+    var parser := JSON.new()
+    if parser.parse(file.get_as_text()) != OK: return {}
+    return parser.data if parser.data is Dictionary else {}
 func read_record() -> Dictionary:
-    if not FileAccess.file_exists(record_path()): return {}
-    var data = JSON.parse_string(FileAccess.get_file_as_string(record_path()))
-    if not data is Dictionary or data.get("version") != 1 or data.get("chapter") != "prologue" or data.get("completed") != true: return {}
-    if not data.get("extras",{}) is Dictionary: return {}
-    return data
-func save_record() -> void:
-    var file := FileAccess.open(record_path(),FileAccess.WRITE)
+    var data := _read_json(checkpoint_path())
+    var probe = Story.new()
+    probe.single = state.single
+    if probe.restore_checkpoint(data): return data
+    data = _read_json(record_path())
+    if preload("res://game/prologue_checkpoint.gd").restore_legacy(probe,data): return data
+    return {}
+func _signature() -> String:
+    var data: Dictionary = state.checkpoint()
+    # Movement is flushed on pause; permanent changes are debounced while playing.
+    data.erase("positions")
+    data.erase("controlled")
+    data.facts.erase("ball")
+    data.facts.erase("wedge")
+    return JSON.stringify(data)
+func save_checkpoint() -> bool:
+    var data: Dictionary = state.checkpoint()
+    var probe = Story.new()
+    probe.single = state.single
+    if not probe.restore_checkpoint(data):
+        save_status = "进度暂未写入 · 可稍后重试"
+        return false
+    var path := checkpoint_path()
+    var temp := path+".tmp"
+    var file := FileAccess.open(temp,FileAccess.WRITE)
     if file:
-        file.store_string(JSON.stringify({"version":1,"chapter":"prologue","completed":true,"extras":state.extras}))
+        file.store_string(JSON.stringify(data))
+        file.flush()
+        var error := file.get_error()
         file.close()
-        save_status = "序章进度已记录"
-        recorded = true
-    else: save_status = "本次通关完成，进度暂未写入 · 可稍后重试"
-
+        if error == OK and DirAccess.rename_absolute(temp,path) == OK:
+            saved_signature = _signature()
+            observed_signature = saved_signature
+            save_delay = 0
+            save_status = "序章通关已记录" if state.finished else "序章途中进度已记录"
+            if state.finished: recorded = true
+            return true
+    save_status = "进度暂未写入 · 可稍后重试"
+    return false
+func save_record() -> void:
+    completion_attempted = true
+    save_checkpoint()
+func cancel_inputs() -> void:
+    state.cancel_inputs()
 func set_active(value: bool) -> void:
+    if active and not value:
+        save_checkpoint()
+        cancel_inputs()
     active = value
     visible = value
     hud.visible = value
@@ -115,17 +162,19 @@ func set_active(value: bool) -> void:
     if not value: audio.silence()
 
 func handle_action(slot: int, button: int) -> void:
-    if not session.running(): return
-    if button == JOY_BUTTON_RIGHT_SHOULDER:
-        state.request_hint()
-        return
+    if not session.running() or slot < 0 or slot > 1: return
     if state.single:
         if slot != 0: return
         if button in [JOY_BUTTON_Y,JOY_BUTTON_B]:
-            get_parent().router.clear_keyboard()
             state.switch_actor()
             return
         slot = state.controlled
+    if button == JOY_BUTTON_RIGHT_SHOULDER:
+        state.tool(slot)
+        return
+    if button == JOY_BUTTON_LEFT_SHOULDER:
+        state.request_hint()
+        return
     if button == JOY_BUTTON_A:
         if state.finished:
             if not recorded: save_record()
@@ -141,7 +190,16 @@ func _physics_process(dt: float) -> void:
         b = a if state.controlled == 1 else Vector2.ZERO
         a = a if state.controlled == 0 else Vector2.ZERO
     state.step(dt,a,b,true)
-    if state.finished and not recorded and save_status.is_empty(): save_record()
+    if state.finished and not recorded and not completion_attempted: save_record()
+    var signature := _signature()
+    if signature != observed_signature:
+        observed_signature = signature
+        save_delay = 0
+    elif signature != saved_signature:
+        save_delay += dt
+        if save_delay >= 0.4:
+            save_delay = 0
+            save_checkpoint()
     if heard != state.event_id:
         heard = state.event_id
         audio.play(state.cue)
@@ -168,7 +226,7 @@ func _physics_process(dt: float) -> void:
     props[3].z_index = 700 if state.carrier >= 0 else 2
     goal_label.text = state.objective()
     line_label.text = state.message if state.message_time > 0 or state.finished else ""
-    controls.text = ("WASD 移动 · E 互动 · Tab 换朵朵 / 团团" if state.single else "朵朵 WASD / E · 团团 方向键 / 空格")+" · R 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换朵朵 / 团团" if state.single else " · 两位分别操作")+" · 右肩想一想 · 菜单键暂停"
+    controls.text = ("WASD 移动 · E 互动 · Tab/Q 换角色 · R 工具" if state.single else "朵朵 WASD / E / T 工具 · 团团 方向键 / 空格 / R 工具")+" · G 想一想 · Esc 暂停" if session.keyboard_mode else "左摇杆移动 · 面键下互动"+(" · 面键上换朵朵 / 团团" if state.single else " · 两位分别操作")+" · 右肩工具 · 左肩想一想 · 菜单键暂停"
     complete_panel.visible = state.finished
     if state.finished:
         completed_text.text = "原本准备休息的下午，\n变成了一起出发的下午。\n\n序章完成 ✓\n"+save_status+"\n\n下一关：点亮第一盏灯\n前往森林，寻找圆圆的方向。\n\n按互动键进入第一章。Esc 返回选关，可重玩序章。"

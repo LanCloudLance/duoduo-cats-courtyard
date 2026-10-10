@@ -2,6 +2,21 @@ extends RefCounted
 const Space = preload("res://game/battle_space.gd")
 
 static func start(b, number: int) -> void:
+    if b.story_encounter == "shell":
+        # Open flanks separate pursuit from a remote caster; lower than practice HP budget.
+        b._spawn("thorn" if number == 1 else "sprout",Vector2(870,360) if number == 1 else Vector2(1050,610),true)
+        b._spawn("weaver",Vector2(960,650) if number == 1 else Vector2(670,250),true)
+        b.seeds[0].pos = Vector2(920,710)
+        b.seeds[1].pos = Vector2(1160,330)
+        return
+    if b.story_encounter == "reserve":
+        # Same three-body limit as practice; clustering makes shield/interrupt/area control useful.
+        b._spawn("armored" if number == 1 else "thorn",Vector2(1000,460) if number == 1 else Vector2(1020,500),true)
+        b._spawn("weaver",Vector2(1100,520) if number == 1 else Vector2(950,290),true)
+        if number == 2: b._spawn("sprout",Vector2(860,640),true)
+        b.seeds[0].pos = Vector2(930,500)
+        b.seeds[1].pos = Vector2(1110,700)
+        return
     if number == 1:
         b._spawn("thorn",Vector2(920,390),true)
         b._spawn("sprout",Vector2(1040,730),true)
@@ -15,6 +30,15 @@ static func start(b, number: int) -> void:
         b._spawn("weaver",Vector2(1260,730),true)
         b._spawn("roller",Vector2(1200,220),true)
         if not b.solo_mode: b._spawn("sprout",Vector2(1000,740),true)
+
+static func objective(b, number: int) -> String:
+    if b.story_encounter == "shell":
+        return "破罩外圈 · 上侧挡追击，或绕下方树桩打断织藤花；中间留路接应。" if number == 1 else "破罩外圈 · 织藤花换到上桩旁，嫩芽从右下靠近；重新选先处理哪边。"
+    if b.story_encounter == "reserve":
+        return "护住归途 · 硬壳与织藤花挤在树桩另一侧，卷叶就在它们前方。" if number == 1 else "护住归途 · 织藤花退到上侧，两只枝团从中下靠近；挡住或绕侧，留意接应。"
+    if b.story_first:
+        return "前方枝团拦住小路；留意冲锋，试着从侧面接应。" if number == 1 else "织藤花守着硬壳的背后，留意落点与展开的结点。"
+    return ["近身小怪会追上来：边移动边连击，留意荆棘冲锋。", "藤蔓会预判去路：看到预警换方向，或打断后排；硬壳要分工拆。", "树怪守着灯芯：挡冲锋、绕侧追击；半血后注意震地。"][clampi(number-1,0,2)]
 
 static func danger(enemy: Dictionary, point: Vector2, margin := 0.0) -> bool:
     if enemy.hp <= 0: return false

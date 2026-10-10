@@ -1,0 +1,6 @@
+{
+  "result": {
+    "type": "string",
+    "value": "{\"scene\":\"release-combat-after-live-input\",\"viewport\":\"1280x900\",\"frames\":300,\"median\":16.69999999999709,\"p95\":17.5,\"p99\":17.60000000000582,\"max\":17.69999999999709,\"over33\":0}"
+  }
+}

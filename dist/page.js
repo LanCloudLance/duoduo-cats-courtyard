@@ -3,10 +3,10 @@ function enter(mode){welcome.hidden=true;play.hidden=false;document.body.classLi
 function home(){frame.removeAttribute('src');play.hidden=true;welcome.hidden=false;document.body.classList.remove('playing');status.textContent='';}
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>enter(b.dataset.mode));
 document.querySelector('#help').onclick=()=>{dialog.showModal();frame.contentWindow?.postMessage({type:'duoduo-pause'},location.origin);};
-document.querySelector('#close-help').onclick=()=>{dialog.close();if(!play.hidden)frame.focus();};
+document.querySelector('#close-help').onclick=()=>{dialog.close();if(!play.hidden){frame.focus();frame.contentDocument?.getElementById('canvas')?.focus();}};
 document.querySelector('#fullscreen').onclick=async()=>{try{if(!document.fullscreenElement)await (play.hidden?document.documentElement:play).requestFullscreen();else await document.exitFullscreen();}catch{status.textContent='此窗口暂不支持全屏，可使用浏览器独立窗口。';}};
 window.addEventListener('message',e=>{if(e.origin!==location.origin||e.source!==frame.contentWindow)return;if(e.data.type==='duoduo-exit')home();if(e.data.type==='duoduo-error'){home();status.textContent='暂时无法进入游戏，请刷新重试。'+e.data.message;}});
 
 document.querySelectorAll("[data-trial]").forEach(b=>b.onclick=()=>enter("trial-"+b.dataset.trial+"-"+document.querySelector("#trial-mode").value));
 
-document.querySelectorAll("[data-later-mode]").forEach(b=>b.onclick=()=>enter("chapter-"+document.querySelector("#story-chapter").value+"-"+b.dataset.laterMode));
+document.querySelectorAll("[data-later-mode]").forEach(b=>b.onclick=()=>enter((document.querySelector("#story-chapter").value==="1"?"chapter-one":"chapter-"+document.querySelector("#story-chapter").value)+"-"+b.dataset.laterMode));

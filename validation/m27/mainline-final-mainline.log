@@ -1,0 +1,37 @@
+Godot Engine v4.7.2.stable.official.ed1daf0bf - https://godotengine.org
+
+M27_MAINLINE_QA_USERDIR /Users/wangyuanlong/Library/Application Support/DuoduoCatsCourtyard-qa-m27-mainline
+CONNECTED GAMEPADS: []
+MAINLINE_CLICK rect=[P: (68.0, 530.0), S: (240.0, 43.0)] viewport=(64, 64) transform=[X: (0.05, 0.0), Y: (0.0, 0.05), O: (0.0, 12.0)] visible=true running=false
+MAINLINE_RECORD user://story-run-1791644601082-3908237-prologue-solo-v2.json
+MAINLINE_BATTLE_BEGIN first solo=true
+MAINLINE_BATTLE_END first solo=true retries=0 hp=[2, 2]
+MAINLINE_RECORD user://story-run-1791644601082-3908237-one-solo-v2.json
+TWO_WINDOW_STATE [(1099.673, 423.042), (1074.288, 459.2828), (1155.0, 360.0)] phase=complete finished=true joined=false message=朵朵：圆圆！我们找你好久，你倒是把床找好了。门边的灯熄了，它被关在里面；窗栏太窄，我们得修门。 stage=story-chapter
+MAINLINE_RECORD user://story-run-1791644601082-3908237-later-chapter-two-solo-v2.json
+THREE_REUNION_STATE [(539.724, 437.3134), (526.4645, 445.4348), (567.724, 452.3134)] joined=true message=朵朵蹲下摸摸爪子，圆圆把脸安静地送进她手里；团团在身边举爪搭过来。朵朵：以后等我们一起，好不好？圆圆正式入队了。
+MAINLINE_RECORD user://story-run-1791644601082-3908237-later-chapter-three-solo-v2.json
+MAINLINE_BATTLE_BEGIN shell solo=true
+MAINLINE_BATTLE_END shell solo=true retries=0 hp=[1, 1]
+MAINLINE_BATTLE_BEGIN reserve solo=true
+MAINLINE_BATTLE_END reserve solo=true retries=0 hp=[3, 2]
+MAINLINE_RECORD user://story-run-1791644601082-3908237-later-chapter-four-solo-v2.json
+MAINLINE_RECORD user://story-run-1791644601082-3908237-later-chapter-five-solo-v2.json
+M27_MAINLINE_COMPLETE solo=true route=["prologue", "one", "two", "three", "four", "five"] encounters=["first", "shell", "reserve"]
+MAINLINE_CLICK rect=[P: (320.0, 530.0), S: (240.0, 43.0)] viewport=(64, 64) transform=[X: (0.05, 0.0), Y: (0.0, 0.05), O: (0.0, 12.0)] visible=true running=false
+MAINLINE_RECORD user://story-run-1791644622585-25411352-prologue-dual-v2.json
+MAINLINE_BATTLE_BEGIN first solo=false
+MAINLINE_BATTLE_END first solo=false retries=0 hp=[3, 2]
+MAINLINE_RECORD user://story-run-1791644622585-25411352-one-dual-v2.json
+TWO_WINDOW_STATE [(1102.547, 425.1475), (1117.634, 444.6448), (1155.0, 360.0)] phase=complete finished=true joined=false message=朵朵：圆圆！我们找你好久，你倒是把床找好了。门边的灯熄了，它被关在里面；窗栏太窄，我们得修门。 stage=story-chapter
+MAINLINE_RECORD user://story-run-1791644622585-25411352-later-chapter-two-dual-v2.json
+THREE_REUNION_STATE [(545.3552, 441.2131), (558.9946, 438.2842), (521.6522, 485.6585)] joined=true message=朵朵蹲下摸摸爪子，圆圆把脸安静地送进她手里；团团在身边举爪搭过来。朵朵：以后等我们一起，好不好？圆圆正式入队了。
+MAINLINE_RECORD user://story-run-1791644622585-25411352-later-chapter-three-dual-v2.json
+MAINLINE_BATTLE_BEGIN shell solo=false
+MAINLINE_BATTLE_END shell solo=false retries=0 hp=[3, 3]
+MAINLINE_BATTLE_BEGIN reserve solo=false
+MAINLINE_BATTLE_END reserve solo=false retries=0 hp=[2, 1]
+MAINLINE_RECORD user://story-run-1791644622585-25411352-later-chapter-four-dual-v2.json
+MAINLINE_RECORD user://story-run-1791644622585-25411352-later-chapter-five-dual-v2.json
+M27_MAINLINE_COMPLETE solo=false route=["prologue", "one", "two", "three", "four", "five"] encounters=["first", "shell", "reserve"]
+M27_MAINLINE_PLAYTHROUGH: 641 checks, 0 failed

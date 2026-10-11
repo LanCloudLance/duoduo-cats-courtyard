@@ -4,6 +4,15 @@ static func seed_points(id: String) -> Array[Vector2]:
     if id=="reserve":return [Vector2(795,585),Vector2(1080,425)]
     return [Vector2(740,655)]
 static func start(b,number: int) -> void:
+    if b.encounter_revision==2:
+        b.seeds=b.seeds.filter(func(seed):return seed.pos.x<b.Space.GATE.x-45)
+        if b.story_encounter=="shell":
+            b._spawn("thorn",Vector2(730,530));b._spawn("weaver",Vector2(895,365))
+        else:
+            b._spawn("armored",Vector2(810,625));b._spawn("sprout",Vector2(720,365))
+        for enemy in b.enemies:
+            if enemy.kind==("weaver" if b.story_encounter=="shell" else "armored"):b.objective_enemy_id=enemy.id
+        return
     match b.story_encounter:
         "first":
             b._spawn("sprout" if number==1 else "weaver",Vector2(760,400) if number==1 else Vector2(1000,370))
@@ -19,6 +28,8 @@ static func start(b,number: int) -> void:
             b._spawn("thorn" if number==1 else "armored",Vector2(875,410))
             b._spawn("weaver",Vector2(1040,625))
 static func objective(b,number: int) -> String:
+    if b.encounter_revision==2:
+        return "顺着连藤找到织藤花，让检修门松开。" if b.story_encounter=="shell" else "让硬壳撞开树梯横枝，再沿打开的路撤离。"
     match b.story_encounter:
         "first":return "把通往驿站的小路清出来。"
         "shell":return "让维修外罩的小路重新通畅。"

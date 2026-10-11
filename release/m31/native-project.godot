@@ -1,0 +1,20 @@
+config_version=5
+
+[application]
+config/name="朵朵与猫猫 · 庭院冒险"
+config/version="0.3.1"
+config/use_custom_user_dir=true
+config/custom_user_dir_name="DuoduoCatsCourtyard-Offline"
+config/custom_user_dir_name.editor="DuoduoCatsCourtyard-qa-m31-offline-editor"
+run/main_scene="res://main.tscn"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=800
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
+
+[rendering]
+textures/vram_compression/import_etc2_astc=true
+renderer/rendering_method="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.05, 0.12, 0.10, 1)

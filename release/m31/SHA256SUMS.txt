@@ -1,0 +1,2 @@
+01078ca4a1b5a6cd33af562465e14cda32a62c8f8b1c3c1406b0c444f7bbe8c3  DuoduoCats-M31-macOS-Universal.zip
+8447c5695dfcbb1b6175fe78149c82cc138fe9dbd39caf3d7da51fb77cac67ff  DuoduoCats-M31-Windows-x64.zip

@@ -1,0 +1,541 @@
+{
+  "revision": "M29",
+  "source": "work/m29/compose_score.py",
+  "rendering": "Original written pitches/rhythms and locally synthesized wooden-bar/plucked-string/drum modes; not recorded human instruments.",
+  "sample_rate": 32000,
+  "third_party_samples": false,
+  "retained_effects": "chime-0.wav and chime-1.wav remain the M22 original synthesis",
+  "tracks": [
+    {
+      "name": "home",
+      "bpm": 92,
+      "meter": 3,
+      "bars": 32,
+      "seconds": 62.6086875,
+      "peak": 0.45327607243266416,
+      "loop_delta": 0.00034233967216377656,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 15.652,
+          "rms_db": -24.47567938178103,
+          "melody_events": 22
+        },
+        {
+          "section": "B",
+          "start": 15.652,
+          "end": 31.304,
+          "rms_db": -26.92179278701497,
+          "melody_events": 16
+        },
+        {
+          "section": "breath",
+          "start": 31.304,
+          "end": 39.13,
+          "rms_db": -36.325836900814366,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 39.13,
+          "end": 46.957,
+          "rms_db": -26.070356463238834,
+          "melody_events": 8
+        },
+        {
+          "section": "return",
+          "start": 46.957,
+          "end": 62.609,
+          "rms_db": -23.133943767446176,
+          "melody_events": 24
+        }
+      ],
+      "events": 210,
+      "pressure": false
+    },
+    {
+      "name": "explore",
+      "bpm": 108,
+      "meter": 3,
+      "bars": 40,
+      "seconds": 66.66665625,
+      "peak": 0.4347789813385422,
+      "loop_delta": 0.00044312606953058036,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 13.333,
+          "rms_db": -23.44074965150157,
+          "melody_events": 24
+        },
+        {
+          "section": "B",
+          "start": 13.333,
+          "end": 26.667,
+          "rms_db": -26.173868367139473,
+          "melody_events": 17
+        },
+        {
+          "section": "breath",
+          "start": 26.667,
+          "end": 33.333,
+          "rms_db": -35.628245960323206,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 33.333,
+          "end": 53.333,
+          "rms_db": -25.618723376693417,
+          "melody_events": 23
+        },
+        {
+          "section": "return",
+          "start": 53.333,
+          "end": 66.667,
+          "rms_db": -22.066008062951635,
+          "melody_events": 26
+        }
+      ],
+      "events": 270,
+      "pressure": false
+    },
+    {
+      "name": "puzzle",
+      "bpm": 80,
+      "meter": 3,
+      "bars": 32,
+      "seconds": 72.0,
+      "peak": 0.4320596980742595,
+      "loop_delta": 0.0,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 18.0,
+          "rms_db": -27.41746123870723,
+          "melody_events": 11
+        },
+        {
+          "section": "B",
+          "start": 18.0,
+          "end": 36.0,
+          "rms_db": -29.9162725254893,
+          "melody_events": 8
+        },
+        {
+          "section": "breath",
+          "start": 36.0,
+          "end": 45.0,
+          "rms_db": -36.81520149485268,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 45.0,
+          "end": 54.0,
+          "rms_db": -29.145239959570517,
+          "melody_events": 4
+        },
+        {
+          "section": "return",
+          "start": 54.0,
+          "end": 72.0,
+          "rms_db": -26.39215874652542,
+          "melody_events": 11
+        }
+      ],
+      "events": 101,
+      "pressure": false
+    },
+    {
+      "name": "chapter3",
+      "bpm": 96,
+      "meter": 3,
+      "bars": 40,
+      "seconds": 75.0,
+      "peak": 0.4926574656419303,
+      "loop_delta": 0.0013562582099215137,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 15.0,
+          "rms_db": -26.041553608181847,
+          "melody_events": 17
+        },
+        {
+          "section": "B",
+          "start": 15.0,
+          "end": 30.0,
+          "rms_db": -25.347474776680187,
+          "melody_events": 12
+        },
+        {
+          "section": "breath",
+          "start": 30.0,
+          "end": 37.5,
+          "rms_db": -36.17976458265787,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 37.5,
+          "end": 60.0,
+          "rms_db": -26.85529373696852,
+          "melody_events": 18
+        },
+        {
+          "section": "return",
+          "start": 60.0,
+          "end": 75.0,
+          "rms_db": -24.510699512622814,
+          "melody_events": 19
+        }
+      ],
+      "events": 238,
+      "pressure": false
+    },
+    {
+      "name": "chapter4",
+      "bpm": 104,
+      "meter": 4,
+      "bars": 32,
+      "seconds": 73.84615625,
+      "peak": 0.4117791461152116,
+      "loop_delta": 0.001964270252133072,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 18.462,
+          "rms_db": -24.734309011207532,
+          "melody_events": 24
+        },
+        {
+          "section": "B",
+          "start": 18.462,
+          "end": 36.923,
+          "rms_db": -27.109975435364085,
+          "melody_events": 17
+        },
+        {
+          "section": "breath",
+          "start": 36.923,
+          "end": 46.154,
+          "rms_db": -37.06131782371823,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 46.154,
+          "end": 55.385,
+          "rms_db": -27.263642073677637,
+          "melody_events": 7
+        },
+        {
+          "section": "return",
+          "start": 55.385,
+          "end": 73.846,
+          "rms_db": -23.683848156939188,
+          "melody_events": 26
+        }
+      ],
+      "events": 270,
+      "pressure": false
+    },
+    {
+      "name": "chapter5",
+      "bpm": 112,
+      "meter": 4,
+      "bars": 32,
+      "seconds": 68.5714375,
+      "peak": 0.438094125814434,
+      "loop_delta": 0.0,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 17.143,
+          "rms_db": -25.355123473791792,
+          "melody_events": 15
+        },
+        {
+          "section": "B",
+          "start": 17.143,
+          "end": 34.286,
+          "rms_db": -26.9771867385499,
+          "melody_events": 14
+        },
+        {
+          "section": "breath",
+          "start": 34.286,
+          "end": 42.857,
+          "rms_db": -36.580711517749705,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 42.857,
+          "end": 51.429,
+          "rms_db": -26.558043682642577,
+          "melody_events": 6
+        },
+        {
+          "section": "return",
+          "start": 51.429,
+          "end": 68.571,
+          "rms_db": -23.95293656799253,
+          "melody_events": 15
+        }
+      ],
+      "events": 354,
+      "pressure": true
+    },
+    {
+      "name": "battle",
+      "bpm": 136,
+      "meter": 3,
+      "bars": 48,
+      "seconds": 63.52940625,
+      "peak": 0.548726647746819,
+      "loop_delta": 0.0012760073777172663,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 10.588,
+          "rms_db": -21.93219603708463,
+          "melody_events": 25
+        },
+        {
+          "section": "B",
+          "start": 10.588,
+          "end": 21.176,
+          "rms_db": -24.50774502621801,
+          "melody_events": 17
+        },
+        {
+          "section": "breath",
+          "start": 21.176,
+          "end": 26.471,
+          "rms_db": -34.54702536236326,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 26.471,
+          "end": 52.941,
+          "rms_db": -24.357226129252282,
+          "melody_events": 38
+        },
+        {
+          "section": "return",
+          "start": 52.941,
+          "end": 63.529,
+          "rms_db": -20.55066339314945,
+          "melody_events": 27
+        }
+      ],
+      "events": 611,
+      "pressure": true
+    },
+    {
+      "name": "boss",
+      "bpm": 144,
+      "meter": 3,
+      "bars": 48,
+      "seconds": 60.0,
+      "peak": 0.5205521602871155,
+      "loop_delta": 0.0009946775607078875,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 10.0,
+          "rms_db": -21.80211385592998,
+          "melody_events": 25
+        },
+        {
+          "section": "B",
+          "start": 10.0,
+          "end": 20.0,
+          "rms_db": -23.706204531986685,
+          "melody_events": 24
+        },
+        {
+          "section": "breath",
+          "start": 20.0,
+          "end": 25.0,
+          "rms_db": -34.210725544172405,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 25.0,
+          "end": 50.0,
+          "rms_db": -23.994300702649255,
+          "melody_events": 40
+        },
+        {
+          "section": "return",
+          "start": 50.0,
+          "end": 60.0,
+          "rms_db": -20.495907144574325,
+          "melody_events": 27
+        }
+      ],
+      "events": 620,
+      "pressure": true
+    },
+    {
+      "name": "rest",
+      "bpm": 78,
+      "meter": 3,
+      "bars": 32,
+      "seconds": 73.84615625,
+      "peak": 0.2907259436611547,
+      "loop_delta": 0.0,
+      "sections": [
+        {
+          "section": "A",
+          "start": 0.0,
+          "end": 18.462,
+          "rms_db": -32.707297701938906,
+          "melody_events": 4
+        },
+        {
+          "section": "B",
+          "start": 18.462,
+          "end": 36.923,
+          "rms_db": -33.590874840883664,
+          "melody_events": 4
+        },
+        {
+          "section": "breath",
+          "start": 36.923,
+          "end": 46.154,
+          "rms_db": -37.03468617750214,
+          "melody_events": 0
+        },
+        {
+          "section": "development",
+          "start": 46.154,
+          "end": 55.385,
+          "rms_db": -33.07536865093998,
+          "melody_events": 2
+        },
+        {
+          "section": "return",
+          "start": 55.385,
+          "end": 73.846,
+          "rms_db": -31.683637315494686,
+          "melody_events": 4
+        }
+      ],
+      "events": 81,
+      "pressure": false
+    }
+  ],
+  "files": {
+    "accent-discovery.ogg": {
+      "sha256": "1776d834aa96d2e47249633657c56c8a9a75f7769e1245f358f23f1444224c9f",
+      "bytes": 11524
+    },
+    "accent-resolved.ogg": {
+      "sha256": "ff4b56b29435752a12ce8b7b1daa9854685d31cdce00ff5f609a1705ed203cfd",
+      "bytes": 14430
+    },
+    "accent-reunion.ogg": {
+      "sha256": "46f8cacdc90479ada10731de1eeb09379bf4fba70c8682c6d43fa8e25cb82d4f",
+      "bytes": 16294
+    },
+    "battle-melody.ogg": {
+      "sha256": "a8796ada2a6f8b086871c9a2fc3c4949f90c380007f0f0a38dac6aae96d8ea9b",
+      "bytes": 259686
+    },
+    "battle-pressure.ogg": {
+      "sha256": "c75386f55e29296d52fba94f98bfc5ee37b72da0b3523573ab8f171a74497d9f",
+      "bytes": 301290
+    },
+    "battle.ogg": {
+      "sha256": "9a1bb2e7c99ed065a69a7316e5908d6f94c3e925b67a252d9367d1328b0c2e54",
+      "bytes": 362884
+    },
+    "boss-melody.ogg": {
+      "sha256": "fad6774e81e3468611fa7090b475b91dac968f268755e1df2ec9e95987ee3ab0",
+      "bytes": 251094
+    },
+    "boss-pressure.ogg": {
+      "sha256": "9c057240a1dcf85f04a4b82da151a341624b06b7617dc9deb64a894a719d91fb",
+      "bytes": 293921
+    },
+    "boss.ogg": {
+      "sha256": "02a1aa060a103dc7b0788613bde179cdea2ca6473c16fd4095ab46a4c2f1b82a",
+      "bytes": 346952
+    },
+    "chapter3-melody.ogg": {
+      "sha256": "5eeef24c1411d1601bc24867a960e76001d5392a04edcf29a8c30a8a22f87f3f",
+      "bytes": 287453
+    },
+    "chapter3.ogg": {
+      "sha256": "d795ec47a1563047a897e7068708bd264d54e674ce8d30f1673be99ce07b90c3",
+      "bytes": 391642
+    },
+    "chapter4-melody.ogg": {
+      "sha256": "6510d9c54cdbf2ff2dd6fae32ff6623674fc0d4b7777c0008a9e0af1df0ba74e",
+      "bytes": 266443
+    },
+    "chapter4.ogg": {
+      "sha256": "9beedffd37b5059c1053508cca9778c67a383ca17f7ed74bf75b9fbb23de0770",
+      "bytes": 404699
+    },
+    "chapter5-melody.ogg": {
+      "sha256": "058101ab10fb615ec7e38c34a23ab6e3348ecd489144a5cc33e2442e29ee775f",
+      "bytes": 225071
+    },
+    "chapter5-pressure.ogg": {
+      "sha256": "2b5f18c199aad25ececf4aca981b18136ac2f3a93d4c97e786ae76b7b5f45893",
+      "bytes": 284223
+    },
+    "chapter5.ogg": {
+      "sha256": "5328b235bde5d9425db616598fd57917c5746db1378644581ac1eb60f870bfcc",
+      "bytes": 315652
+    },
+    "explore-melody.ogg": {
+      "sha256": "7460e6362cc4c65bc7b7577ce954dcf3f165291ddcda19761c4c15d7f3ce17da",
+      "bytes": 261218
+    },
+    "explore.ogg": {
+      "sha256": "6b85830bc9e13e6906e1d79152c45de86f0230a7f1a3ca0394a25e63612266e9",
+      "bytes": 362728
+    },
+    "home-melody.ogg": {
+      "sha256": "a6d560a4b2dc4b24ccee996ed7a55388fd9c2f42c2a717a11995ea74bd2bff13",
+      "bytes": 233632
+    },
+    "home.ogg": {
+      "sha256": "21a8fe184381232cb296a216b891866683c01d02ef16c7cf193e86a9ddabed0b",
+      "bytes": 325026
+    },
+    "puzzle-melody.ogg": {
+      "sha256": "cb76ea51e82f2b19d6f2094207f122c014b173cc0332f875d49dfde3bb076c12",
+      "bytes": 199445
+    },
+    "puzzle.ogg": {
+      "sha256": "07c4809ac48909345c2e9776a1427eb0cf77233ef366479281166ca18c088cd0",
+      "bytes": 251462
+    },
+    "rest-melody.ogg": {
+      "sha256": "67e78338c2daf03cf73cf96e0872d46464100f09919431fadb803548cc2318e7",
+      "bytes": 107874
+    },
+    "rest.ogg": {
+      "sha256": "bb8b21b825bad943f46e264f8d0915cf3fc8a15ec184300d4c3704c330b5c9ac",
+      "bytes": 260733
+    }
+  },
+  "subjective_listening_verified": false
+}

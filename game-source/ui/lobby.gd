@@ -21,6 +21,8 @@ var battle_save_error:=""
 const Checkpoint = preload("res://game/checkpoint.gd")
 const TEAM = preload("res://assets/team.png")
 const Music = preload("res://game/music_director.gd")
+const JourneyScore = preload("res://game/journey_score.gd")
+var journey_score = JourneyScore.new()
 const CREAM := Color("f6eedc")
 const MUTE := Color("a8b9ad")
 const GOLD := Color("e9c981")
@@ -682,6 +684,24 @@ func _notification(what: int) -> void:
     elif what == NOTIFICATION_APPLICATION_FOCUS_IN:
         session.set_focus(true)
 
+func update_journey_music(playing:bool)->void:
+    if playing:music_started=true
+    music.set_paused(not session.focused or (music_started and not playing))
+    if not music_started:
+        music.set_scene("home","flow")
+        return
+    if not playing or not session.focused:return
+    var source=prologue.state if stage=="prologue" else chapter_one.state if stage in ["chapter-one","chapter-combat"] else story_chapter.state if stage in ["story-chapter","story-combat"] else null
+    var score:Dictionary=journey_score.sample(stage,source,story_run_id,arena.battle if stage in ["combat","chapter-combat","story-combat"] else null)
+    music.set_scene(score.profile,score.mood)
+    if not score.accent.is_empty():music.accent(score.accent)
+    if stage in ["combat","chapter-combat","story-combat"]:
+        if arena.battle.feedback_id<music_feedback_cursor:music_feedback_cursor=0
+        for event in arena.battle.feedback_since(music_feedback_cursor):
+            # Ordinary taps retain the melody; only weighty contacts create room.
+            if event.kind in ["heavy","hurt","parry","danger","plant_burst"]:music.duck(0.18)
+        music_feedback_cursor=arena.battle.feedback_id
+
 func _process(_delta: float) -> void:
     if not is_instance_valid(top_status):
         return
@@ -727,18 +747,8 @@ func _process(_delta: float) -> void:
             JavaScriptBridge.eval("window.duoduoStatus = " + JSON.stringify(report),true)
     var playing: bool = session.running()
     journal_button.visible=stage in ["prologue","chapter-one","chapter-combat","story-chapter","story-combat"]
-    if playing: music_started = true
-    if not music_started: music.set_context("home")
-    elif playing:
-        if stage == "story-chapter": music.set_context("home" if story_chapter.state.phase in ["home","complete"] and story_chapter.state.chapter==5 else "rest" if story_chapter.state.finished else "boss" if story_chapter.state.chapter==5 and story_chapter.state.phase in ["shield","lure","unjam","withdraw"] else "puzzle")
-        elif stage == "chapter-one": music.set_context("rest" if chapter_one.state.lit else "puzzle" if chapter_one.state.phase == "station" else "explore")
-        else: music.set_context(music.context_for("combat" if stage in ["chapter-combat","story-combat"] else stage,arena.battle.phase,arena.battle.wave))
-    if playing and stage in ["combat","chapter-combat","story-combat"]:
-        if arena.battle.feedback_id < music_feedback_cursor: music_feedback_cursor = 0
-        for event in arena.battle.feedback_since(music_feedback_cursor):
-            if event.kind in ["hit","heavy","hurt","parry","danger","plant_burst"]: music.duck(0.18)
-        music_feedback_cursor = arena.battle.feedback_id
-    music.set_paused(not session.focused or (music_started and not playing))
+    update_journey_music(playing)
+
     for child in get_children():
         if child is CanvasItem and child != story_chapter and child != chapter_one and child != prologue and child != courtyard and child != arena and child != light_corridor and child != chime_gate and child != rest_area:
             child.visible = not playing and (child==journey_menu or development_menu)
@@ -1057,7 +1067,19 @@ func start_story_chapter(chapter:int,single:bool,continuation:=false)->void:
 func enter_story_combat()->void:
     router.clear_keyboard()
     var id:="first" if not story_chapter.state.joined else "reserve" if story_chapter.state.get("reserve_retained")==true else "shell"
-    if not configure_story_arena({"id":id,"mode":"solo" if session.single_player else "dual","available_role_ids":[0,1,2] if story_chapter.state.joined else [0,1],"selected_role_id":0,"current_cat":story_chapter.state.current_cat,"story_run_id":story_run_id,"return_chapter":story_chapter.state.chapter,"return_phase":story_chapter.state.phase,"cleared_segments":0,"title":story_chapter.state.title+" · "+("树梯入口" if id=="reserve" else "外罩支架"),"destination":"通路清开了。回到修复现场。","allow_next_level":true}):return
+    var chapter:int=story_chapter.state.chapter
+    var context:Dictionary={
+        "id":id,"encounter_revision":2 if chapter==4 else 1,
+        "mode":"solo" if session.single_player else "dual",
+        "available_role_ids":[0,1,2] if story_chapter.state.joined else [0,1],
+        "selected_role_id":0,"current_cat":story_chapter.state.current_cat,
+        "story_run_id":story_run_id,"return_chapter":chapter,
+        "return_phase":story_chapter.state.phase,"cleared_segments":0,
+        "title":story_chapter.state.title+" · "+("树梯横枝" if id=="reserve" else "检修路藤门"),
+        "destination":"横枝让开了，一起到树心前歇歇。" if id=="reserve" else "藤门松开了，修过的外罩和看见的灯路都还在。",
+        "allow_next_level":true
+    }
+    if not configure_story_arena(context):return
     apply_player_settings()
     stage="story-combat";story_chapter.set_active(false);arena.set_active(session.running());arena._refresh()
 
@@ -1072,7 +1094,7 @@ func collect_battle_progress()->void:
     if not story_route_active or stage not in ["chapter-combat","story-combat"]:return
     var result:Dictionary=arena.result()
     if result.get("story_run_id")!=story_run_id:return
-    var signature:String=JSON.stringify([result.completed_segments,result.selected_role_id,result.current_cat])
+    var signature:String=JSON.stringify([result.get("encounter_revision",1),result.get("route_open",false),result.completed_segments,result.selected_role_id,result.current_cat])
     if signature==battle_save_signature and battle_save_error.is_empty():return
     if battle_journey.save(result):battle_save_signature=signature;battle_save_error=""
     else:battle_save_error=battle_journey.last_error

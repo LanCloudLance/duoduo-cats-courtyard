@@ -1,0 +1,53 @@
+{
+  "game_version": "M31 / 0.3.1",
+  "tag": "m31-offline-v0.3.1",
+  "release_url": "https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/tag/m31-offline-v0.3.1",
+  "source_snapshot": "game-source",
+  "source_manifest_files": 723,
+  "sealed_source_manifest_sha256": "12063f6deda1e9f49a185b37c32408f0f2b0ec7eb2598d704a1b26ed087702a5",
+  "gameplay_modified_for_native_export": false,
+  "source_self_review_passes": [
+    1,
+    2,
+    3
+  ],
+  "integrated_suites_passed": 37,
+  "native_mac_resource_checks": 151,
+  "native_mac_resource_failures": 0,
+  "pure_pck_files": 297,
+  "mac_windows_game_pck_identical": true,
+  "zip_crc_and_contents_verified": true,
+  "mac_extraction_permissions_and_codesign_verified": true,
+  "player_namespace": "DuoduoCatsCourtyard-Offline",
+  "packages": [
+    {
+      "platform": "macOS-Universal",
+      "bytes": 87678310,
+      "sha256": "01078ca4a1b5a6cd33af562465e14cda32a62c8f8b1c3c1406b0c444f7bbe8c3",
+      "game_version": "M31 / 0.3.1",
+      "engine_version": "4.7.2.stable.official.ed1daf0bf",
+      "executable_sha256": "930dce9f52a0eaa77af06801028e5cb0093c0dd8ccd1b0eee87577fd6a3e4282",
+      "game_pck_sha256": "8caddd37d5fe165aed22d8108f3f6074d6a0f555ce2472c60dfc96fa87d914be",
+      "asset_name": "DuoduoCats-M31-macOS-Universal.zip",
+      "download_url": "https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/download/m31-offline-v0.3.1/DuoduoCats-M31-macOS-Universal.zip"
+    },
+    {
+      "platform": "Windows-x64",
+      "bytes": 65285791,
+      "sha256": "8447c5695dfcbb1b6175fe78149c82cc138fe9dbd39caf3d7da51fb77cac67ff",
+      "game_version": "M31 / 0.3.1",
+      "engine_version": "4.7.2.stable.official.ed1daf0bf",
+      "executable_sha256": "d34d36f3be1a6c49c56525ae86469b92e4f417ddf0b43cf00dd80c385c4b0562",
+      "game_pck_sha256": "8caddd37d5fe165aed22d8108f3f6074d6a0f555ce2472c60dfc96fa87d914be",
+      "asset_name": "DuoduoCats-M31-Windows-x64.zip",
+      "download_url": "https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/download/m31-offline-v0.3.1/DuoduoCats-M31-Windows-x64.zip"
+    }
+  ],
+  "limits": [
+    "Mac ad-hoc signature; no Apple Developer ID notarization",
+    "Windows actual gameplay not yet tested",
+    "Intel Mac, older OS and real dual controllers not tested",
+    "Human fun and long-session listening not yet accepted"
+  ],
+  "followup": "P2: journal button slightly overlaps keyboard instruction in the pause menu"
+}

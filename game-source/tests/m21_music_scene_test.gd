@@ -9,6 +9,9 @@ func run() -> void:
     var lobby = load("res://main.tscn").instantiate()
     root.add_child(lobby)
     await process_frame
+    # Explicit fixture: another QA suite may have saved a different music level.
+    lobby.player_settings.music_level=1
+    lobby.apply_player_settings()
     var font: Font = lobby.music_button.get_theme_font("font")
     check(font == lobby.theme.default_font and font.has_char("音".unicode_at(0)),"music button uses bundled Chinese font without relying on OS fallback")
     lobby.music_button.pressed.emit()

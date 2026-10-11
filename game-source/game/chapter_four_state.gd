@@ -20,6 +20,7 @@ const STALL_LAMP:=Vector2(300,270)
 const VIEW_LAMP:=Vector2(1090,595)
 const MARKET_DOOR:=Vector2(420,410)
 const VIEW_DOOR:=Vector2(980,530)
+const TREE_ENTRY:=Vector2(1170,570)
 var visit_room:=""
 var visit_pending:="none"
 var lamp_dest:="rack"
@@ -76,7 +77,7 @@ func aimed(role:int,origin:Vector2,destination:Vector2)->bool:
 
 func room_name()->String:
     if not visit_room.is_empty():return visit_room
-    return "market" if phase=="market" else "exterior" if phase in ["exterior","battle_two"] else "interior"
+    return "market" if phase=="market" else "interior"
 func walkable(p:Vector2,role:int)->bool:
     if not super.walkable(p,role):return false
     if room_name()=="market" and PIT.has_point(p):return role==1 and market_beam and cover_hooked and RETURN_PLANK.has_point(p)
@@ -113,13 +114,16 @@ func target(role:int)->String:
             if reserve_available and near(role,STALL_LAMP,55):return "集市备用灯座"
             if near(role,Vector2(182,290),60):return "重新摆摊的摊主"
         elif visit_room=="exterior":
-            if cloth and phase in ["meet","investigate"] and near(role,PATCH,60):return "查看破罩"
+            if cloth and near(role,TREE_ENTRY,40):return "检修路藤门"
+            if cloth and near(role,SEAM_LIGHT,60):return "外罩照灯架"
+            if cloth and near(role,LATCH,60):return "外罩固定扣"
+            if cloth and near(role,PATCH,60):return "破防风罩"
             if reserve_available and near(role,VIEW_LAMP,55):return "观景台灯座"
         return ""
-    if phase in ["meet","investigate","test","offer","home_offer","rest"]:
+    if phase in ["meet","investigate","exterior","test","offer","home_offer","rest"]:
         if near(role,MARKET_DOOR,48):return "去集市灯座"
         if near(role,VIEW_DOOR,48):return "去观景外廊"
-    if reserve_available and phase in ["investigate","test","offer","home_offer","rest"]:
+    if reserve_available and phase in ["meet","investigate","exterior","test","offer","home_offer","rest"]:
         if near(role,RESERVE,38):return "独立小灯把手"
     if phase=="market":
         if cover_carried and near(role,CATCH):return "接住灯罩"
@@ -127,20 +131,20 @@ func target(role:int)->String:
         if near(role,MARKET_LIGHT,62):return "照向低处"
         if near(role,HOOK,62):return "灯罩拉环"
         if near(role,CATCH,54):return "接物宽岸"
-    if phase in ["meet","investigate","test","offer"]:
+    if phase in ["meet","investigate","exterior","test","offer"]:
         if near(role,ALIGHT):return "阿灯"
         if near(role,DUCT_LIGHT,60):return "暗槽照灯架"
         if near(role,BRANCH,60):return "旁路隔离扣"
         if near(role,ARROWS,60):return "收送试光柄"
-    if phase=="exterior":
-        if near(role,SEAM_LIGHT,60):return "外罩照灯架"
-        if near(role,LATCH,60):return "外罩固定扣"
-        if near(role,PATCH,60):return "破防风罩"
     if phase=="home_offer" and near(role,HOME,80):return "应急归途灯匣"
     if phase=="rest" and near(role,REST,85):return "树心前的休息桌"
     return ""
 
 func interact(role:int)->void:
+    _interact(role)
+    reconcile_progress()
+
+func _interact(role:int)->void:
     if role not in available_roles() or finished or battle_requested or action_time[role]>0 or dialogue_active() or social_transition_active():return
     var item:=target(role)
     if item=="":return
@@ -156,12 +160,12 @@ func interact(role:int)->void:
             actions[2]="";market_beam=false
             stage_social([],{"role":0,"kind":"travel","target":destination,"duration":0.1,"participants":[0,1,2]}, {0:destination+Vector2(20,30),1:destination+Vector2(45,50),2:destination+Vector2(70,70)})
         "重新摆摊的摊主":say("摊主在小灯下铺好布：这会儿可以看清灯罩的花纹了。" if lamp_dest=="stall" else "摊主把灯罩抱在怀里，等摊面再亮一些。")
-        "查看破罩":
-            shell_examined=true
-            if role==0:
-                early_patch=true;act(0,"touch")
-                observe("shell_wind","补片盖住一角，那里安静了；没压住的布边仍被余风吹起。",PATCH)
-            else:observe("shell_wind","罩上的裂口透着风，里面的灯匣跟着晃。",PATCH)
+        "检修路藤门":
+            if role!=0:say("朵朵带大家一起去看通向树心的检修路。");return
+            if battles_finished>0:observe("tree_route","源藤已经退开，通向树心的检修路留出来了。",TREE_ENTRY);return
+            phase="battle_one";battle_requested=true;battle_waves=1
+            clear_trial();actions=["","",""];patch_braced=false
+            say("粗藤从门后的一株织藤源连过来，缠住了树心检修路。先让它松开。",1)
         "独立小灯把手":
             if role!=0:say("封好的小灯有一个适合手提的把手。");return
             if lamp_dest=="rack":
@@ -192,32 +196,26 @@ func interact(role:int)->void:
         "接住灯罩":
             if role!=0:say("团团把灯罩举向朵朵，等她接稳。");return
             if not near(1,CATCH,90) or PIT.has_point(positions[1]):say("朵朵伸出手，等团团沿踏板回到宽岸。");return
-            cloth=true;cover_carried=false;phase="meet";actions[2]="";market_beam=false
+            cloth=true;cover_carried=false;phase="investigate";actions[2]="";market_beam=false
             say("朵朵接稳灯罩。摊主：谢谢！这块修补布请带给灯树里的阿灯。",2)
         "接物宽岸":say("朵朵在宽岸伸手：团团，把灯罩带回来，我接着。")
         "阿灯":
             if role!=0:say("阿灯蹲下摸摸猫猫：我一直守着送光台，没有带走圆圆。");return
-            if phase=="meet":
-                phase="investigate"
-                start_dialogue(["阿灯：昨夜风很大。我试着送光，可它们又回来了。","阿灯：停止杆也拉不动。我怕把最后的光弄丢。","朵朵：先试一小段，看看它真的去了哪里。"],{"role":0,"kind":"inspect","target":ALIGHT,"duration":1.5,"participants":[0,1,2]})
-            elif phase=="investigate":
-                if not diagnosis_ready():
-                    say("阿灯：我看见的光会回来。你们的小灯为什么能留下？我们还得比较连接改变后的结果。");return
-                arrows_seen=true;phase="battle_one";battle_requested=true;battle_waves=2
-                clear_trial();actions[2]=""
-                say("小灯被隔开时留住光，连回去却被收走。朵朵：余风和回收，是两件事。",1)
+            if phase in ["meet","investigate","exterior","test"]:
+                if diagnosis_ready():say("阿灯：小灯隔开就能留光，主机却仍在回收。外廊的检修路通向树心。",1)
+                else:start_dialogue(["阿灯：昨夜风很大。我试着送光，可它们又回来了。","阿灯：停止杆也拉不动。我怕把最后的光弄丢。","朵朵：先试一小段，看看它真的去了哪里。"],{"role":0,"kind":"inspect","target":ALIGHT,"duration":1.5,"participants":[0,1,2]})
             elif phase=="offer" and inward_verified:
                 lantern_offered=true;phase="home_offer"
                 say("阿灯：备用灯匣不接主线，够你们三个一起回家。\n门里的沙发和猫垫亮了。主线还没修好。",2)
             else:say("阿灯：小备用灯和主线分开存着光，所以集市能歇脚。可回家的路还接在主线上。")
         "暗槽照灯架":
-            if phase not in ["investigate","test"]:return
+            if phase not in ["meet","investigate","exterior","test"]:return
             if role!=2:say("这里的架子能固定圆圆的光，照进上方的暗槽。");return
             if not aimed(2,DUCT_LIGHT,DUCT):say("光落在槽外。圆圆要面向上方的暗槽，再固定定光扣。");return
             act(2,"light");duct_seen=true
             say("圆圆稳住试光源。试光柄旁有两条槽：一条接主机，一条接小灯。再互动或用工具可以撤光。",1)
         "旁路隔离扣":
-            if phase not in ["investigate","test"]:return
+            if phase not in ["meet","investigate","exterior","test"]:return
             if role!=1:say("窄槽里的小隔离扣适合团团的爪钩。它只控制旁路。");return
             if not trial_lit():say("扣后太暗了，团团看不清，先把试光源稳住。");return
             if pulse_active:cancel_trial()
@@ -227,21 +225,23 @@ func interact(role:int)->void:
                 say("团团合回旁路，刚留住的光沿连接槽被主机吸走。折枝仍卡在主机里，没有被拔动。",1)
             else:
                 say("团团打开旁路隔离扣，小灯和主机断开了。扣后能看见折枝，主机里的枝条不能强拔。" if bypass_isolated else "团团合回隔离扣，小灯重新连上主机。",1)
+            reconcile_progress()
         "收送试光柄":
             if role!=0:say("试光柄有些重，让朵朵切换主线和分光，再用工具送一缕测试光。");return
-            if phase not in ["investigate","test"]:return
+            if phase not in ["meet","investigate","exterior","test"]:return
             if pulse_active:cancel_trial()
             route_split=not route_split
             say("朵朵把镜片转向分光槽。工具键送出一缕测试光。" if route_split else "朵朵把镜片转回主线。工具键送出一缕测试光。",1)
         "破防风罩":
             if role!=0:say("补片需要朵朵撑稳，才能够到外侧的固定扣。");return
-            if not cloth or not arrows_seen:return
+            if not cloth:return
             shell_examined=true
+            if shell_fixed:say("补片和边扣都牢牢留住了，罩边已经不漏风。");return
             if not latch_fixed:
-                act(0,"brace");patch_braced=true;say("朵朵把修补布撑在破口。她不动时，团团就能拉来外侧固定扣。",1)
+                early_patch=true;act(0,"brace");patch_braced=true;say("朵朵把修补布撑在破口。她不动时，团团就能拉来外侧固定扣。",1)
             elif seam_seen:
-                shell_fixed=true;patch_braced=false;actions[0]="";actions[2]="";phase="test";visit_room="exterior"
-                route_split=false;clear_trial()
+                shell_fixed=true;patch_braced=false;actions[0]="";actions[2]=""
+                clear_trial();reconcile_progress()
                 say("朵朵压牢最后一道扣槽，罩内的风停了。回试光台送一缕光，看看修补改变了什么。",2)
             else:say("扣子已经固定住补片，阴影里还有一道没有压紧的边。")
         "外罩固定扣":
@@ -269,18 +269,24 @@ func after_battle()->void:
     super.after_battle()
     actions=["","",""];action_time=[0.0,0.0,0.0]
     if phase=="battle_one":
-        phase="exterior";positions=[Vector2(850,495),Vector2(895,530),Vector2(805,545)]
-        say("荆棘退开。宽树梯与扶绳通向外罩；带来的修补布正好能盖住破口。")
+        phase="investigate";visit_room="exterior";visit_pending="none"
+        positions=[Vector2(1070,550),Vector2(1110,600),Vector2(1030,610)]
+        reconcile_progress()
+        say("源藤退开了，树心检修路不再被缠住。"+("外罩已封牢，主机回流的原因也查清了。" if phase=="offer" else "已经做好的维修和试光结果都还在。"))
     elif phase=="battle_two":
-        phase="rest";positions=[Vector2(780,485),Vector2(730,535),Vector2(680,555)]
-        say("树梯旁的荆棘退开了。归途灯匣仍封好留着，一起到备用灯旁歇歇。")
+        phase="rest";visit_room="";visit_pending="none";positions=[Vector2(780,485),Vector2(730,535),Vector2(680,555)]
+        say("树梯横枝已经让开。归途灯匣仍封好留着，一起到备用灯旁歇歇。")
 
 func objective()->String:
     match phase:
         "market":return "摊主的灯罩落在阴影里的踏板尽头。"
-        "meet":return "修补布已经拿到，阿灯守着的送光台却仍然暗着。"
-        "investigate":return "阿灯开了一小段测试线路。光到底流去了哪里？"
-        "exterior":return "余风从破罩里穿过，补片边缘不停翻动。"
+        "meet":return "修补布已经拿到，送光台与外廊都能去看看。"
+        "investigate":
+            if battles_finished>0:return "检修路已清开。"+("外罩也修好了，再比较试光结果。" if shell_fixed else "可以修外罩，也可以先比较试光结果。")
+            if diagnosis_ready() and shell_fixed and inward_verified:return "外罩已修好，主机仍回流。外廊的检修路通向树心。"
+            if shell_fixed:return "罩边已封好。可以去试光，也可以先清开树心检修路。"
+            return "光回到了哪里？可以试光，也可以先去外廊修罩、清开检修路。"
+        "exterior":return "主机与风是两处问题。外廊补片的边缘还在翻动。"
         "test":return "外罩安静下来了。同一缕测试光会有什么变化？"
         "offer":return "阿灯看着牢固的外罩，从身后拿出一只灯匣。"
         "home_offer":return "备用归途安全亮着；朵朵准备回应阿灯。"
@@ -306,7 +312,7 @@ func release_trial_light()->void:
 func step_trial(dt:float)->void:
     return_flash_time=maxf(0,return_flash_time-dt)
     if not pulse_active:return
-    if phase not in ["investigate","test"] or not trial_lit():cancel_trial();return
+    if phase not in ["meet","investigate","exterior","test"] or not trial_lit():cancel_trial();return
     pulse_elapsed+=dt
     if pulse_elapsed<TRIAL_SECONDS:return
     pulse_active=false;trial_count+=1
@@ -322,16 +328,28 @@ func step_trial(dt:float)->void:
         if lamp_dest=="rack" and not bypass_isolated:reserve_available=false
         reserve_charge=0.5 if reserve_available and lamp_dest=="rack" else 0.0
         say("光沿槽倒流，回到卡住的收光机。"+("破罩边还有一股光被风吹散。" if not shell_fixed else "补好的罩边没有漏出光。"),1)
-    if phase=="test" and shell_fixed and not route_split:
-        inward_verified=true;phase="offer";actions[2]=""
-        say("朵朵：罩边不漏了，主线却还是回流。\n阿灯：外罩修好还不够，里面的收光机没有停。",1)
+    if shell_fixed and not route_split:
+        inward_verified=true
+        say("罩边不漏了，主线仍回流。阿灯：收光机还没停。",1)
+    reconcile_progress()
+
+func reconcile_progress()->void:
+    # Narrative progress follows physical facts; it never selects a room or
+    # awards a repair, an observation, or a battle outcome.
+    if phase in ["market","battle_one","home_offer","battle_two","rest","complete"]:return
+    if diagnosis_ready():arrows_seen=true
+    if battles_finished==0:phase="investigate"
+    elif not diagnosis_ready():phase="investigate"
+    elif not shell_fixed:phase="exterior"
+    elif not inward_verified:phase="test"
+    else:phase="offer"
 
 func tool(role:int)->void:
     if dialogue_active() or social_transition_active():return
     if role not in available_roles() or finished or battle_requested or action_time[role]>0:return
     if role==2 and actions[2]=="light":
         release_trial_light();return
-    if role==0 and phase in ["investigate","test"] and near(0,ARROWS,60):
+    if role==0 and phase in ["meet","investigate","exterior","test"] and near(0,ARROWS,60):
         if pulse_active:say("这缕光还在路上，先看看它去了哪里。");return
         if not trial_lit():say("试光源暗着。圆圆可以在灯架上稳住朝向暗槽的光。");return
         clear_trial();pulse_active=true;act(0,"touch")
@@ -341,7 +359,7 @@ func tool(role:int)->void:
 
 func request_hint()->void:
     hints+=1
-    var context:=str([phase,cover_hooked,cover_carried,market_beam,cloth,duct_seen,trial_lit(),route_split,bypass_isolated,patch_braced,main_return_seen,connected_split_seen,reserve_hold_seen,shell_leak_seen,latch_fixed,seam_seen,shell_fixed,inward_verified])
+    var context:=str([phase,room_name(),battles_finished,near(0,TREE_ENTRY,85),cover_hooked,cover_carried,market_beam,cloth,duct_seen,trial_lit(),route_split,bypass_isolated,patch_braced,main_return_seen,connected_split_seen,reserve_hold_seen,shell_leak_seen,latch_fixed,seam_seen,shell_fixed,inward_verified])
     if hint_context!=context:hint_context=context;hint_level=0
     hint_level=mini(hint_level+1,3)
     var lines:Array[String]=[]
@@ -351,13 +369,13 @@ func request_hint()->void:
             elif not cover_carried and market_beam:lines=["亮起的踏板通到了灯罩脚下。","团团能走这段窄路，圆圆需要继续稳光。","让团团沿亮着的踏板取灯罩，再原路返回宽岸。"]
             elif not cover_carried:lines=["灯罩到了踏板尽头，踏板还在阴影中。","稳定的光能照出供团团返回的路。","让圆圆在集市灯架朝左上稳光，团团沿亮起的踏板取灯罩。"]
             else:lines=["团团叼着灯罩，宽岸有人可以接应。","灯罩要在安全的宽岸交接。","让团团沿踏板回接物宽岸，朵朵靠近接住。"]
-        "meet":lines=["阿灯一直守着暗下来的送光台。","带来的修补布让它知道你们愿意帮忙。","让朵朵走近阿灯，聊聊昨夜的灯光。"]
+        "meet":lines=["送光台和外廊都能去看看。","修补布能补罩，试光台能比较光的去向。","可以直接试光或去外廊；想听昨夜的事，也能找阿灯聊聊。"]
         "investigate":
-            if diagnosis_ready():lines=["独立小灯与接回主机的光，已经留下不同结果。","改变连接后去向改变，说明破罩的风与主机回收是两件事。","到阿灯身边说说对照；不需要把每条可能线路再做一遍。"]
+            if diagnosis_ready():lines=["独立小灯与接回主机的光，已经留下不同结果。","改变连接后去向改变，说明破罩的风与主机回收是两件事。","可以去外廊修罩或清开检修路；已完成的那一件不用重做。"]
             elif not trial_lit():lines=["上方暗槽连着两条试光线路。","试光柄需要稳定光源才能送出样本。","圆圆在暗槽灯架面向上方，互动稳光。"]
             elif not reserve_hold_seen:lines=["小灯到主机之间，有一个能打开的小扣。","分出支路仍可能接着收光机；断开连接后，会不会不同？","团团打开旁路扣，朵朵选择分光，再用工具送一缕光。"]
             elif not (main_return_seen or connected_split_seen or reconnected_seen):lines=["独立小灯留住了光，主机那边还在转动。","可以改送主线，也可以把亮着的小灯重新接回去，比较去向。","在灯仍在试验架上时，团团合回隔离扣；或朵朵切到主线送一缕光。"]
-            else:lines=["灯路有了对照，罩边仍有风声。","断线能留住小灯，不会堵住破罩的风。","带着修补布去破罩边，先看看、压住一角。"]
+            else:lines=["灯路有了对照，罩边仍有风声。","断线能留住小灯，不会堵住破罩的风。","带着修补布去外廊，可以撑住补片、拉扣，再照清翘边。"]
         "exterior":
             if not latch_fixed and patch_braced:lines=["朵朵已经撑稳补片，外侧固定扣不再来回晃。","撑布时保持站位，爪钩才能把远处的扣拉来。","让团团到外罩固定扣旁拉住它。"]
             elif not latch_fixed:lines=["补片边沿翻动，外侧有一只固定扣。","布撑稳后，爪钩才能拉住远处的扣。","朵朵撑住破罩上的布，团团拉外侧固定扣。"]
@@ -365,9 +383,22 @@ func request_hint()->void:
             else:lines=["光照出了补片最后一道扣槽。","挂住补片之后，还要压牢边缘。","朵朵沿破罩的亮边压紧最后一道扣槽。"]
         "test":lines=["罩边的风停了，主机却还在动。","重复同一路线的测试，才能看出修补改变了什么。","圆圆朝暗槽稳光，朵朵选择主线，用工具重送一缕光。"]
         "offer":lines=["阿灯拿出了独立封存的小灯匣。","那里面的备用光没有接回主机。","到阿灯旁听听灯匣能做什么。"]
-        "home_offer":lines=["门里熟悉的沙发和猫垫亮起来了。","这盏备用光够三位一起回去，是否留下由朵朵决定。","三位靠近归途灯匣，让朵朵回应阿灯。"]
+        "home_offer":lines=["门里熟悉的沙发和猫垫亮起来了。","这盏备用光够三位一起回去，朵朵还惦记着暗下来的主路。","三位靠近归途灯匣，让朵朵回应阿灯。"]
         "rest":lines=["休息桌旁的备用灯还亮着。","同伴到齐才能一起准备去树心。","三位到休息桌旁，让朵朵招呼大家歇歇。"]
         _:lines=[objective(),"先处理眼前的荆棘，守住大家。","和伙伴一起完成当前遭遇。"]
+    # Work hints follow the visible room, not a formerly linear story phase.
+    if room_name()=="exterior" and cloth and phase not in ["battle_one","battle_two"]:
+        if battles_finished==0 and (near(0,TREE_ENTRY,85) or shell_fixed):
+            lines=["检修路的门缠着粗藤，藤线一直连到门后。","门后的织藤源维持着这片缠绕，补罩与清路可以先后做。","朵朵到右侧藤门前互动，和猫猫一起清开检修路。"]
+        elif not shell_fixed:
+            if not latch_fixed and patch_braced:lines=["补片撑稳了，外侧固定扣不再来回晃。","撑布时保持站位，爪钩才能把扣拉来。","让团团到外罩固定扣旁拉住它。"]
+            elif not latch_fixed:lines=["补片边沿翻动，外侧有一只固定扣。","布撑稳后，爪钩才能拉住远处的扣。","朵朵撑住破罩上的布，团团拉外侧固定扣。"]
+            elif not seam_seen:lines=["补片挂住了，阴影里还有一道翘边。","斜照的光能显出未压紧的扣槽。","圆圆在外罩灯架朝右上照向补片。"]
+            else:lines=["补片最后一道扣槽已经看清。","挂住补片之后，还要压牢边缘。","朵朵沿破罩的亮边压紧最后一道扣槽。"]
+        elif not diagnosis_ready():lines=["补片和检修路都好了，留光与回流还需要比较。","外罩挡风，不会改变小灯和主机的连接。","从左侧门回试光台，比较隔离小灯与主机收回的光。"]
+        elif not inward_verified:lines=["补片封好了，修后主线还没有试过。","只有实际送光，才知道回流是否还在。","从左侧门回试光台，沿主线送一缕光。"]
+        else:lines=["补片和检修路都好了，试光结果也已经记住。","主机还需要维修，阿灯为三位留着独立灯匣。","从左侧门回屋，听听阿灯的归途安排。"]
+    elif phase=="exterior":lines=["试光结果已经留下，外罩的补片还没封稳。","堵住罩边的风，不需要重做已清开的检修路。","从观景外廊的门出去，再查看补片和固定扣。"]
     var labels:=["观察","规则","局部做法"]
     say("提示 %d / 3 · %s：%s"%[hint_level,labels[hint_level-1],lines[hint_level-1]])
 
@@ -562,7 +593,8 @@ func presentation()->Dictionary:
     data.visit_room=visit_room
     data.mechanisms.append({"id":"market_door","position":MARKET_DOOR,"angle":0.0,"load":false,"lit":false,"connection":"return" if visit_room=="market" else "market"})
     data.mechanisms.append({"id":"view_door","position":VIEW_DOOR,"angle":0.0,"load":false,"lit":false,"connection":"return" if visit_room=="exterior" else "exterior"})
-    data.stage="market" if phase=="market" else "exterior" if phase=="exterior" else "tree_room"
+    data.stage="market" if room_name()=="market" else "exterior" if room_name()=="exterior" else "tree_room"
+    data.tree_route_open=battles_finished>=1
     return data
 
 func social_arrived()->void:

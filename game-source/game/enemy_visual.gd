@@ -55,6 +55,11 @@ func sync(enemy: Dictionary) -> void:
     body.material.set_shader_parameter("hit_flash",0.84 if enemy.flash > 0.075 else 0.0)
     bud.visible = (kind in ["armored","elder"] and enemy.mode == "exposed") or kind == "weaver"
     bud.position = body.position+Vector2(0,-65) if kind == "weaver" else -enemy.direction*29
+    if kind=="armored" and enemy.mode=="exposed":
+        var bloom:float=Pose.rear_openness(enemy)
+        bud.scale=Vector2.ONE*37/REGIONS[4].size.x*(0.60+0.40*bloom)
+        bud.modulate=Color("ffe0a0") if enemy.get("opening","")=="miss" else Color("efffc3")
+    else:bud.modulate=Color.WHITE
     modulate.a = 1.0
     if enemy.has("death_age"):
         var death: float = enemy.death_age/0.38
@@ -85,6 +90,17 @@ func _draw() -> void:
         draw_arc(Vector2.ZERO,32,angle-1.4,angle+1.4,28,Color("fff2bf") if state.bounce > 0 else Color("c59b68"),4,true)
         if state.mode != "exposed":
             draw_circle(-state.direction*29,9,Color("6e6442"))
+        else:
+            # Four real rear leaves fold back over the vulnerable node as it closes.
+            # This stays on the enemy's body; it is not another HUD timer bar.
+            var rear:Vector2=-state.direction*29
+            var bloom:float=Pose.rear_openness(state)
+            var strength:float=0.65 if state.get("opening","")=="miss" else 1.0
+            for i in range(4):
+                var ray:Vector2=Vector2.from_angle(state.direction.angle()+PI/4+i*PI/2)
+                var root:Vector2=rear+ray*9
+                var tip:Vector2=rear+ray*(12+14*bloom*strength)
+                draw_colored_polygon(PackedVector2Array([root-ray.orthogonal()*4,tip,root+ray.orthogonal()*4]),Color("eef8b1") if strength==1.0 else Color("e1bd7e"))
     if state.flash > 0:
         for i in range(5):
             var direction := Vector2.from_angle(i*TAU/5)

@@ -4,7 +4,17 @@ const Checkpoint=preload("res://game/story_checkpoint.gd")
 const Journey=preload("res://game/story_journey.gd")
 var last_error:=""
 func valid(value:Dictionary)->bool:
-    if value.get("version")!=1 or value.get("encounter_id") not in ["first","shell","reserve"] or value.get("mode") not in ["solo","dual"]:return false
+    for key in ["encounter_id","mode","story_run_id","return_phase"]:
+        if not value.get(key) is String:return false
+    if not Checkpoint.integer(value.get("version"),1,1) or not Checkpoint.integer(value.get("completed_segments"),0,2):return false
+    if value.get("encounter_id") not in ["first","shell","reserve"] or value.get("mode") not in ["solo","dual"]:return false
+    var revision=value.get("encounter_revision",1)
+    if not Checkpoint.integer(revision,1,2):return false
+    var opened=value.get("route_open",false)
+    if not opened is bool:return false
+    if revision==2 and not value.has("route_open"):return false
+    if revision==2 and (value.encounter_id not in ["shell","reserve"] or (value.get("completed_segments")!=0 and value.get("completed_segments")!=2) or opened!=(value.get("completed_segments")==2)):return false
+    if revision==1 and opened:return false
     var single:bool=value.mode=="solo"
     var chapter=value.get("return_chapter")
     if not Journey.new().valid({"version":1,"mode":value.mode,"run_id":value.get("story_run_id"),"chapter":chapter},single):return false
@@ -34,4 +44,4 @@ func read(context:Dictionary)->Dictionary:
         if value.get(key)!=context.get(key):return {}
     if value.encounter_id!=context.get("id"):return {}
     # JSON numbers are floats; the live encounter boundary requires exact ints.
-    return {"cleared_segments":int(value.completed_segments),"selected_role_id":int(value.selected_role_id),"current_cat":int(value.current_cat)}
+    return {"encounter_revision":int(value.get("encounter_revision",1)),"route_open":bool(value.get("route_open",false)),"cleared_segments":int(value.completed_segments),"selected_role_id":int(value.selected_role_id),"current_cat":int(value.current_cat)}

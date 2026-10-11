@@ -145,7 +145,7 @@ static func draw_paths(v:Node2D,presentation:Dictionary)->void:
     if presentation.get("phase","") in ["home","complete","farewell","approach"]:return
     for path in presentation.get("paths",[]):
         var id:String=path.get("id","")
-        if id not in ["outer_steps","outer_path","outer_end_ladder","cart_path","far_platform","service_shortcut","service_front"]:continue
+        if id not in ["outer_steps","outer_path","outer_end_ladder","cart_path","far_platform","service_shortcut","service_front","left_service","right_service"]:continue
         var points:PackedVector2Array=PackedVector2Array(path.get("points",[]))
         if points.size()<2:continue
         var width:float=path.get("width",24.0);var mode:String=path.get("state","closed")
@@ -198,6 +198,16 @@ static func draw_mechanisms(v:Node2D,presentation:Dictionary)->void:
                 pressure_plate(v,Rect2(p-Vector2(35,17),Vector2(70,34)),loaded)
                 for x in [-39,39]:panel(v,Rect2(p+Vector2(x-4,-31),Vector2(8,38)),COPPER)
                 if connection=="selected":v.draw_arc(p,42,PI*.1,PI*.9,22,LIGHT,2,true)
+            "service_jaw":
+                # Two visibly different gaps, drawn from the same open condition
+                # that allows cat feet into the service passage.
+                panel(v,Rect2(p-Vector2(29,26),Vector2(58,49)),Color("302d25"))
+                var gap:=2.0 if loaded else 17.0
+                for sign in [-1,1]:
+                    panel(v,Rect2(p+Vector2(-28,sign*gap-6),Vector2(56,12)),COPPER if loaded else EDGE)
+                if not loaded:
+                    v.draw_line(p+Vector2(-21,11),p+Vector2(21,11),MINT,3,true)
+                    v.draw_line(p+Vector2(-21,-10),p+Vector2(21,-10),Color(MINT,.5),2,true)
             "load_frame":
                 if phase in ["unjam","withdraw"]:
                     v.machine_arm(p+Vector2(-67,0).rotated(angle),p+Vector2(67,0).rotated(angle),18)
@@ -276,8 +286,9 @@ static func draw_four(v:Node2D,s,presentation:Dictionary)->void:
         v.prop(11,Rect2(970,226,176,145))
         if s.patch_braced or s.latch_fixed or s.shell_fixed:v.prop(12,Rect2(977,229,162,137),0 if s.shell_fixed or s.latch_fixed else sin(s.clock*6)*.02)
         latch(v,Rect2(s.LATCH-Vector2(18,28),Vector2(36,49)),s.latch_fixed,0)
-        v.lamp(s.SEAM_LIGHT,s.seam_seen)
-        if s.seam_seen:v.draw_line(s.SEAM_LIGHT-Vector2(0,35),Vector2(1050,254),LIGHT,4,true)
+        var seam_lit:bool=s.actions[2]=="light" and s.aimed(2,s.SEAM_LIGHT,s.PATCH)
+        v.lamp(s.SEAM_LIGHT,seam_lit)
+        if seam_lit:v.draw_line(s.SEAM_LIGHT-Vector2(0,35),Vector2(1050,254),LIGHT,4,true)
         if not s.shell_fixed:
             for i in range(5):
                 var p:=Vector2(944+fposmod(s.clock*55+i*32,210),244+i*22)
@@ -285,6 +296,19 @@ static func draw_four(v:Node2D,s,presentation:Dictionary)->void:
         else:
             v.draw_line(Vector2(1007,264),Vector2(1092,264),EDGE,3,true)
         npc(v,0,1,Vector2(660,305),111,s.clock)
+        # The maintenance route is beyond the repair platform; its physical
+        # obstruction is cleared in the encounter and remains cleared here.
+        var gate:Vector2=s.TREE_ENTRY
+        v.prop(7,Rect2(gate-Vector2(35,87),Vector2(70,108)))
+        if s.battles_finished<1:
+            for offset in [-12,8,28]:
+                var vine:=PackedVector2Array([gate+Vector2(-31,offset-58),gate+Vector2(-14,offset-27),gate+Vector2(8,offset-36),gate+Vector2(31,offset-7)])
+                v.draw_polyline(vine,Color("405c45"),7,true)
+                v.draw_polyline(vine,Color("97a571"),2,true)
+                v.draw_circle(gate+Vector2(-13,offset-27),4,Color("637e4f"))
+        else:
+            v.arrow(gate+Vector2(0,-18),Vector2.UP,MINT)
+        v.ink(gate+Vector2(-90,40),"树心检修路 · 已清开" if s.battles_finished>=1 else "树心检修路 · 藤结缠门",180,14)
     else:
         npc(v,0,2 if s.inward_verified else 1 if s.pulse_active else 0,s.ALIGHT,115,s.clock)
         # The testing rig is a physical copper manifold, not a picture of a mirror.

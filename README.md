@@ -1,5 +1,19 @@
 # 朵朵与猫猫：把回家的路点亮
 
+**最新：M31 离线验收版，序章、五章冒险与回家尾声。**
+
+- [Mac Universal（Apple Silicon / Intel）](https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/download/m31-offline-v0.3.1/DuoduoCats-M31-macOS-Universal.zip)
+- [Windows 64 位](https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/download/m31-offline-v0.3.1/DuoduoCats-M31-Windows-x64.zip)
+- [发行说明与附件](https://github.com/LanCloudLance/duoduo-cats-courtyard/releases/tag/m31-offline-v0.3.1) · [文件校验与验证范围](release/m31/README.md)
+
+完整解压后即可运行，音乐、字体、素材均已内置。Mac 双击 .app；Windows 双击 DuoduoCats.exe，保持 .pck 同目录。Mac 原生独立 QA 版已做本机开局、移动、互动和暂停恢复检查；Windows 实机运行、真实双手柄和真人趣味仍待验收。Mac 尚未 Apple 公证，首次启动指引随包附上。
+
+game-source 已同步封版 M31 源码；[三遍自审](release/m31/final-review.md)、[原生包独立审核](release/m31/native-package-audit.md)及来源清单可查。离线版存档与网页版分开。
+
+## Web 构建与历史记录
+
+以下保留此前 Web 交付说明。dist 对应此前私有 Site v19；此次公开 GitHub 原生发行不会替换该网站的部署版本。
+
 同一 Godot 4.7.2 / GDScript 工程的 Web 单线程导出。权威游戏源码保留在工作区 outputs/duoduo-game；这里 game-source 是本次构建对应快照，修改后需同步再构建。dist 为网站部署内容。
 
 M28 当前入口提供完整新旅程、按人数继续、设置和已解锁章节回访；旧独立开发场只在 development-menu 启用。主线为序章、五章与归家。谜题采用真实受力、光路、隔离与可恢复探索；单人战斗一位部署、手动接棒，双人两位真人、第三位候补。详见 [全篇重审和返工评审](validation/m28/final-review.md)。技术候选不代表儿童趣味、Windows实体手柄或真实首通时长已验收。浏览器用独立的 /userfs/DuoduoCatsCourtyard 安全点，IndexedDB 保存在本站当前浏览器中；不与桌面自动同步。网页顶部操作说明会暂停游戏，回画面后 Enter 或菜单键继续。

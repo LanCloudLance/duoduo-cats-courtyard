@@ -1,4 +1,6 @@
 extends RefCounted
+const M30=preload("res://game/puzzle_m30_checkpoint.gd")
+const M28=preload("res://game/puzzle_m28_checkpoint.gd")
 const Legacy=preload("res://game/puzzle_legacy_checkpoint.gd")
 ## Save only durable, verified progress. Live commands must be issued again.
 const PHASES := {
@@ -10,11 +12,11 @@ const FLAGS := {
     2:["locked_a","locked_b","hook_owned","hook_practiced","shortcut_open","reverse_seen","rear_loaded_seen","outer_locked","cart_open"],
     3:["wick_found","wick_ready","wick_fitted","npc_called","door_open","joined","light_equipped","cat_lock","bridge_locked","light_released","narrow_open","rig_ready","exit_revealed","exit_low_latched","exit_high_latched","map_discovered"],
     4:["cover_hooked","cover_carried","cloth","duct_seen","branch_seen","arrows_seen","latch_fixed","seam_seen","shell_fixed","inward_verified","lantern_offered","reserve_retained","main_return_seen","shell_leak_seen","reserve_hold_seen","connected_split_seen","stall_seen","view_seen","early_patch","shell_examined","reconnected_seen","reserve_available"],
-    5:["route_lock","route_supported","route_lit","bridge_locked","arm_locked","lid_open","machine_stopped","plate_aligned","tested","network_lit","home_tag","tag_inserted","farewell_gift","gear_stored","paws_clean","far_walkway","isolation_open","worklight_seen","left_released","right_released","lower_pin","upper_pin","pilot_open","pilot_charged","cat_one_clean","cat_two_clean"]}
+    5:["route_lock","route_supported","route_lit","bridge_locked","arm_locked","lid_open","machine_stopped","plate_aligned","tested","network_lit","home_tag","tag_inserted","farewell_gift","gear_stored","paws_clean","far_walkway","isolation_open","worklight_seen","lower_pin","upper_pin","pilot_open","pilot_charged","cat_one_clean","cat_two_clean"]}
 const NUMBERS := {
     2:{"lamp_a":3,"lamp_b":3}, 3:{"door_angle":3,"board_angle":3,"rig_angle":1,"source_level":1,"high_mirror_angle":1},
-    4:{"battles_finished":2}, 5:{"lid_pins":2,"wheel_notch":2,"cleared_segments":3,"stage_checkpoint":3,"arm_route":1,"pilot_route":1}}
-const CHOICES := {2:{"support_site":["a","carried","cat_carried","b","far","outer"]},3:{},4:{"lamp_dest":["rack","carried","stall","view"],"visit_room":["","market","exterior"]},5:{"support_site":["rack","carried","left","right"]}}
+    4:{"battles_finished":2}, 5:{"lid_pins":2,"wheel_notch":2,"stage_checkpoint":3,"arm_route":1,"pilot_route":1}}
+const CHOICES := {2:{"support_site":["a","carried","cat_carried","b","far","outer"]},3:{},4:{"lamp_dest":["rack","carried","stall","view"],"visit_room":["","market","exterior"]},5:{"support_site":["rack","carried","left","right"],"extraction_side":["none","left","right","restored"],"extraction_method":["none","support","held","restored"],"charged_route":["none","tower","market"]}}
 static func capture(s)->Dictionary:
     if not PHASES.has(s.chapter):return {}
     var facts:Dictionary={}
@@ -23,7 +25,7 @@ static func capture(s)->Dictionary:
     for key in CHOICES[s.chapter]:facts[key]=s.get(key)
     var points:Array=[]
     for p in s.positions:points.append([p.x,p.y])
-    return {"version":2,"puzzle_revision":1,"chapter":s.chapter_key,"mode":"solo" if s.single else "dual","phase":s.phase,"completed":s.finished,"facts":facts,"positions":points,"controlled":s.controlled,"current_cat":s.current_cat,"history":s.history.duplicate()}
+    return {"version":2,"puzzle_revision":3 if s.chapter==5 else 2 if s.chapter==4 else 1,"chapter":s.chapter_key,"mode":"solo" if s.single else "dual","phase":s.phase,"completed":s.finished,"facts":facts,"positions":points,"controlled":s.controlled,"current_cat":s.current_cat,"history":s.history.duplicate()}
 static func valid_history(value)->bool:
     if not value is Array or value.size()>32:return false
     for entry in value:
@@ -56,8 +58,8 @@ static func dependencies(chapter:int,f:Dictionary,phase:String,completed:bool)->
             for key in milestones:
                 if f[key] and PHASES[3].find(phase)<PHASES[3].find(milestones[key]):return false
         4:
-            if f.visit_room!="" and phase not in ["meet","investigate","test","offer","home_offer","rest"]:return false
-            for pair in [["cover_carried","cover_hooked"],["cloth","cover_hooked"],["branch_seen","cloth"],["main_return_seen","cloth"],["connected_split_seen","cloth"],["reserve_hold_seen","branch_seen"],["latch_fixed","cloth"],["shell_fixed","latch_fixed"],["shell_fixed","seam_seen"],["inward_verified","shell_fixed"],["lantern_offered","inward_verified"],["reserve_retained","lantern_offered"]]:
+            if f.visit_room!="" and phase not in ["meet","investigate","battle_one","exterior","test","offer","home_offer","battle_two","rest"]:return false
+            for pair in [["cover_carried","cover_hooked"],["cloth","cover_hooked"],["branch_seen","cloth"],["main_return_seen","cloth"],["connected_split_seen","cloth"],["reserve_hold_seen","branch_seen"],["latch_fixed","cloth"],["seam_seen","latch_fixed"],["shell_fixed","latch_fixed"],["shell_fixed","seam_seen"],["inward_verified","shell_fixed"],["inward_verified","main_return_seen"],["lantern_offered","inward_verified"],["reserve_retained","lantern_offered"]]:
                 if not implies(f,pair[0],pair[1]):return false
             if f.lamp_dest!="rack" and not f.reserve_available:return false
             if (f.stall_seen or f.view_seen) and not f.reserve_hold_seen:return false
@@ -66,18 +68,19 @@ static func dependencies(chapter:int,f:Dictionary,phase:String,completed:bool)->
             if f.early_patch and not (f.cloth and f.shell_examined):return false
             if f.reconnected_seen and not f.reserve_hold_seen:return false
             if phase!="market" and not f.cloth:return false
-            if phase in ["battle_one","exterior","test","offer","home_offer","battle_two","rest","complete"] and not (f.reserve_hold_seen and (f.main_return_seen or f.connected_split_seen or f.reconnected_seen) and (f.shell_examined or f.shell_leak_seen)):return false
-            if phase in ["exterior","test","offer","home_offer","battle_two","rest","complete"] and f.battles_finished<1:return false
+            var diagnosed:bool=f.reserve_hold_seen and (f.main_return_seen or f.connected_split_seen or f.reconnected_seen) and (f.shell_examined or f.shell_leak_seen)
+            if phase in ["exterior","test","offer","home_offer","battle_two","rest","complete"] and not diagnosed:return false
+            if phase in ["exterior","test","offer","home_offer","battle_two"] and f.battles_finished!=1:return false
+            if phase in ["rest","complete"] and f.battles_finished!=2:return false
+            if phase in ["market","meet","battle_one"] and f.battles_finished!=0:return false
+            if phase=="investigate" and (f.battles_finished>1 or f.battles_finished==1 and diagnosed):return false
+            if phase=="market" and (f.cloth or f.shell_fixed):return false
+            if phase=="exterior" and f.shell_fixed:return false
             if phase in ["test","offer","home_offer","battle_two","rest","complete"] and not f.shell_fixed:return false
+            if phase=="test" and f.inward_verified:return false
             if phase in ["offer","home_offer","battle_two","rest","complete"] and not f.inward_verified:return false
             if phase in ["home_offer","battle_two","rest","complete"] and not f.lantern_offered:return false
             if phase in ["battle_two","rest","complete"] and not f.reserve_retained:return false
-            if phase in ["rest","complete"] and f.battles_finished!=2:return false
-            if phase in ["market","meet","investigate","battle_one"] and (f.battles_finished!=0 or f.shell_fixed):return false
-            if phase=="market" and f.cloth:return false
-            if phase=="exterior" and f.shell_fixed:return false
-            if phase in ["exterior","test","offer","home_offer","battle_two"] and f.battles_finished!=1:return false
-            if phase in ["market","meet","investigate","battle_one","exterior","test"] and f.inward_verified:return false
             if phase in ["market","meet","investigate","battle_one","exterior","test","offer"] and f.lantern_offered:return false
             if phase in ["market","meet","investigate","battle_one","exterior","test","offer","home_offer"] and f.reserve_retained:return false
         5:
@@ -86,10 +89,15 @@ static func dependencies(chapter:int,f:Dictionary,phase:String,completed:bool)->
             if f.pilot_open and not f.machine_stopped:return false
             if f.arm_route==1 and not f.far_walkway:return false
             if f.lid_pins!=int(f.lower_pin)+int(f.upper_pin):return false
-            if f.cleared_segments!=(3 if f.machine_stopped else int(f.left_released)+int(f.right_released)):return false
-            if f.machine_stopped and not (f.left_released and f.right_released):return false
-            if (f.left_released or f.right_released or f.support_site!="rack") and not f.lid_open:return false
-            if (f.left_released or f.right_released) and not f.worklight_seen:return false
+            if f.machine_stopped!=(f.extraction_side!="none"):return false
+            if f.machine_stopped!=(f.extraction_method!="none"):return false
+            if f.extraction_method=="support" and (f.extraction_side not in ["left","right"] or f.support_site!=f.extraction_side):return false
+            if f.extraction_method=="held" and (f.extraction_side!="right" or f.support_site!="rack" or not f.isolation_open):return false
+            if (f.extraction_method=="restored")!=(f.extraction_side=="restored"):return false
+            if f.support_site!="rack" and not f.lid_open:return false
+            if f.machine_stopped and not f.worklight_seen:return false
+            if f.pilot_charged!=(f.charged_route!="none"):return false
+            if f.pilot_charged and f.charged_route!=("tower" if f.pilot_route==0 else "market"):return false
             if f.pilot_charged and not (f.pilot_open and f.plate_aligned and f.machine_stopped):return false
             if f.tested and not f.pilot_charged:return false
             if f.paws_clean!=(f.cat_one_clean and f.cat_two_clean):return false
@@ -97,7 +105,6 @@ static func dependencies(chapter:int,f:Dictionary,phase:String,completed:bool)->
             for pair in [["route_supported","route_lock"],["route_lit","route_supported"],["bridge_locked","route_lit"],["arm_locked","bridge_locked"],["lid_open","arm_locked"],["machine_stopped","lid_open"],["tested","machine_stopped"],["network_lit","tested"],["tag_inserted","network_lit"],["gear_stored","tag_inserted"],["paws_clean","tag_inserted"]]:
                 if not implies(f,pair[0],pair[1]):return false
             if (f.lid_pins>0 and not f.arm_locked) or (f.lid_open!=(f.lid_pins==2)):return false
-            if (f.cleared_segments>0 and not f.lid_open) or (f.machine_stopped!=(f.cleared_segments==3)):return false
             var expected:=3 if f.machine_stopped else 2 if f.lid_open else 1 if f.arm_locked else 0
             if f.stage_checkpoint!=expected:return false
             if phase!="approach" and not f.bridge_locked:return false
@@ -119,6 +126,11 @@ static func dependencies(chapter:int,f:Dictionary,phase:String,completed:bool)->
             if phase=="farewell" and (f.gear_stored or f.paws_clean):return false
     return true
 static func restore(s,value:Dictionary)->bool:
+    # Guard Variant types before comparison, including strict legacy readers.
+    if not integer(value.get("version"),2,2):return false
+    if not value.get("chapter") is String or value.chapter!=s.chapter_key:return false
+    if not value.get("mode") is String or value.mode!=("solo" if s.single else "dual"):return false
+    if value.has("puzzle_revision") and not integer(value.puzzle_revision,1,3):return false
     if not value.has("puzzle_revision"):
         var probe=s.get_script().new()
         probe.single=s.single
@@ -133,7 +145,42 @@ static func restore(s,value:Dictionary)->bool:
         if not restore(s,capture(fresh)):return false
         s.say("旧旅程的章节已保留；这里的机关重新布置过，从本章安全入口继续。")
         return true
-    if value.get("puzzle_revision")!=1:return false
+    if s.chapter==4 and value.get("puzzle_revision")==1:
+        # Validate the complete old dependency graph before translating phases.
+        var old_state=s.get_script().new();old_state.single=s.single
+        if not M28.restore(old_state,value):return false
+        if old_state.phase in ["exterior","battle_two"] and old_state.visit_room.is_empty():old_state.visit_room="exterior"
+        if old_state.phase=="meet":old_state.phase="investigate"
+        old_state.reconcile_progress()
+        if not restore(s,capture(old_state)):return false
+        s.say("旧旅程的补片、试光结果和实际开路成果已经保留。维修现在可以按自己的顺序继续。")
+        return true
+    if s.chapter==5 and value.get("puzzle_revision")==2:
+        # The frozen M30 reader rejects old impossible side provenance first.
+        var old_state=s.get_script().new();old_state.single=s.single
+        if not M30.restore(old_state,value):return false
+        old_state.extraction_method="restored" if old_state.extraction_side=="restored" else "support" if old_state.machine_stopped else "none"
+        if not restore(s,capture(old_state)):return false
+        s.say("旧旅程的撑扣、取枝和试送证据已经保留。人工接重是可自由尝试的新方法。")
+        return true
+    if s.chapter==5 and value.get("puzzle_revision")==1:
+        # Decode through the frozen strict schema before any migration mutation.
+        var old_state=s.get_script().new();old_state.single=s.single
+        if not M28.restore(old_state,value):return false
+        old_state.left_released=false;old_state.right_released=false;old_state.cleared_segments=0
+        old_state.extraction_side="restored" if old_state.machine_stopped else "none"
+        old_state.extraction_method="restored" if old_state.machine_stopped else "none"
+        # Revision one had no per-destination evidence. Preserve witnessed final
+        # verification, but require a fresh pilot for an unfinished test.
+        if not old_state.tested:old_state.pilot_charged=false
+        old_state.charged_route=("tower" if old_state.pilot_route==0 else "market") if old_state.pilot_charged else "none"
+        if old_state.phase=="unjam":
+            old_state.support_site="rack"
+            old_state.positions.assign(safe_points(old_state))
+        if not restore(s,capture(old_state)):return false
+        s.say("维修入口已更新。已锁好的桥、夹臂和检修盖保留；未取出的折枝从安全平台重新选侧。" if s.phase=="unjam" else "旧旅程的永久成果已经保留。")
+        return true
+    if value.get("puzzle_revision")!=(3 if s.chapter==5 else 2 if s.chapter==4 else 1):return false
     if value.get("version")!=2 or value.get("chapter")!=s.chapter_key or value.get("mode")!=("solo" if s.single else "dual"):return false
     var phase_value=value.get("phase")
     if not phase_value is String or phase_value not in PHASES[s.chapter] or typeof(value.get("completed"))!=TYPE_BOOL:return false

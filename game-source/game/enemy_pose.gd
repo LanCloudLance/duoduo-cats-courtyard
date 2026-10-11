@@ -1,5 +1,13 @@
 extends RefCounted
 ## Samples the simulation's action clock; never owns hits or collision movement.
+static func progress(enemy: Dictionary) -> float:
+    var spans := {"windup":1.2,"rush":0.48,"melee_windup":0.5,"melee":0.22,"cast":0.85,"burst":0.22,"slam_windup":0.82,"slam":0.22,"rest":0.85,"exposed":1.25}
+    var span: float=enemy.get("opening_duration",1.25) if enemy.mode=="exposed" else enemy.get("pose_duration",spans.get(enemy.mode,1.0)) if enemy.get("pose_mode","")==enemy.mode else spans.get(enemy.mode,1.0)
+    return clampf(1.0-enemy.timer/maxf(span,0.001),0,1)
+static func rear_openness(enemy: Dictionary) -> float:
+    if enemy.mode!="exposed":return 0.0
+    # Leaves draw inward during the final third of a second, rather than vanishing.
+    return smoothstep(0.0,0.35,maxf(0,enemy.timer))
 static func sample(enemy: Dictionary) -> Dictionary:
     var mode: String = enemy.mode
     var spans := {"windup":1.2,"rush":0.48,"melee_windup":0.5,"melee":0.22,
@@ -57,11 +65,17 @@ static func sample(enemy: Dictionary) -> Dictionary:
         lift = 20*release
     elif mode in ["rest","exposed"]:
         var recovery := 1.0-ease
+        if mode=="exposed" and enemy.kind=="armored":
+            recovery=rear_openness(enemy)*(0.45 if enemy.get("opening","")=="miss" else 1.0)
         offset.y = 4*recovery
         stretch = Vector2(1+0.09*recovery,1-0.10*recovery)
         lean = -facing*0.09*recovery
         reach = -6*recovery
         lift = 10*recovery
+        if mode=="exposed" and enemy.kind=="armored":
+            offset.y+=7*recovery
+            lean-=facing*0.18*recovery
+            lift+=8*recovery
     else:
         offset.y = -absf(sin(age*8))*2
     return {"offset":offset,"stretch":stretch,"lean":lean,"reach":reach,"lift":lift}

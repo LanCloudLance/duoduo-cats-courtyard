@@ -18,7 +18,7 @@ func run() -> void:
     check(music.context_for("combat","combat",1) == "battle","active encounter selects rhythmic score")
     check(music.context_for("combat","combat",3) == "boss","final encounter changes the arrangement")
     check(music.context_for("combat","clear",3) == "rest","cleared battle drops pressure without waiting for a new scene")
-    check(music.context_for("combat","intermission",1) == "battle","short intermission keeps the ongoing battle phrase")
+    check(music.context_for("combat","intermission",1) == "rest","intermission withdraws the battle score")
     check(music.context_for("light") == "puzzle" and music.context_for("gate") == "puzzle","linked puzzle scenes preserve their musical identity")
     music.set_context("explore")
     await create_timer(0.06).timeout

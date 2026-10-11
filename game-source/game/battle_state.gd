@@ -20,6 +20,11 @@ var solo_mode := false
 var story_first := false
 var story_encounter := "practice"
 var wave_total := 2
+var encounter_revision := 1
+var route_open := false
+var route_cause := ""
+var objective_enemy_id := -1
+var objective_enemy_defeated := false
 var hp: Array[int] = [3,3]
 var facing: Array[Vector2] = [Vector2.RIGHT,Vector2.RIGHT]
 var velocity: Array[Vector2] = [Vector2.ZERO,Vector2.ZERO]
@@ -68,19 +73,25 @@ func configure(value: Dictionary) -> bool:
     var selected=value.get("selected_role_id",0)
     var cat=value.get("current_cat",1)
     var cleared=value.get("cleared_segments",0)
+    var revision=value.get("encounter_revision",1)
+    var opened=value.get("route_open",false)
+    if not revision is int or revision not in [1,2] or not opened is bool:return false
+    if revision==2 and (id not in ["shell","reserve"] or cleared not in [0,2] or opened!=(cleared==2)):return false
+    if revision==1 and opened:return false
     if id not in ["first","shell","reserve","practice"] or not allowed is Array or not selected is int or not cat is int or not cleared is int or cleared<0 or cleared>2:return false
     if id=="first" and 2 in allowed:return false
     var candidate=Roster.new()
     if not candidate.configure(mode,allowed,selected,cat):return false
     roster=candidate;solo_mode=roster.single;story_encounter=id;story_first=id=="first";current_cat=cat
-    context=value.duplicate(true);Space.configure(id);cleared_segments=cleared;wave=cleared
+    encounter_revision=revision;route_open=opened;wave_total=1 if revision==2 else 2
+    context=value.duplicate(true);Space.configure(id);Space.configure_route(revision==2,opened);cleared_segments=cleared;wave=0 if revision==2 else cleared
     phase="clear" if cleared==2 else "briefing" if cleared==0 else "intermission"
     for slot in deployed_slots():positions[actor(slot)]=Space.STARTS[slot]
     park_reserves();garden.setup(self)
     message="小路露出来了。" if cleared==2 else "准备好了再出发。"
     return true
 func result() -> Dictionary:
-    return {"encounter_id":story_encounter,"mode":"solo" if solo_mode else "dual","completed_segments":cleared_segments,"outcome":"complete" if phase=="complete" else "failed" if phase=="failed" else "in_progress","selected_role_id":actor(0),"current_cat":current_cat,"story_run_id":context.get("story_run_id",""),"return_chapter":context.get("return_chapter",0),"return_phase":context.get("return_phase","")}
+    return {"encounter_revision":encounter_revision,"route_open":route_open,"encounter_id":story_encounter,"mode":"solo" if solo_mode else "dual","completed_segments":cleared_segments,"outcome":"complete" if phase=="complete" else "failed" if phase=="failed" else "in_progress","selected_role_id":actor(0),"current_cat":current_cat,"story_run_id":context.get("story_run_id",""),"return_chapter":context.get("return_chapter",0),"return_phase":context.get("return_phase","")}
 func deployed_slots() -> Array[int]:return roster.deployed_slots()
 func available_roles() -> Array:return roster.available.duplicate()
 func actor(slot: int) -> int:return roster.role_for_slot(slot)
@@ -132,15 +143,22 @@ func interact(slot: int) -> void:
             message="扶住伙伴。"
         else:message="伙伴还在那边。"
         return
+    if phase=="combat" and encounter_revision==2 and story_encounter=="reserve" and positions[actor(slot)].distance_to(Space.GATE)<=105:
+        if not objective_enemy_defeated:
+            message="横枝绷得很紧；硬壳的冲势能撞开它。"
+        else:_open_route("release")
+        return
     if phase in ["briefing","intermission"]:
         if intermission>0:return
         confirmed[slot]=true
-        if deployed_slots().all(func(s):return confirmed[s]):_start_wave(cleared_segments+1)
+        if deployed_slots().all(func(s):return confirmed[s]):_start_wave(1 if encounter_revision==2 else cleared_segments+1)
     elif phase=="clear":
-        if positions[actor(slot)].distance_to(EXIT)>95:message="出口已经安全了。";return
+        if not at_exit(slot):message="出口已经安全了。";return
         confirmed[slot]=true
-        if deployed_slots().all(func(s):return confirmed[s] and positions[actor(s)].distance_to(EXIT)<=95):
+        if deployed_slots().all(func(s):return confirmed[s] and at_exit(s)):
             phase="complete";cancel_attacks();message="小路清开了。伙伴都在。"
+func at_exit(slot:int)->bool:
+    return positions[actor(slot)].distance_to(EXIT)<=95 and (encounter_revision==1 or positions[actor(slot)].x>Space.GATE.x+30)
 func request_switch(slot: int) -> bool:
     if slot not in deployed_slots() or roster.next_role(slot)<0 or phase=="complete" or (hp[slot]<=0 and phase!="failed") or swap_cooldown[slot]>0:return false
     if phase!="failed" and _switch_locked(slot):swap_pending[slot]=0.18;return true
@@ -197,6 +215,8 @@ func _cancel_rescue() -> void:rescuer=-1;rescue_progress=0
 func _start_wave(number: int) -> void:
     cancel_attacks();_cancel_rescue();wave=number;phase="combat";confirmed=[false,false]
     enemies.clear();fallen.clear();garden.setup(self)
+    if encounter_revision==2:
+        route_open=false;route_cause="";objective_enemy_id=-1;objective_enemy_defeated=false;Space.configure_route(true,false)
     Encounter.start(self,number);message=Encounter.objective(self,number)
 func _spawn(kind: String,point: Vector2,protect_arrival:=true) -> void:
     if protect_arrival and (deployed_slots().any(func(s):return positions[actor(s)].distance_to(point)<190) or not Space.valid(point,Space.ENEMY_RADIUS)):
@@ -204,7 +224,7 @@ func _spawn(kind: String,point: Vector2,protect_arrival:=true) -> void:
         for x in range(6):
             for y in range(4):
                 var p: Vector2=FIELD.position+Vector2(65+x*(FIELD.size.x-130)/5,65+y*(FIELD.size.y-130)/3)
-                if Space.valid(p,26) and deployed_slots().all(func(s):return positions[actor(s)].distance_to(p)>=190) and enemies.all(func(e):return e.pos.distance_to(p)>95):candidates.append(p)
+                if Space.valid(p,26) and (encounter_revision==1 or p.x<Space.GATE.x-Space.ROUTE_RADIUS-Space.ENEMY_RADIUS) and deployed_slots().all(func(s):return positions[actor(s)].distance_to(p)>=190) and enemies.all(func(e):return e.pos.distance_to(p)>95):candidates.append(p)
         candidates.sort_custom(func(a,c):return a.distance_squared_to(point)<c.distance_squared_to(point))
         if not candidates.is_empty():point=candidates[0]
     var health: float={"sprout":4.0,"weaver":5.0,"armored":5.0,"elder":18.0,"roller":5.0}.get(kind,5.0)
@@ -255,22 +275,27 @@ func step(delta: float,p1: Vector2,p2: Vector2,enabled: bool) -> void:
         if dodging:motion=dodge_direction[slot]*550;dodge_time[slot]=maxf(0,dodge_time[slot]-local)
         var before: Vector2=positions[actor(slot)]
         positions[actor(slot)]=_move_actor(before,motion*local,dodging);velocity[slot]=(positions[actor(slot)]-before)/dt
-        if phase=="clear" and positions[actor(slot)].distance_to(EXIT)>95:confirmed[slot]=false
+        if phase=="clear" and not at_exit(slot):confirmed[slot]=false
     if rescuer>=0:
         if inputs[rescuer].length()>0.1 or hp[rescuer]<=0 or positions[actor(rescuer)].distance_to(positions[actor(1-rescuer)])>85:_cancel_rescue()
         else:
             rescue_progress+=dt
             if rescue_progress>=RESCUE_SECONDS:
                 hp[1-rescuer]=2;invulnerable[1-rescuer]=2;_cancel_rescue();message="一起站起来了。"
-    if phase!="complete":garden.step(self,dt)
+    if phase not in ["clear","complete"] or encounter_revision==1:garden.step(self,dt)
+    if encounter_revision==2 and route_open:_retreat_enemies(dt)
     if phase=="intermission":intermission=maxf(0,intermission-dt)
     elif phase=="combat":
         for enemy in enemies:
             if enemy.hp>0:_enemy_step(enemy,dt)
             else:
+                if enemy.id==objective_enemy_id:objective_enemy_defeated=true
                 var body: Dictionary=enemy.duplicate(true);body.death_age=0.0;fallen.append(body)
                 feedback("defeat",enemy.pos,-1,{"direction":enemy.get("impact_direction",-enemy.direction),"target_id":enemy.id})
         enemies=enemies.filter(func(e):return e.hp>0)
+        if encounter_revision==2:
+            if story_encounter=="shell" and objective_enemy_defeated and not alive_slots().is_empty():_open_route("source")
+            return
         if enemies.is_empty() and not alive_slots().is_empty():
             cleared_segments=wave;phase="intermission" if wave<wave_total else "clear";intermission=0.8;confirmed=[false,false]
             hazards.clear();message="这段路清开了。" if wave<wave_total else "出口已经安全了。"
@@ -280,7 +305,7 @@ func _move_actor(origin: Vector2, offset: Vector2, dodging: bool) -> Vector2:
     if dodging: return end
     # Same contact radius as pounce; tangential input slides, retreat always works.
     for enemy in enemies:
-        if enemy.hp <= 0: continue
+        if enemy.hp <= 0 or (encounter_revision==2 and route_open): continue
         var radial: Vector2 = enemy.pos.direction_to(origin)
         var distance: float = origin.distance_to(enemy.pos)
         if distance < 44.01:
@@ -308,34 +333,86 @@ func _expose(enemy: Dictionary, cause: String) -> void:
     if precise:enemy.timer+=0.60 if enemy.kind=="armored" else 0.45
     enemy.perfect_guard=precise
     if solo_mode and enemy.kind == "armored": enemy.timer += 0.8
+    if enemy.kind == "armored" and cause == "miss": enemy.timer = 1.15 if solo_mode else 0.90
     if enemy.kind == "elder": enemy.timer = 2.0 if cause == "stump" or guard_age <= 0.18 else 1.15
     if cause == "shield": feedback("parry" if guard_age <= 0.18 else "guard",enemy.pos,0)
     enemy.opening = cause
+    # One authoritative simulation span drives the rear bud, recovery pose and score.
+    # Keep legacy opening="shield" for combat/save contracts; event cause names parry.
+    enemy.opening_duration = enemy.timer
+    if enemy.mode == "exposed":
+        feedback("opening",enemy.pos,0 if cause == "shield" else -1,{"cause":"parry" if precise else cause,"target_id":enemy.id,"duration":enemy.timer,"kind_of_enemy":enemy.kind})
     enemy.heavy_extended = false
     if not alive_slots().is_empty():
         if enemy.kind == "armored":
             message = "背后的结点展开了。"
         else:
             message = "枝球停住了。"
-func _rush(enemy: Dictionary, dt: float) -> void:
-    var before: Vector2 = enemy.pos
-    var speed := 560.0 if enemy.kind == "roller" else 480.0
-    var end := _bounded(before+enemy.direction*speed*dt)
+func rush_contacts(enemy:Dictionary,before:Vector2,end:Vector2)->Array[Dictionary]:
+    # Both simulation and the locked-direction forecast use this ordered geometry.
+    # Bodies take damage but do not stop a rush; shields, enemies and scenery do.
     var hits: Array[Dictionary] = []
     for stump in Space.STUMPS:
         var t := Space.contact(before,end,stump,Space.STUMP_RADIUS+Space.ENEMY_RADIUS)
-        if t != INF: hits.append({"t":t,"kind":"stump","slot":-1})
+        if t != INF: hits.append({"t":t,"kind":"stump","surface":"stump","point":stump,"slot":-1})
+    for gate_point in Space.route_points():
+        var t:float=Space.contact(before,end,gate_point,Space.ROUTE_RADIUS+Space.ENEMY_RADIUS)
+        if t!=INF:hits.append({"t":t,"kind":"route" if encounter_revision==2 and story_encounter=="reserve" and enemy.id==objective_enemy_id and enemy.kind=="armored" and not route_open and absf(gate_point.y-Space.GATE.y)<Space.ROUTE_GAP else "stump","surface":"fence","point":gate_point,"slot":-1})
     for slot in deployed_slots():
         if hp[slot] <= 0 or enemy.hit.has(slot): continue
         var shield: bool = slot == 0 and guarding and dodge_time[0] <= 0 and facing[0].dot(-enemy.direction) >= 0.25 and facing[0].dot(positions[0].direction_to(before)) >= 0.25
         var t := Space.contact(before,end,positions[actor(slot)],64.0 if shield else 44.0)
-        if t != INF: hits.append({"t":t,"kind":"shield" if shield else "body","slot":slot})
+        if t != INF: hits.append({"t":t,"kind":"shield" if shield else "body","point":positions[actor(slot)],"slot":slot})
     for other in enemies:
         if is_same(other,enemy) or other.hp <= 0 or other.kind == "armored": continue
         var t := Space.contact(before,end,other.pos,Space.ENEMY_RADIUS*2)
-        if t != INF: hits.append({"t":t,"kind":"enemy","slot":-1,"enemy":other})
+        if t != INF: hits.append({"t":t,"kind":"enemy","point":other.pos,"slot":-1,"enemy":other})
     hits.sort_custom(func(a,b): return a.t < b.t)
+    return hits
+func rush_preview(enemy:Dictionary)->Dictionary:
+    if phase!="combat" or enemy.hp<=0 or enemy.mode not in ["windup","rush"]:return {}
+    var before:Vector2=enemy.pos
+    var speed:float=560.0 if enemy.kind=="roller" else 480.0
+    var seconds:float=(0.65 if enemy.kind=="roller" else 0.48) if enemy.mode=="windup" else maxf(0.0,enemy.timer)
+    var travel:Vector2=enemy.direction*speed
+    # Show only the locked straight segment before a field edge. The real rush
+    # may slide along that edge; drawing one chord to its clamped final point
+    # would invent a different direction and false obstacle/route promises.
+    var straight_seconds:float=seconds
+    for axis in range(2):
+        if absf(travel[axis])<0.001:continue
+        var edge:float=FIELD.end[axis]-26 if travel[axis]>0 else FIELD.position[axis]+26
+        var edge_seconds:float=maxf(0.0,(edge-before[axis])/travel[axis])
+        straight_seconds=minf(straight_seconds,edge_seconds)
+    var end:Vector2=before+travel*straight_seconds
+    var first:Dictionary={}
+    var remaining_hp:Array[int]=hp.duplicate()
+    var windup_seconds:float=maxf(0,enemy.timer) if enemy.mode=="windup" else 0.0
+    for hit in rush_contacts(enemy,before,end):
+        if hit.kind=="body":
+            var slot:int=hit.slot
+            var contact_seconds:float=windup_seconds+straight_seconds*hit.t
+            var blocked:bool=actor(slot)==0 and guarding and facing[slot].dot(-enemy.direction)>=0.25
+            # Timer updates precede contact. Windup-to-rush can cross two capped
+            # updates; an already rushing body only needs one. Short immunity
+            # may still succeed, but is not advertised as certain to survive.
+            var boundary_margin:float=0.2 if enemy.mode=="windup" else 0.1
+            var protected:bool=blocked or invulnerable[slot]>contact_seconds+boundary_margin or dodge_time[slot]>contact_seconds+boundary_margin
+            if not protected:remaining_hp[slot]=maxi(0,remaining_hp[slot]-1)
+            continue
+        first=hit.duplicate();first.position=before.lerp(end,maxf(0.0,hit.t-0.001));end=first.position;break
+    var survivor:bool=deployed_slots().any(func(slot):return remaining_hp[slot]>0)
+    return {"from":before,"end":end,"contact":first,"opens_route":not first.is_empty() and first.kind=="route" and survivor,"boundary_limited":straight_seconds<seconds}
+func _rush(enemy: Dictionary, dt: float) -> void:
+    var before: Vector2 = enemy.pos
+    var speed := 560.0 if enemy.kind == "roller" else 480.0
+    var end := _bounded(before+enemy.direction*speed*dt)
+    var hits:Array[Dictionary]=rush_contacts(enemy,before,end)
     for hit in hits:
+        if hit.kind=="route":
+            enemy.pos=before.lerp(end,maxf(0,hit.t-0.001))
+            _open_route("impact")
+            return
         if hit.kind == "enemy":
             var other: Dictionary = hit.enemy
             other.hp = maxf(0,other.hp-1)
@@ -353,6 +430,9 @@ func _rush(enemy: Dictionary, dt: float) -> void:
             enemy.pos = before.lerp(end,maxf(0,hit.t-0.001))
             if hit.slot >= 0: enemy.hit[hit.slot] = true
             _expose(enemy,"shield" if hit.kind == "shield" else "stump")
+            if hit.get("surface","")=="fence":
+                feedback("route_contact",hit.point,-1,{"life":0.55})
+                message="硬篱挡住了冲势。"
             return
         hurt(hit.slot,positions[actor(hit.slot)]-enemy.direction*50)
         enemy.hit[hit.slot] = true
@@ -360,7 +440,6 @@ func _rush(enemy: Dictionary, dt: float) -> void:
     if enemy.timer <= 0 or enemy.pos == before:
         if enemy.kind == "armored":
             _expose(enemy,"miss")
-            enemy.timer = 1.7
             return
         enemy.mode = "rest"
         enemy.timer = 1.4 if enemy.kind == "armored" else (1.25 if enemy.kind == "thorn" else 1.65)
@@ -408,3 +487,27 @@ func _enemy_ai(enemy: Dictionary, dt: float) -> void:
         enemy.mode = "approach"
         enemy.timer = 0.2
         enemy.opening = ""
+
+func _open_route(cause:String)->void:
+    if encounter_revision!=2 or route_open or phase!="combat" or alive_slots().is_empty():return
+    if story_encounter=="shell" and (cause!="source" or not objective_enemy_defeated):return
+    if story_encounter=="reserve" and (cause not in ["impact","release"] or (cause=="release" and not objective_enemy_defeated)):return
+    route_open=true;route_cause=cause;cleared_segments=2;phase="clear";confirmed=[false,false]
+    Space.configure_route(true,true);hazards.clear();seeds.clear();cancel_attacks();_cancel_rescue()
+    for enemy in enemies:
+        if enemy.hp<=0:continue
+        enemy.mode="retreat";enemy.timer=0;enemy.hit.clear();enemy.erase("aim")
+        enemy.retreat_target=Vector2(minf(enemy.pos.x,Space.GATE.x-180),FIELD.position.y+45 if enemy.pos.y<Space.GATE.y else FIELD.end.y-45)
+    var detail:Dictionary={"cause":cause,"life":0.8}
+    if story_encounter=="shell":
+        for body in fallen:
+            if body.id==objective_enemy_id:detail.tether_from=body.pos+Vector2(0,-38);break
+    feedback("route_open",Space.GATE,-1,detail)
+    message="连藤松开了，穿过检修门。" if story_encounter=="shell" else "横枝断开了，沿树梯撤离。" if cause=="impact" else "硬壳不再顶住横枝，通路解开了。"
+func _retreat_enemies(dt:float)->void:
+    for enemy in enemies:
+        if enemy.hp<=0 or enemy.mode!="retreat":continue
+        var goal:Vector2=enemy.get("retreat_target",enemy.pos)
+        var delta:Vector2=goal-enemy.pos
+        enemy.pos=Space.move(enemy.pos,Space.direction(enemy.pos,goal,Space.ENEMY_RADIUS)*minf(90*dt,delta.length()),Space.ENEMY_RADIUS)
+        enemy.direction=delta.normalized() if delta.length()>2 else Vector2.LEFT

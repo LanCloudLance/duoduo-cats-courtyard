@@ -5,6 +5,8 @@ const Battle = preload("res://game/battle_state.gd")
 const Actor = preload("res://game/actor_view.gd")
 const StoryLabels = preload("res://game/story_labels.gd")
 const EnemyView = preload("res://game/enemy_visual.gd")
+const EnemyPose = preload("res://game/enemy_pose.gd")
+const RouteView = preload("res://game/battle_route_view.gd")
 const BACKDROP = preload("res://assets/visual-m14/arena-painted.png")
 const BENCH_WOOD = preload("res://assets/visual-m26/floor-pieces.png")
 var solo = Solo.new()
@@ -21,6 +23,7 @@ var label_metrics: Dictionary = {}
 var enemy_label_layout: Array[Dictionary] = []
 var audio = preload("res://game/garden_audio.gd").new()
 var heard_feedback := 0
+var route_returned := false
 var font: Font
 var camera := Camera2D.new()
 var hud := CanvasLayer.new()
@@ -52,6 +55,8 @@ func _ready() -> void:
     hud.layer=11;add_child(hud)
     _panel(Rect2(22,12,1236,62))
     title_label=_label("",Rect2(40,22,275,30),22)
+    title_label.clip_text=true
+    title_label.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
     status_label=_label("",Rect2(315,28,205,25),16)
     girl_label=_label("",Rect2(550,22,320,30),20)
     cat_label=_label("",Rect2(910,22,310,30),20)
@@ -74,14 +79,14 @@ func configure(value: Dictionary) -> bool:
     if is_inside_tree():cancel_inputs()
     battle=candidate;solo=Solo.new();encounter_context=value.duplicate(true);held_actions.clear()
     story_title=str(value.get("title",""));story_destination=str(value.get("destination","小路清开了。"))
-    allow_next_level=bool(value.get("allow_next_level",true));heard_feedback=0
+    allow_next_level=bool(value.get("allow_next_level",true));heard_feedback=0;route_returned=false
     if is_inside_tree():_rebuild_props();_sync_actors(0.0);_refresh()
     return true
 func result() -> Dictionary:return battle.result()
 func configure_solo(value: bool) -> void:
     configure({"id":"practice","mode":"solo" if value else "dual","available_role_ids":[0,1,2],"selected_role_id":0,"current_cat":1,"allow_next_level":not value})
 func restart() -> void:
-    var next: Dictionary=encounter_context.duplicate(true);next["cleared_segments"]=0;configure(next)
+    var next: Dictionary=encounter_context.duplicate(true);next["cleared_segments"]=0;next["route_open"]=false;configure(next)
 func _rebuild_props() -> void:
     for prop in props:prop.queue_free()
     props.clear()
@@ -108,9 +113,14 @@ func handle_action(slot: int,button: int) -> void:
         held_actions[key]={"role":battle.actor(slot),"generation":battle.generation[slot]}
     var movement: Vector2=session.movement(slot)
     if movement.length()>0.1 and battle.dodge_time[slot]<=0:battle.facing[slot]=movement.normalized()
-    if button==JOY_BUTTON_A and battle.phase=="complete" and allow_next_level:next_level_requested.emit();return
+    if button==JOY_BUTTON_A and battle.phase=="complete" and allow_next_level:
+        if battle.encounter_revision==1:next_level_requested.emit()
+        return
     match button:
-        JOY_BUTTON_A:battle.interact(slot)
+        JOY_BUTTON_A:
+            battle.interact(slot)
+            if battle.encounter_revision==2 and battle.phase=="complete" and allow_next_level and not route_returned:
+                route_returned=true;next_level_requested.emit()
         JOY_BUTTON_X:battle.attack(slot)
         JOY_BUTTON_B:battle.dodge(slot,movement)
         JOY_BUTTON_Y:battle.request_switch(slot)
@@ -173,7 +183,7 @@ func _refresh() -> void:
     for i in range(fallen_views.size()):fallen_views[i].sync(battle.fallen[i])
     _layout_labels()
     title_label.text=story_title if not story_title.is_empty() else {"first":"驿站前的小路","shell":"外罩维修道","reserve":"归途树梯","practice":"林间空地"}.get(battle.story_encounter,"林间空地")
-    status_label.text=("单人出战" if battle.solo_mode else "双人协作")+" · %d / 2"%battle.cleared_segments
+    status_label.text=("单人出战" if battle.solo_mode else "双人协作")+(" · 路已打开" if battle.route_open else " · 断开连藤" if battle.story_encounter=="shell" else " · 撞开横枝") if battle.encounter_revision==2 else ("单人出战" if battle.solo_mode else "双人协作")+" · %d / 2"%battle.cleared_segments
     girl_label.text=["朵朵","团团","圆圆"][battle.actor(0)]+"   "+_health(0)
     cat_label.text="体力随出战共享" if battle.solo_mode else ["朵朵","团团","圆圆"][battle.actor(1)]+"   "+_health(1)
     var reserves: Array[String]=[]
@@ -196,11 +206,12 @@ func _refresh() -> void:
     hint_label.text=battle.message
     if battle.phase=="briefing":hint_label.text="准备好按 "+key+" 开始；可先试动作。"
     elif battle.phase=="intermission":hint_label.text="准备好按 "+key+" 继续。" if battle.intermission<=0 else "歇一小会。"
-    elif battle.phase=="clear":hint_label.text="到亮起的出口，按 "+key+"。"
+    elif battle.phase=="clear":hint_label.text=("穿过打开的门，到出口按 "+key+" 返回。") if battle.encounter_revision==2 else "到亮起的出口，按 "+key+"。"
     elif battle.phase=="complete":hint_label.text=story_destination+"  "+(("E" if session.keyboard_mode else "A") if battle.solo_mode else ("任一位 E / 空格" if session.keyboard_mode else "任一位 A"))+" 继续返回。"
     elif battle.phase=="failed":hint_label.text="按 "+key+" 重试当前一段；可先换出战角色。"
     if battle.attacks.charging:hint_label.text="准备好了 · 松开角色技重拍" if battle.attacks.charge_time>=battle.attacks.CHARGE_SECONDS else "圆圆正在准备重拍"
     if battle.rescuer>=0:hint_label.text="扶起伙伴 %d%% · 移动或受击会松手"%int(battle.rescue_progress/battle.RESCUE_SECONDS*100)
+    hint_label.visible=hint_label.text!=objective_label.text
     queue_redraw()
 func EncounterText() -> String:
     if battle.phase=="failed":return "先回安全处，再试这段小路。"
@@ -240,6 +251,7 @@ func _draw() -> void:
         for side in [-1,1]:draw_line(seat+Vector2(side*27,3),seat+Vector2(side*27,19),Color("645438"),7)
     draw_rect(battle.FIELD.grow(20),Color(0.15,0.26,0.14,0.28),false,25)
     draw_rect(battle.FIELD,Color(0.83,0.85,0.61,0.45),false,3)
+    if battle.encounter_revision==2:_draw_route()
     for hazard in battle.hazards:
         var warning: bool = hazard.age < 0.65
         draw_circle(hazard.pos,hazard.radius,Color(0.58,0.14,0.24,0.15 if warning else 0.40))
@@ -276,6 +288,10 @@ func _draw() -> void:
         var camp_text := "营火集合  %s / %s" % ["✓" if battle.confirmed[0] else "朵朵", "✓" if battle.confirmed[1] else "猫咪"]
         if battle.solo_mode:
             camp_text = "战斗完成 ✓" if battle.phase == "complete" else ("营火 · E 确认" if session.keyboard_mode else "营火 · 面键下确认")
+        if battle.encounter_revision==2:
+            camp_text=("检修路出口" if battle.story_encounter=="shell" else "树梯出口")+((" · E" if session.keyboard_mode else " · A") if battle.solo_mode else "")
+            if not battle.solo_mode:_draw_exit_badges()
+            if battle.phase=="complete":camp_text="已穿过出口 ✓"
         _text(battle.EXIT + Vector2(-95, 104),camp_text,190,17)
     for enemy in battle.enemies:
         var source: Dictionary=battle.linked_source(enemy)
@@ -286,15 +302,31 @@ func _draw() -> void:
             for i in range(1,5):
                 var knot: Vector2=from.lerp(to,i/5.0)
                 draw_circle(knot,4,Color("c4e49c"))
+            if battle.encounter_revision==2 and source.get("link_flash",0)>0:
+                var pulse:Vector2=from.lerp(to,clampf(source.link_flash/0.20,0,1))
+                draw_circle(pulse,7,Color("354d36"));draw_circle(pulse,4,Color("fff0b5"))
             var angle: float=enemy.direction.angle()
             draw_arc(enemy.pos,40,angle-1.35,angle+1.35,28,Color("70bb85"),7,true)
             draw_arc(enemy.pos,40,angle-1.35,angle+1.35,28,Color("d9efaf"),2,true)
+        elif battle.encounter_revision==2 and battle.story_encounter=="shell" and enemy.kind in ["thorn","sprout"]:
+            for weaver in battle.enemies:
+                if weaver.id!=battle.objective_enemy_id or weaver.hp<=0 or weaver.get("weave_break",0)<=0 or not battle.Space.clear_line(weaver.pos,enemy.pos,0):continue
+                var start:Vector2=weaver.pos+Vector2(0,-36)
+                var end:Vector2=enemy.pos+Vector2(0,-26)
+                var middle:Vector2=(start+end)*0.5+Vector2(0,32)
+                draw_polyline(PackedVector2Array([start,middle,end]),Color("77885d"),3,true)
+                for side in [-1,1]:
+                    var knot:Vector2=middle+Vector2(side*12,4)
+                    draw_line(knot,knot+Vector2(side*5,8),Color("b0bc79"),3,true)
         if enemy.mode == "windup":
             var reach := 364.0 if enemy.kind == "roller" else 230.0
             var end: Vector2 = enemy.pos + enemy.direction * reach
+            var forecast:Dictionary={}
+            if battle.encounter_revision==2:
+                forecast=battle.rush_preview(enemy)
+                if not forecast.is_empty():end=forecast.end;reach=enemy.pos.distance_to(end)
             var side: Vector2 = enemy.direction.orthogonal() * 39
-            var full: float = (0.9 if enemy.kind == "thorn" else 1.2)+(0.2 if battle.solo_mode else 0.0)
-            var urgency: float = clampf(1.0-enemy.timer/full,0,1)
+            var urgency: float = EnemyPose.progress(enemy)
             draw_line(enemy.pos, end, Color(0.79, 0.26, 0.14, 0.18+urgency*0.14), 78)
             draw_line(enemy.pos, end, Color("865337"), 3, true)
             for step in range(1,4):
@@ -304,18 +336,27 @@ func _draw() -> void:
             draw_line(enemy.pos - side, end - side, Color("f7b278"), 2, true)
             draw_line(end - enemy.direction * 24 + side * 0.4, end, Color("fbd29d"), 4, true)
             draw_line(end - enemy.direction * 24 - side * 0.4, end, Color("fbd29d"), 4, true)
+            if not forecast.is_empty() and not forecast.contact.is_empty():
+                var contact_point:Vector2=forecast.contact.point
+                var color:=Color("e9f4a4") if forecast.opens_route else Color("efbd86")
+                draw_arc(contact_point,32+urgency*5,0,TAU,32,Color("3d5338"),8,true)
+                draw_arc(contact_point,32+urgency*5,0,TAU,32,color,3,true)
+                if forecast.opens_route:
+                    for sign in [-1,1]:
+                        draw_polyline(PackedVector2Array([contact_point+Vector2(sign*21,-11),contact_point+Vector2(sign*13,0),contact_point+Vector2(sign*21,11)]),color,4,true)
         if enemy.mode in ["cast","burst","slam_windup","slam"]:
             var center: Vector2 = enemy.get("aim",enemy.pos) if enemy.mode in ["cast","burst"] else enemy.pos
             var radius := 58.0 if enemy.mode in ["cast","burst"] else 112.0
             var warning: bool = enemy.mode in ["cast","slam_windup"]
             draw_circle(center,radius,Color(0.75,0.2,0.27,0.16 if warning else 0.5))
             draw_arc(center,radius,0,TAU,48,Color("f9b19b"),3,true)
-            draw_arc(center,radius-6,-PI/2,-PI/2+TAU*clampf(1-enemy.timer,0.02,1),48,Color("fff0ca"),4,true)
+            draw_arc(center,radius-6,-PI/2,-PI/2+TAU*maxf(0.02,EnemyPose.progress(enemy)),48,Color("fff0ca"),4,true)
             draw_line(center-Vector2(8,0),center+Vector2(8,0),Color("ffd2bd"),2,true)
             draw_line(center-Vector2(0,8),center+Vector2(0,8),Color("ffd2bd"),2,true)
         elif enemy.mode in ["melee_windup","melee"]:
             var angle: float = enemy.direction.angle()
             draw_arc(enemy.pos,82,angle-1.3,angle+1.3,24,Color("efb072"),5,true)
+            draw_arc(enemy.pos,76,angle-1.3,angle-1.3+2.6*maxf(0.02,EnemyPose.progress(enemy)),24,Color("fff0ca"),3,true)
         _draw_enemy(enemy,battle.enemies.find(enemy))
     for effect in battle.fx:
         _draw_impact(effect)
@@ -390,8 +431,10 @@ func _draw_enemy(enemy: Dictionary,index:int) -> void:
     var p: Vector2 = enemy.pos
     if enemy.kind == "armored" and enemy.mode == "exposed":
         var angle: float = enemy.direction.angle()
-        draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("527b47"),9,true)
-        draw_arc(p,48,angle+PI-1.31,angle+PI+1.31,32,Color("d7f5a9"),4,true)
+        var bloom:float=EnemyPose.rear_openness(enemy)
+        var half:float=1.31*bloom
+        draw_arc(p,48,angle+PI-half,angle+PI+half,32,Color("527b47"),9*bloom,true)
+        draw_arc(p,48,angle+PI-half,angle+PI+half,32,Color("e1bd7e") if enemy.get("opening","")=="miss" else Color("d7f5a9"),4*bloom,true)
     if index>=enemy_label_layout.size():return
     var badge:Dictionary=enemy_label_layout[index]
     var rect:Rect2=badge.rect
@@ -427,9 +470,11 @@ func _layout_labels()->void:
         var enemy:Dictionary=battle.enemies[index]
         var text:String={"armored":"硬壳","thorn":"荆棘","roller":"枝球","sprout":"嫩芽","weaver":"织藤花","elder":"树怪"}.get(enemy.kind,"树怪")
         var cue:String={"windup":"将冲锋","cast":"将落藤","slam_windup":"将重拍","melee_windup":"将挥扫"}.get(enemy.mode,"")
-        if enemy.mode=="exposed":cue="背结展开"
+        if enemy.mode=="retreat":cue="收蔓退开"
+        if enemy.mode=="exposed":cue="背结收合" if enemy.timer<0.35 else "短暂露背" if enemy.get("opening","")=="miss" else "背结展开"
         if not battle.linked_source(enemy).is_empty() and cue.is_empty():cue="连藤护住正面"
-        if enemy.kind=="weaver" and battle.story_encounter=="shell" and enemy.get("weave_break",0)>0:cue="连藤断开"
+        if enemy.kind=="weaver" and battle.story_encounter=="shell" and enemy.get("weave_break",0)>0:
+            cue=RouteView.source_cue(enemy) if battle.encounter_revision==2 else "连藤断开"
         if not cue.is_empty():text+=" · "+cue
         var width:float=maxf(62,font.get_string_size(text,HORIZONTAL_ALIGNMENT_LEFT,-1,17).x+12)
         var base:=Rect2(enemy.pos+Vector2(-width/2,-166 if enemy.kind=="elder" else -127),Vector2(width,32))
@@ -440,7 +485,23 @@ func _layout_labels()->void:
         protected.append(rect.grow(3))
 
 func _draw_impact(effect: Dictionary) -> void:
-    if effect.kind in ["swing","charge","ready","danger"]: return
+    if effect.kind in ["swing","charge","ready","danger","opening"]: return
+    if effect.kind=="route_contact":
+        var ratio:float=1-effect.life/0.55
+        var center:Vector2=effect.pos+Vector2(sin(ratio*TAU*3)*(1-ratio)*4,0)
+        for sign in [-1,1]:draw_line(center+Vector2(sign*24,-12),center+Vector2(sign*(28+ratio*12),-18),Color(0.92,0.74,0.43,1-ratio),3,true)
+        return
+    if effect.kind=="route_open":
+        var ratio:float=1-effect.life/0.8
+        draw_arc(effect.pos,28+ratio*66,-PI/2,PI/2,24,Color(0.84,0.96,0.58,1-ratio),5,true)
+        if effect.has("tether_from"):
+            var start:Vector2=effect.tether_from
+            var end:Vector2=effect.pos+Vector2(-12,-25)
+            var middle:Vector2=(start+end)*0.5+Vector2(-30,ratio*42-25)
+            var fade:=Color(0.67,0.68,0.37,1-ratio)
+            draw_line(start,start.lerp(middle,1-ratio*0.7),fade,7,true)
+            draw_line(end,end.lerp(middle,1-ratio*0.7),fade,7,true)
+        return
     if effect.kind=="not_ready":
         _text(effect.pos+Vector2(-65,-100),"动作还在恢复",130,16)
         return
@@ -482,3 +543,64 @@ func _draw_impact(effect: Dictionary) -> void:
     if effect.kind in ["parry","control","interrupt"]:
         var title: String = {"parry":"精挡 · 空当更长","control":"压住了","interrupt":"藤条停了"}[effect.kind]
         _text(center+Vector2(-70,-44-t*15),title,140,18)
+
+func _draw_route()->void:
+    var gate:Vector2=battle.Space.GATE
+    # The same branch centers as collision form a continuous hedge with a real gap.
+    for point in battle.Space.route_points():
+        if battle.story_encounter=="reserve" and absf(point.y-gate.y)<battle.Space.ROUTE_GAP:
+            # A tied sapling bends differently from the crossed durable hedge.
+            draw_line(point+Vector2(-13,-25),point+Vector2(13,25),Color("5c3d2b"),15,true)
+            draw_line(point+Vector2(-10,-25),point+Vector2(16,25),Color("c59859"),8,true)
+            continue
+        draw_line(point+Vector2(-14,-25),point+Vector2(14,25),Color("69523a"),11,true)
+        draw_line(point+Vector2(14,-25),point+Vector2(-14,25),Color("8d744b"),7,true)
+        draw_line(point+Vector2(-15,-24),point+Vector2(8,17),Color("b19a67"),2,true)
+        for side in [-1,1]:
+            draw_line(point+Vector2(side*8,-5),point+Vector2(side*29,-20),Color("8da35b"),5,true)
+    for side in [-1,1]:
+        var base:=gate+Vector2(76,side*62)
+        draw_line(base,base+Vector2(92,0),Color("c1a46e"),9,true)
+    for x in range(5):draw_line(gate+Vector2(80+x*19,-62),gate+Vector2(80+x*19,62),Color("b99b65"),6,true)
+    if battle.route_open:
+        for side in [-1,1]:
+            var anchor:=gate+Vector2(0,side*105)
+            draw_polyline(PackedVector2Array([anchor+Vector2(-17,side*10),anchor+Vector2(6,side*2),anchor+Vector2(-11,-side*20)]),Color("aa8753"),9,true)
+        draw_line(gate-Vector2(62,0),gate+Vector2(84,0),Color(0.85,0.93,0.57,0.40),40,true)
+        # The top objective already reports the opened route; keep moving bodies unobscured.
+    elif battle.story_encounter=="shell":
+        var tether:Dictionary=RouteView.root_tether(battle)
+        if tether.get("state","")=="bound":
+            var points:=PackedVector2Array([tether.from,tether.middle,tether.end])
+            draw_polyline(points,Color("4b422c"),11,true)
+            draw_polyline(points,Color("ba9757"),5,true)
+            for side in [-1,1]:draw_arc(tether.end+Vector2(side*8,0),10,-PI/2,PI/2,16,Color("dfc079"),3,true)
+        _text(gate+Vector2(-155,-128),"检修门 · 根藤绷紧",255,17)
+    else:
+        draw_line(gate+Vector2(-18,-76),gate+Vector2(20,76),Color("775134"),23,true)
+        draw_line(gate+Vector2(-13,-73),gate+Vector2(24,69),Color("c5a06b"),5,true)
+        for side in [-1,1]:
+            var knot:=gate+Vector2(side*9,side*45)
+            draw_arc(knot,14,0,TAU,24,Color("4b3a2c"),8,true)
+            draw_arc(knot,14,0,TAU,24,Color("edce87"),4,true)
+            draw_line(knot+Vector2(-9,0),knot+Vector2(9,0),Color("edce87"),3,true)
+        _text(gate+Vector2(-155,-128),"树梯横枝 · 绑带绷紧",255,17)
+        if battle.phase=="combat" and battle.objective_enemy_defeated:
+            var key:String=("E" if battle.solo_mode else "E / 空格") if session.keyboard_mode else "A"
+            _text(gate+Vector2(-165,104),"靠近解开 · "+key,250,17)
+func _draw_exit_badges()->void:
+    for badge in RouteView.exit_badges(battle,session.keyboard_mode):
+        var p:Vector2=battle.EXIT+Vector2(-48 if badge.slot==0 else 48,44)
+        var ready:bool=badge.state in ["ready","confirmed"]
+        var color:=Color("d9e5a2") if ready else Color("c8a28e") if badge.state=="down" else Color("89977c")
+        draw_set_transform(p,0,Vector2(0.65,1))
+        draw_circle(Vector2.ZERO,14,Color("354a35"))
+        if ready:draw_circle(Vector2.ZERO,10,color)
+        else:draw_arc(Vector2.ZERO,10,0,TAU,24,color,2,true)
+        draw_circle(Vector2(-5,-17),4,color);draw_circle(Vector2(5,-17),4,color)
+        draw_set_transform(Vector2.ZERO)
+        if badge.state=="confirmed":draw_polyline(PackedVector2Array([p+Vector2(-6,0),p+Vector2(-1,5),p+Vector2(9,-7)]),Color("304b35"),3,true)
+        if badge.state=="down":
+            draw_line(p-Vector2(5,5),p+Vector2(5,5),color,3,true);draw_line(p+Vector2(-5,5),p+Vector2(5,-5),color,3,true)
+        var key:String="✓" if badge.state=="confirmed" else "待扶" if badge.state=="down" else badge.key
+        _text(p+Vector2(-46,33),"P%d · %s"%[badge.slot+1,key],92,16)
